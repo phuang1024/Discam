@@ -35,4 +35,6 @@ def solve_transform(from_pts, to_pts, iters=100, lr=1e-3):
             trans[2, :2] = 0
             trans[2, 2] = 1
 
+    print(loss.item())
+
     return trans
