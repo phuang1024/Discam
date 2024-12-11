@@ -1,3 +1,7 @@
+"""
+Wrapper around cv2.VideoCapture to read video frames.
+"""
+
 import cv2
 
 
@@ -40,3 +44,10 @@ class VideoReader:
         height = int(frame.shape[0] * self.res / frame.shape[1])
         frame = cv2.resize(frame, (self.res, height))
         return frame
+
+
+def get_video_length(path):
+    video = cv2.VideoCapture(path)
+    length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    video.release()
+    return length

@@ -36,7 +36,6 @@ def get_keypoints(img1, img2, num_keypoints=30):
     Takes first N keypoints, by min distance.
     """
     (key1, des1), (key2, des2), matches = run_orb(img1, img2)
-    print(len(matches))
 
     # Take first N keypoints.
     matches = sorted(matches, key=lambda x: x.distance)

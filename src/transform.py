@@ -24,7 +24,7 @@ def solve_transform(from_pts, to_pts, iters=20, lr=1e-3, gamma=0.85):
     optim = torch.optim.Adam([trans], lr=lr)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma)
 
-    losses = []
+    #losses = []
     for _ in range(iters):
         optim.zero_grad()
         pred = torch.matmul(trans, from_pts)
@@ -38,9 +38,18 @@ def solve_transform(from_pts, to_pts, iters=20, lr=1e-3, gamma=0.85):
             trans[2, :2] = 0
             trans[2, 2] = 1
 
-        losses.append(loss.item())
+        #losses.append(loss.item())
 
-    plt.plot(losses)
-    plt.show()
+    #plt.plot(losses)
+    #plt.show()
 
     return trans
+
+
+def extract_translation_zoom(transform):
+    """
+    Extract translation and zoom from SE(2) transform.
+    """
+    translation = (transform[0, 2].item(), transform[1, 2].item())
+    zoom = (transform[0, 0].item() + transform[1, 1].item()) / 2
+    return translation, zoom
