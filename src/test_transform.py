@@ -1,3 +1,7 @@
+"""
+Test the transformation solver and feature matching functions.
+"""
+
 import argparse
 
 import cv2
