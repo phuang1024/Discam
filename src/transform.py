@@ -7,7 +7,7 @@ import torch
 from tqdm import trange
 
 
-def solve_transform(from_pts, to_pts, iters=100, lr=1e-3):
+def solve_transform(from_pts, to_pts, iters=20, lr=1e-3, gamma=0.85):
     """
     Solve SE(2) transform via gradient descent.
 
@@ -22,19 +22,25 @@ def solve_transform(from_pts, to_pts, iters=100, lr=1e-3):
 
     criterion = torch.nn.MSELoss()
     optim = torch.optim.Adam([trans], lr=lr)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma)
 
+    losses = []
     for _ in range(iters):
         optim.zero_grad()
         pred = torch.matmul(trans, from_pts)
         loss = criterion(pred, to_pts)
         loss.backward()
         optim.step()
+        scheduler.step()
 
         # Reset bottom row of transform.
         with torch.no_grad():
             trans[2, :2] = 0
             trans[2, 2] = 1
 
-    print(loss.item())
+        losses.append(loss.item())
+
+    plt.plot(losses)
+    plt.show()
 
     return trans
