@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as T
+import torchvision.transforms.functional as F
 from torch.utils.data import Dataset
 
 from constants import *
@@ -21,18 +22,11 @@ class Augmentation(torch.nn.Module):
     Label invariant augmentations
     """
 
-    def __init__(self):
+    def __init__(self, res):
         super().__init__()
         self.rot = T.RandomRotation(3)
-        self.crop = T.RandomResizedCrop(256, scale=(0.8, 1.0), antialias=True)
+        self.crop = T.RandomResizedCrop(res, scale=(0.8, 1.0), antialias=True)
         self.color = T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.4, hue=0.2)
-
-        self.upper_mask = torch.zeros(256, 256)
-        for i in range(192):
-            self.upper_mask[i] = 1 - i / 192
-
-    def upper_noise(self, x):
-        return x + torch.randn_like(x) * self.upper_mask
 
     def forward(self, x):
         if random.random() < 0.5:
@@ -42,7 +36,7 @@ class Augmentation(torch.nn.Module):
         if random.random() < 0.5:
             x[..., :3, :, :] = self.color(x)
         if random.random() < 0.3:
-            x = self.upper_noise(x)
+            x = x + torch.randn_like(x) * 0.1
         return x
 
 
@@ -62,7 +56,10 @@ class DiscamDataset(Dataset):
         self.transl_fac = transl_fac
         self.scale_fac = scale_fac
 
-        self.aug = Augmentation()
+        # Read one image to get resolution
+        img = torchvision.io.read_image(str(self.data_dir / "0.jpg"))
+
+        self.aug = Augmentation((img.shape[-2], img.shape[-1]))
         self.length = 0
 
         for file in self.data_dir.iterdir():
@@ -86,10 +83,9 @@ class DiscamDataset(Dataset):
 
         if random.random() < 0.3:
             img, (tx, ty, scale) = aug_3dtrans(img, (tx, ty, scale))
-
         img = self.aug(img)
 
-        return img, torch.tensor([tx, ty, scale])
+        return img, torch.tensor([tx, ty, scale], dtype=torch.float32)
 
 
 def aug_3dtrans(img, label):
@@ -109,6 +105,7 @@ def aug_3dtrans(img, label):
     scale_fac = width / img.shape[-1]
 
     new_img = img[..., y:y + height, x:x + width]
+    new_img = F.resize(new_img, (img.shape[-2], img.shape[-1]))
     new_label = (
         label[0] - dx * 0.3,
         label[1] - dy * 0.3,
