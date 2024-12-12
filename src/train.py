@@ -10,6 +10,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader, random_split
 
+from constants import *
 from dataset import DiscamDataset
 from model import DiscamModel
 
@@ -22,12 +23,15 @@ def train(args):
     train_loader = DataLoader(train_data, **loader_args)
     val_loader = DataLoader(val_data, **loader_args)
 
-    model = DiscamModel()
+    model = DiscamModel().to(DEVICE)
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     for epoch in range(args.epochs):
         for img, label in (pbar := tqdm(train_loader)):
+            img = img.to(DEVICE)
+            label = label.to(DEVICE)
+
             optimizer.zero_grad()
             pred = model(img)
             loss = criterion(pred, label)
@@ -38,12 +42,15 @@ def train(args):
 
         with torch.no_grad():
             for img, label in (pbar := tqdm(val_loader)):
+                img = img.to(DEVICE)
+                label = label.to(DEVICE)
+
                 pred = model(img)
                 loss = criterion(pred, label)
 
                 pbar.set_description(f"Val epoch {epoch}: Loss: {loss.item():.4f}")
 
-        torch.save(model.state_dict(), "model.pt")
+        torch.save(model.state_dict(), "discam.pt")
 
 
 def main():
