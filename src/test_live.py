@@ -19,9 +19,17 @@ def make_vis_image(pred):
     img = np.full((400, 400, 3), 255, dtype=np.uint8)
 
     # Draw text labels
-    cv2.putText(img, f"tx: {pred[0]:.2f}", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-    cv2.putText(img, f"ty: {pred[1]:.2f}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-    cv2.putText(img, f"scale: {pred[2]:.2f}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(img, f"tx: {pred[0]:.2f}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(img, f"ty: {pred[1]:.2f}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+    cv2.putText(img, f"scale: {pred[2]:.2f}", (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+
+    cv2.rectangle(img, (10, 150), (150, 390), (0, 0, 0), 1)
+    x = int(pred[0] * 70 + 80)
+    y = int(pred[1] * 120 + 270)
+    cv2.circle(img, (x, y), 5, (0, 0, 255), -1)
+
+    y = int(pred[2] * 120 + 270)
+    cv2.circle(img, (360, y), 5, (0, 255, 0), -1)
 
     return img
 
@@ -35,7 +43,7 @@ def main():
     args = parser.parse_args()
 
     model = DiscamModel().to(DEVICE)
-    model.load_state_dict(torch.load(args.model))
+    model.load_state_dict(torch.load(args.model, map_location=DEVICE))
 
     video = cv2.VideoCapture(args.video)
 
