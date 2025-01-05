@@ -22,7 +22,7 @@ def prepare_reid_input(frame, preds):
         person = person.permute(2, 0, 1) / 128.0 - 1.0
         inputs.append(person)
 
-    return torch.stack(inputs).to("cuda")
+    return torch.stack(inputs).to("cuda") if inputs else None
 
 
 @torch.no_grad()
@@ -36,6 +36,7 @@ def main():
 
     target_embed = None
     i = 0
+    color = None
     while True:
         for _ in range(args.interval):
             ret, frame = video.read()
@@ -46,21 +47,24 @@ def main():
         preds = preds[0].boxes
 
         persons = prepare_reid_input(frame, preds)
-        results = reid_model(persons)
+        if persons is not None:
+            results = reid_model(persons)
 
-        if i % 100 == 0:
-            res_i = random.randint(0, len(results) - 1)
-            target_embed = results[res_i].unsqueeze(0)
-            print("Recompute target")
+            if i % 400 == 0:
+                res_i = random.randint(0, len(results) - 1)
+                target_embed = results[res_i].unsqueeze(0)
+                color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                print("Recompute target")
 
-        else:
-            dists = torch.nn.functional.cosine_similarity(target_embed, results)
-            best_i = torch.argmax(dists).item()
+            else:
+                dists = torch.nn.functional.cosine_similarity(target_embed, results)
+                best_i = torch.argmax(dists).item()
 
-            x1, y1, x2, y2 = map(int, preds.xyxy[best_i])
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.imshow("frame", frame)
-            cv2.waitKey(10)
+                x1, y1, x2, y2 = map(int, preds.xyxy[best_i])
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+        cv2.imshow("frame", frame)
+        cv2.waitKey(10)
 
         i += 1
 
