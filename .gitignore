@@ -1,7 +1,7 @@
 __pycache__
 
 *.pt
+*.mp4
 
 data
 results
-videos
