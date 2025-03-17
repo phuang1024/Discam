@@ -3,6 +3,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 
 def generate_frames(args, cap):
@@ -23,7 +24,6 @@ def process_file(args, file):
 
     with open(file.with_suffix(".txt"), "r") as f:
         coords = np.array(list(map(int, f.read().strip().split()))).reshape(-1, 2)
-        print(coords)
 
     cap = cv2.VideoCapture(str(file))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -31,8 +31,7 @@ def process_file(args, file):
 
     last_frame = None
     mask = None
-    last_bounds = None
-    for i, frame in enumerate(generate_frames(args, cap)):
+    for i, frame in tqdm(enumerate(generate_frames(args, cap)), desc=file.stem):
         if i == 0:
             mask = np.zeros((height, width, 3), dtype=np.uint8)
             cv2.fillPoly(mask, [coords], (255, 255, 255))
@@ -44,25 +43,11 @@ def process_file(args, file):
             diff = cv2.GaussianBlur(diff, (5, 5), 0)
             salient = diff > 25
             y, x = np.where(salient)
-            if len(x) > 100:
-                min_x, min_y, max_x, max_y = x.min() - args.margin, y.min() - args.margin, x.max() + args.margin, y.max() + args.margin
-                min_x = np.clip(min_x, 0, frame.shape[1] - 1)
-                min_y = np.clip(min_y, 0, frame.shape[0] - 1)
-                max_x = np.clip(max_x, 0, frame.shape[1] - 1)
-                max_y = np.clip(max_y, 0, frame.shape[0] - 1)
-                bounds = np.array([min_x, min_y, max_x, max_y])
-                if last_bounds is not None:
-                    bounds = (last_bounds * 0.9 + bounds * 0.1).astype(int)
-                last_bounds = bounds
+            min_x, min_y, max_x, max_y = x.min(), y.min(), x.max(), y.max()
 
-                cv2.imwrite(str(args.output / file.stem / f"{i}.jpg"), frame)
-                with open(args.output / file.stem / f"{i}.txt", "w") as f:
-                    f.write(" ".join(map(str, bounds)))
-
-                frame_vis = frame.copy()
-                cv2.rectangle(frame_vis, (bounds[0], bounds[1]), (bounds[2], bounds[3]), (0, 255, 0), 2)
-                cv2.imshow("frame", frame_vis)
-                cv2.waitKey(0)
+            cv2.imwrite(str(args.output / file.stem / f"{i}.jpg"), frame)
+            with open(args.output / file.stem / f"{i}.txt", "w") as f:
+                f.write(f"{min_x} {min_y} {max_x} {max_y}")
 
         last_frame = frame
 
@@ -73,12 +58,10 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--res", type=int, default=480, help="Output vertical resolution.")
     parser.add_argument("--fps", type=float, default=1, help="FPS of sampling.")
-    parser.add_argument("--margin", type=int, default=30)
     args = parser.parse_args()
 
     for file in args.input.iterdir():
         if file.is_file() and file.suffix == ".mp4" and file.with_suffix(".txt").exists():
-            print(f"Processing {file.name}")
             process_file(args, file)
 
 

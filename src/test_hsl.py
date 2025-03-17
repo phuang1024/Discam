@@ -5,6 +5,7 @@ Script to test HSL dynamic range compression.
 import argparse
 
 import cv2
+import numpy as np
 
 
 def main():
@@ -20,22 +21,19 @@ def main():
             break
         cv2.imshow("original", frame)
 
-        # Convert to HLS
         hls = cv2.cvtColor(frame, cv2.COLOR_BGR2HLS)
-
-        # Split channels
         h, l, s = cv2.split(hls)
 
-        # Apply CLAHE to L channel
-        cl = clahe.apply(l)
-
-        # Merge channels
-        hls = cv2.merge((h, cl, s))
-
-        # Convert back to BGR
+        l_clahe = clahe.apply(l)
+        hls = cv2.merge((h, l_clahe, s))
         frame = cv2.cvtColor(hls, cv2.COLOR_HLS2BGR)
+        cv2.imshow("clahe", frame)
 
-        cv2.imshow("adjusted", frame)
+        l_uniform = np.full_like(l, 128)
+        hls = cv2.merge((h, l_uniform, s))
+        frame = cv2.cvtColor(hls, cv2.COLOR_HLS2BGR)
+        cv2.imshow("uniform", frame)
+
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
