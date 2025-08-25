@@ -19,6 +19,51 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
+from frame_diff import frame_diff
+
+
+def make_roi_mask(roi, width, height):
+    """
+    Draw quadrilateral ROI.
+
+    roi: Data read from JSON file.
+    """
+    mask = np.zeros((height, width), dtype=np.uint8)
+    pts = np.array(list(roi.values()), dtype=np.int32)
+    cv2.fillPoly(mask, [pts], 255)
+    #mask_bool = mask.astype(bool)
+    return mask
+
+
+def process_frames(args, cap, mask):
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    read_index = 0
+    write_index = 0
+    frame_queue = deque(maxlen=args.compare_step)
+
+    pbar = tqdm(total=total_frames)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        pbar.update(1)
+        read_index += 1
+        frame_queue.append(frame)
+
+        if read_index % args.frame_step == 0:
+            # TODO
+            frame1 = frame_queue[0]
+            frame2 = frame_queue[-1]
+
+            frame_diff(frame1, frame2)
+
+            # Write frame
+            write_index += 1
+
+        if args.max_frames > 0 and write_index >= args.max_frames:
+            break
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -41,63 +86,16 @@ def main():
 
     # Open video file.
     cap = cv2.VideoCapture(str(args.video))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # Make ROI mask.
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    mask = np.zeros((height, width), dtype=np.uint8)
-    pts = np.array(list(roi.values()), dtype=np.int32)
-    cv2.fillPoly(mask, [pts], 255)
-    mask_bool = mask.astype(bool)
+    mask = make_roi_mask(
+        roi,
+        int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+    )
     cv2.imwrite(str(args.output / "mask.png"), mask)
 
-    # Process frames.
-    read_index = 0
-    write_index = 0
-    frame_queue = deque(maxlen=args.compare_step)
-
-    pbar = tqdm(total=total_frames)
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        pbar.update(1)
-        read_index += 1
-        frame_queue.append(frame)
-
-        if read_index % args.frame_step == 0:
-            if len(frame_queue) < args.compare_step:
-                continue
-
-            # Compute frame difference.
-            frame_a = frame_queue[0]
-            frame_b = frame_queue[-1]
-            diff = cv2.absdiff(frame_a, frame_b)
-            gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-            _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-            thresh = cv2.bitwise_and(thresh, mask)
-            thresh = cv2.medianBlur(thresh, 5)
-
-            # Find XY min max.
-            ys, xs = np.where(thresh > 0)
-            if len(xs) == 0 or len(ys) == 0:
-                # TODO
-                continue
-            x_min, x_max = xs.min(), xs.max()
-            y_min, y_max = ys.min(), ys.max()
-
-            # Draw rectangle on frame.
-            boxed_frame = frame.copy()
-            cv2.rectangle(boxed_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-            cv2.imshow("Motion", boxed_frame)
-            cv2.waitKey(100)
-
-            # Write frame
-            write_index += 1
-
-        if args.max_frames > 0 and write_index >= args.max_frames:
-            break
+    process_frames(args, cap, mask)
 
 
 if __name__ == "__main__":
