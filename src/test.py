@@ -9,7 +9,6 @@ import cv2
 
 from agent import Agent
 from constants import *
-from sessionlog import ResultsDir
 from model import DiscamModel
 
 

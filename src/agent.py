@@ -2,29 +2,25 @@
 Simulate PTZ camera controlled by neural network.
 """
 
-import cv2
 import torch
 
 
 class Agent:
-    def __init__(self, model, video_res, model_input_res, velocity):
+    def __init__(self, model, video_res, velocity):
         """
         video_res: (width, height) of input video frames.
         """
         self.model = model
         self.video_res = video_res
-        self.model_input_res = model_input_res
         self.velocity = velocity
 
         self.bbox = (0, 0, video_res[0], video_res[1])
 
     def step(self, frame):
         """
-        frame: (H, W, 3) RGB uint8 ndarray
+        frame: (3, H, W) RGB float32 tensor [0, 1]
         """
-        frame = cv2.resize(frame, self.model_input_res)
-        frame = torch.from_numpy(frame).float() / 255
-        frame = frame.permute(2, 0, 1).unsqueeze(0)  # (1, 3, H, W)
+        frame = frame.unsqueeze(0)  # (1, 3, H, W)
 
         pred = self.model(frame)[0]
         pred = pred.detach().cpu().numpy()
