@@ -7,7 +7,10 @@ from pathlib import Path
 
 import cv2
 import torch
+from torch.utils.data import Dataset
 from torchvision.io import read_image
+
+from constants import *
 
 
 class VideosDataset:
@@ -79,3 +82,51 @@ class VideosDataset:
         bboxes = torch.stack(bboxes, dim=0)
 
         return frames, bboxes
+
+
+class SimulatedDataset(Dataset):
+    """
+    Conventional PyTorch dataset. Loads simulated data from train.py:simulate()
+
+    XY pairs:
+        x: frame (3, H, W) float32 tensor in [0, 1] range
+        y: expected edge weights (4,) float32 [-1, 1] tensor
+            This is computed with the difference between agent's bbox and gt bbox.
+    """
+
+    def __init__(self, dir: Path):
+        self.dir = dir
+
+        self.max_num = 0
+        for f in dir.iterdir():
+            if "jpg" in f.suffix:
+                index = f.stem.split(".")[0]
+                num = int(index)
+                if num > self.max_num:
+                    self.max_num = num
+        self.max_num += 1
+
+    def __len__(self):
+        return self.max_num
+
+    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
+        frame_path = self.dir / f"{index}.frame.jpg"
+        agent_path = self.dir / f"{index}.agent.json"
+        gt_path = self.dir / f"{index}.gt.json"
+
+        frame = read_image(str(frame_path)).float() / 255
+        with open(agent_path, "r") as f:
+            agent_bbox = torch.tensor(json.load(f), dtype=torch.float32)
+        with open(gt_path, "r") as f:
+            gt_bbox = torch.tensor(json.load(f), dtype=torch.float32)
+
+        # Compute edge weights.
+        edge_weights = torch.tensor([
+            agent_bbox[1] - gt_bbox[1],  # up
+            gt_bbox[2] - agent_bbox[2],  # right
+            gt_bbox[3] - agent_bbox[3],  # down
+            agent_bbox[0] - gt_bbox[0],  # left
+        ])
+        edge_weights = torch.tanh(edge_weights / EDGE_WEIGHT_TEMP)
+
+        return frame, edge_weights
