@@ -1,13 +1,9 @@
 """
-Generate training data from a video.
+Generate bounding box data from a video.
 
 Video must be a stationary camera.
 Manually mark quadrilateral field region.
 Detects and bounds motion in the ROI.
-
-TODOS:
-- Detect and account for camera shake. Don't count it as motion.
-- Detect stationary people and include in bounding box.
 """
 
 import argparse
