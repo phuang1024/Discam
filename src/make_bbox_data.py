@@ -96,8 +96,8 @@ def main():
     parser.add_argument("video", type=Path, help="Path to input video file.")
     parser.add_argument("output", type=Path, help="Path to output directory.")
     parser.add_argument("--max_frames", type=int, default=-1, help="Maximum number of frames to process.")
-    parser.add_argument("--frame_step", type=int, default=5, help="Process every Nth frame.")
-    parser.add_argument("--compare_step", type=int, default=8, help="Frame step for motion comparison.")
+    parser.add_argument("--frame_step", type=int, default=15, help="Process every Nth frame.")
+    parser.add_argument("--compare_step", type=int, default=10, help="Frame step for motion comparison.")
     args = parser.parse_args()
 
     # Read ROI data.
