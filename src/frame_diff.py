@@ -7,7 +7,12 @@ import cv2
 import numpy as np
 
 
-def frame_diff(img1, img2):
+def align_frame(img1, img2):
+    """
+    Aligh img1 to img2 using ORB feature matching.
+
+    Returns aligned img1.
+    """
     orb = cv2.ORB_create(5000)
     kp1, des1 = orb.detectAndCompute(img1, None)
     kp2, des2 = orb.detectAndCompute(img2, None)
@@ -27,10 +32,59 @@ def frame_diff(img1, img2):
 
     h, w, _ = img2.shape
     aligned = cv2.warpAffine(img1, M, (w, h))
+    return aligned
+
+
+def frame_diff(img1, img2, floor=0.05, mult=5, blur=3):
+    """
+    Aligns frames and computes absolute difference.
+
+    Returns grayscale (H, W) float32 [0 to 1] image.
+    """
+    aligned = align_frame(img1, img2)
 
     diff = cv2.absdiff(aligned, img2)
-    _, diff = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)
+    diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
 
-    cv2.imshow("Diff", diff)
-    cv2.waitKey(100)
+    diff = ((diff - floor) * mult).clip(0, 1)
 
+    #diff = (diff * 255).astype(np.uint8)
+    #diff = cv2.blur(diff, (blur, blur), 0)
+
+    #diff = diff.astype(np.float32) / 255.0
+
+    return diff
+
+
+def compute_bbox(diff, thres=0.4, downsample=4, blur=3, padding=50):
+    """
+    Compute bounding box of salient areas
+    using techniques to reduce noise.
+
+    diff: (H, W) float32 [0 to 1] image.
+    thres: Saliency threshold, between 0 and 1.
+    downsample: Downsample factor.
+    blur: Box blur kernel size.
+    padding: Padding in pixels.
+    """
+    diff = (diff * 255).astype(np.uint8)
+    h, w = diff.shape
+    diff = cv2.resize(diff, (w // downsample, h // downsample), cv2.INTER_AREA)
+
+    diff = cv2.blur(diff, (blur, blur), 0)
+
+    thres = int(thres * 255)
+    diff = diff > thres
+
+    ys, xs = np.where(diff)
+    if len(xs) == 0 or len(ys) == 0:
+        return None
+    x1, x2 = xs.min(), xs.max()
+    y1, y2 = ys.min(), ys.max()
+
+    x1 = max(0, x1 * downsample - padding)
+    y1 = max(0, y1 * downsample - padding)
+    x2 = min(w, x2 * downsample + padding)
+    y2 = min(h, y2 * downsample + padding)
+
+    return (x1, y1, x2, y2)

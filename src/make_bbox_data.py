@@ -19,7 +19,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from frame_diff import frame_diff
+from frame_diff import frame_diff, compute_bbox
+from utils import EMA, bbox_aspect
 
 
 def make_roi_mask(roi, width, height):
@@ -35,12 +36,32 @@ def make_roi_mask(roi, width, height):
     return mask
 
 
+def vis_bbox(frame, diff, bbox):
+    frame = frame.copy()
+
+    x1, y1, x2, y2 = bbox
+    color = (0, 255, 0)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+    color = (226, 99, 255)
+    for ch in range(3):
+        frame[..., ch] = color[ch] * diff + frame[..., ch] * (1 - diff)
+
+    cv2.imshow("Frame", frame)
+    cv2.waitKey(1)
+
+
 def process_frames(args, cap, mask):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     read_index = 0
     write_index = 0
     frame_queue = deque(maxlen=args.compare_step)
+
+    diff_ema = EMA()
+    diff_mult = 2
 
     pbar = tqdm(total=total_frames)
     while True:
@@ -52,13 +73,22 @@ def process_frames(args, cap, mask):
         frame_queue.append(frame)
 
         if read_index % args.frame_step == 0:
-            # TODO
             frame1 = frame_queue[0]
             frame2 = frame_queue[-1]
+            diff = frame_diff(frame1, frame2)
+            diff = diff_ema.update(diff)
+            diff = (diff * diff_mult).clip(0, 1)
+            diff = diff * mask
 
-            frame_diff(frame1, frame2)
+            bbox = compute_bbox(diff, thres=0.2)
+            assert bbox is not None
+            bbox = bbox_aspect(bbox, aspect=width / height, width=width, height=height)
+            #vis_bbox(frame, diff, bbox)
 
             # Write frame
+            with open(args.output / f"{read_index}.bbox.json", "w") as f:
+                data = [int(v) for v in bbox]
+                json.dump(data, f)
             write_index += 1
 
         if args.max_frames > 0 and write_index >= args.max_frames:
@@ -94,6 +124,7 @@ def main():
         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
     )
     cv2.imwrite(str(args.output / "mask.png"), mask)
+    mask = mask.astype(bool).astype(np.float32)
 
     process_frames(args, cap, mask)
 
