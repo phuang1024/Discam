@@ -17,7 +17,7 @@ SIM_STEPS = 100
 # Frame skip between steps in simulation.
 SIM_FRAME_SKIP = 3
 # Number of simulations per epoch.
-SIMS_PER_EPOCH = 1#00
+SIMS_PER_EPOCH = 100
 # Number of training steps per epoch.
 STEPS_PER_EPOCH = 500
 # Number of epochs per training session.

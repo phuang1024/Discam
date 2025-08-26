@@ -94,6 +94,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--results", type=Path, required=True, help="Path to results directory.")
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of epochs to train.")
     args = parser.parse_args()
 
     results_path = args.results
@@ -104,11 +105,12 @@ def main():
     model = DiscamModel(MODEL_INPUT_RES).to(DEVICE)
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY)
 
-    epoch_path = sess_path / "0"
-    epoch_path.mkdir(parents=True, exist_ok=True)
+    for epoch in range(args.epochs):
+        epoch_path = sess_path / f"epoch{epoch}"
+        epoch_path.mkdir(parents=True, exist_ok=True)
 
-    #simulate(videos_dataset, agent, epoch_path)
-    train_epoch(model, epoch_path)
+        simulate(videos_dataset, agent, epoch_path)
+        train_epoch(model, epoch_path)
 
 
 if __name__ == "__main__":
