@@ -55,7 +55,7 @@ class Agent:
         self.bbox = (x1, y1, x2, y2)
 
 
-def apply_edge_weights(bbox, edges, aspect, velocity, min_size=10):
+def apply_edge_weights(bbox, edges, aspect, velocity, min_size=20):
     """
     Apply model prediction to bbox, keeping aspect ratio.
 

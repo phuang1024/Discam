@@ -106,7 +106,7 @@ def main():
     print("  Device:", DEVICE)
 
     results_path = args.results
-    sess_path = results_path / "test"
+    sess_path = results_path
     print("  Session path:", sess_path)
 
     videos_dataset = VideosDataset(args.data)
