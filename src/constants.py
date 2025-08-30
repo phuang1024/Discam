@@ -20,10 +20,12 @@ SIM_FRAME_SKIP = 3
 SIMS_PER_EPOCH = 10
 # Number of training steps per epoch.
 STEPS_PER_EPOCH = 300
+# Use data from the last N epochs for training.
+DATA_HISTORY = 5
 # Number of epochs per training session.
 EPOCHS_PER_SESSION = 10
 
 BATCH_SIZE = 32
-LR = 3e-4
+LR = 1e-4
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
