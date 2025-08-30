@@ -94,25 +94,34 @@ class SimulatedDataset(Dataset):
             This is computed with the difference between agent's bbox and gt bbox.
     """
 
-    def __init__(self, dir: Path):
-        self.dir = dir
+    def __init__(self, dirs: list[Path]):
+        self.dirs = dirs
 
-        self.max_num = 0
-        for f in dir.iterdir():
-            if "jpg" in f.suffix:
-                index = f.stem.split(".")[0]
-                num = int(index)
-                if num > self.max_num:
-                    self.max_num = num
-        self.max_num += 1
+        # Lengths of individual dirs.
+        self.lengths = []
+        for d in dirs:
+            length = 0
+            for f in d.iterdir():
+                if "jpg" in f.suffix:
+                    num = int(f.stem.split(".")[0])
+                    if num > length:
+                        length = num
+            self.lengths.append(length)
 
     def __len__(self):
-        return self.max_num
+        return sum(self.lengths)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        frame_path = self.dir / f"{index}.frame.jpg"
-        agent_path = self.dir / f"{index}.agent.json"
-        gt_path = self.dir / f"{index}.gt.json"
+        # Find which dir the index belongs to.
+        dir_index = 0
+        while index >= self.lengths[dir_index]:
+            index -= self.lengths[dir_index]
+            dir_index += 1
+        dir = self.dirs[dir_index]
+
+        frame_path = dir / f"{index}.frame.jpg"
+        agent_path = dir / f"{index}.agent.json"
+        gt_path = dir / f"{index}.gt.json"
 
         frame = read_image(str(frame_path)).float() / 255
         with open(agent_path, "r") as f:

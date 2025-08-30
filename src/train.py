@@ -54,8 +54,8 @@ def simulate(videos_dataset, agent, epoch_path: Path):
             index += 1
 
 
-def train_epoch(model, epoch_path: Path):
-    dataset = SimulatedDataset(epoch_path)
+def train_epoch(model, save_dir: Path, data_dirs: list[Path]):
+    dataset = SimulatedDataset(data_dirs)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=16,
@@ -88,6 +88,11 @@ def train_epoch(model, epoch_path: Path):
             pbar.update(1)
             if step >= STEPS_PER_EPOCH:
                 break
+    pbar.close()
+
+    model_path = save_dir / "model.pt"
+    print("Saving to", model_path)
+    torch.save(model.state_dict(), model_path)
 
 
 def main():
@@ -97,20 +102,38 @@ def main():
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs to train.")
     args = parser.parse_args()
 
+    print("Begin training.")
+    print("  Device:", DEVICE)
+
     results_path = args.results
     sess_path = results_path / "test"
+    print("  Session path:", sess_path)
 
     videos_dataset = VideosDataset(args.data)
+    print("Using videos from:", args.data)
 
     model = DiscamModel(MODEL_INPUT_RES).to(DEVICE)
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY)
+    print("Model:")
+    print(model)
+    print("Number of parameters:", sum(p.numel() for p in model.parameters()))
 
+    epoch_paths = []
     for epoch in range(args.epochs):
+        print("Begin epoch", epoch)
         epoch_path = sess_path / f"epoch{epoch}"
         epoch_path.mkdir(parents=True, exist_ok=True)
+        epoch_paths.append(epoch_path)
+        print("  Epoch path:", epoch_path)
 
+        print("  Simulating...")
         simulate(videos_dataset, agent, epoch_path)
-        train_epoch(model, epoch_path)
+        data_dirs = epoch_paths[max(0, epoch - DATA_HISTORY):]
+        print("  Training...")
+        print("    Using data from:", data_dirs)
+        train_epoch(model, epoch_path, data_dirs)
+
+        print("  End epoch", epoch)
 
 
 if __name__ == "__main__":
