@@ -40,7 +40,7 @@ def simulate(videos_dataset, agent, epoch_path: Path):
             agent.step(frame)
 
             # Save frame and bbox.
-            frame = frame.permute(1, 2, 0).numpy() * 255
+            frame = frame.cpu().permute(1, 2, 0).numpy() * 255
             frame = frame.astype("uint8")
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             cv2.imwrite(str(epoch_path / f"{index}.frame.jpg"), frame)
