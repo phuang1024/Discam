@@ -20,6 +20,7 @@ def main():
     args = parser.parse_args()
 
     model = DiscamModel(MODEL_INPUT_RES)
+    model.load_state_dict(torch.load(args.results, map_location=DEVICE))
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY)
 
     for i in range(1000):
