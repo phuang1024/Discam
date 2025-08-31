@@ -50,7 +50,7 @@ def simulate(videos_dataset, agent, data_dir: Path):
             frame = frame.cpu().permute(1, 2, 0).numpy() * 255
             frame = frame.astype("uint8")
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame)
+            cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 40])
 
             with open(data_dir / f"{index}.agent.json", "w") as f:
                 json.dump([int(x) for x in agent.bbox], f)
@@ -61,7 +61,7 @@ def simulate(videos_dataset, agent, data_dir: Path):
             index += 1
 
 
-def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_step):
+def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_step, save):
     """
     tb_writer: TensorBoard SummaryWriter.
     global_step: Current global step for logging.
@@ -102,9 +102,10 @@ def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_
                 break
     pbar.close()
 
-    model_path = save_dir / "model.pt"
-    print("Saving to", model_path)
-    torch.save(model.state_dict(), model_path)
+    if save:
+        model_path = save_dir / "model.pt"
+        print("Saving to", model_path)
+        torch.save(model.state_dict(), model_path)
 
 
 def main():
@@ -112,6 +113,7 @@ def main():
     parser.add_argument("--results", type=Path, required=True, help="Path to results directory.")
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs to train.")
+    parser.add_argument("--save_every", type=int, default=5, help="Save every N epochs.")
     args = parser.parse_args()
     args.results.mkdir(parents=True, exist_ok=True)
 
@@ -143,13 +145,17 @@ def main():
         simulate(videos_dataset, agent, epoch_path / "data")
         prev_data_dirs.append(data_dir)
 
-        data_dirs = prev_data_dirs[max(0, epoch - DATA_HISTORY):]
+        data_dirs = prev_data_dirs[max(0, epoch - DATA_HISTORY + 1):]
         print("  Training...")
         print("    Using data from:", data_dirs)
-        train_epoch(model, epoch_path, data_dirs, tb_writer, global_step)
+        train_epoch(model, epoch_path, data_dirs, tb_writer, global_step, (epoch + 1) % args.save_every == 0)
         global_step += STEPS_PER_EPOCH
 
         print("  End epoch", epoch)
+
+        save_path = args.results / f"latest.pt"
+        print("  Saving latest to", save_path)
+        torch.save(model.state_dict(), save_path)
 
 
 if __name__ == "__main__":
