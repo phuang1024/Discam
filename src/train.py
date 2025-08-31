@@ -8,6 +8,7 @@ from pathlib import Path
 
 import cv2
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import trange
 
 from agent import Agent
@@ -17,10 +18,16 @@ from model import DiscamModel
 
 
 @torch.no_grad()
-def simulate(videos_dataset, agent, epoch_path: Path):
+def simulate(videos_dataset, agent, data_dir: Path):
     """
     Simulate data for one epoch of training.
+
+    videos_dataset: Instance of VideosDataset to sample from.
+    agent: Agent to use for simulation.
+    data_dir: Where to save data.
     """
+    data_dir.mkdir(parents=True, exist_ok=True)
+
     index = 0
     for sim in trange(SIMS_PER_EPOCH, desc="Simulating"):
         # Reset environment.
@@ -43,24 +50,28 @@ def simulate(videos_dataset, agent, epoch_path: Path):
             frame = frame.cpu().permute(1, 2, 0).numpy() * 255
             frame = frame.astype("uint8")
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(str(epoch_path / f"{index}.frame.jpg"), frame)
+            cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame)
 
-            with open(epoch_path / f"{index}.agent.json", "w") as f:
+            with open(data_dir / f"{index}.agent.json", "w") as f:
                 json.dump([int(x) for x in agent.bbox], f)
 
-            with open(epoch_path / f"{index}.gt.json", "w") as f:
+            with open(data_dir / f"{index}.gt.json", "w") as f:
                 json.dump([int(x) for x in gt_bbox], f)
 
             index += 1
 
 
-def train_epoch(model, save_dir: Path, data_dirs: list[Path]):
+def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_step):
+    """
+    tb_writer: TensorBoard SummaryWriter.
+    global_step: Current global step for logging.
+    """
     dataset = SimulatedDataset(data_dirs)
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=16,
+        batch_size=BATCH_SIZE,
         shuffle=True,
-        num_workers=4,
+        num_workers=16,
         pin_memory=True,
     )
 
@@ -83,9 +94,10 @@ def train_epoch(model, save_dir: Path, data_dirs: list[Path]):
             loss.backward()
             optimizer.step()
 
-            step += 1
+            tb_writer.add_scalar("train/loss", loss.item(), global_step + step)
             pbar.set_postfix(loss=loss.item())
             pbar.update(1)
+            step += 1
             if step >= STEPS_PER_EPOCH:
                 break
     pbar.close()
@@ -101,13 +113,14 @@ def main():
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs to train.")
     args = parser.parse_args()
+    args.results.mkdir(parents=True, exist_ok=True)
+
+    tb_writer = SummaryWriter(log_dir=args.results / "logs")
+    global_step = 0
 
     print("Begin training.")
     print("  Device:", DEVICE)
-
-    results_path = args.results
-    sess_path = results_path
-    print("  Session path:", sess_path)
+    print("  Results path:", args.results)
 
     videos_dataset = VideosDataset(args.data)
     print("Using videos from:", args.data)
@@ -118,20 +131,23 @@ def main():
     print(model)
     print("Number of parameters:", sum(p.numel() for p in model.parameters()))
 
-    epoch_paths = []
+    prev_data_dirs = []
     for epoch in range(args.epochs):
         print("Begin epoch", epoch)
-        epoch_path = sess_path / f"epoch{epoch}"
+        epoch_path = args.results / f"epoch{epoch}"
         epoch_path.mkdir(parents=True, exist_ok=True)
-        epoch_paths.append(epoch_path)
         print("  Epoch path:", epoch_path)
 
         print("  Simulating...")
-        simulate(videos_dataset, agent, epoch_path)
-        data_dirs = epoch_paths[max(0, epoch - DATA_HISTORY):]
+        data_dir = epoch_path / "data"
+        simulate(videos_dataset, agent, epoch_path / "data")
+        prev_data_dirs.append(data_dir)
+
+        data_dirs = prev_data_dirs[max(0, epoch - DATA_HISTORY):]
         print("  Training...")
         print("    Using data from:", data_dirs)
-        train_epoch(model, epoch_path, data_dirs)
+        train_epoch(model, epoch_path, data_dirs, tb_writer, global_step)
+        global_step += STEPS_PER_EPOCH
 
         print("  End epoch", epoch)
 
