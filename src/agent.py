@@ -1,8 +1,7 @@
 """
-Simulate PTZ camera controlled by neural network.
+This file defines the Agent class.
+The agent uses the NN to control a virtual PTZ camera (a bounding box).
 """
-
-import torch
 
 
 class Agent:
