@@ -13,11 +13,13 @@ class Agent:
         self.video_res = video_res
         self.velocity = velocity
 
-        self.bbox = (0, 0, video_res[0], video_res[1])
+        self.bbox = (0, 0, video_res[0] / 2, video_res[1] / 2)
 
     def step(self, frame):
         """
         frame: (3, H, W) RGB float32 tensor [0, 1]
+        return: Predicted edge weights.
+            Np array.
         """
         frame = frame.unsqueeze(0)  # (1, 3, H, W)
 
@@ -25,7 +27,18 @@ class Agent:
         pred = pred.detach().cpu().numpy()
 
         aspect = self.video_res[0] / self.video_res[1]
-        self.bbox = apply_edge_weights(self.bbox, pred, aspect, self.velocity)
+        bbox = apply_edge_weights(self.bbox, pred, aspect, self.velocity)
+        self.set_bbox(bbox)
+
+        return pred
+
+    def set_bbox(self, bbox):
+        """
+        Checks bounds after.
+
+        bbox: (x1, y1, x2, y2)
+        """
+        self.bbox = bbox
         self.check_bbox_bounds()
 
     def check_bbox_bounds(self):

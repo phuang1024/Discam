@@ -10,7 +10,7 @@ MODEL_INPUT_RES = (640, 360)
 # Pixels per step.
 AGENT_VELOCITY = 8
 # weight = tanh(diff / temp)
-EDGE_WEIGHT_TEMP = 40
+EDGE_WEIGHT_TEMP = 100
 
 # Number of steps per simulation.
 SIM_STEPS = 100

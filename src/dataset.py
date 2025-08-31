@@ -130,13 +130,27 @@ class SimulatedDataset(Dataset):
         with open(gt_path, "r") as f:
             gt_bbox = torch.tensor(json.load(f), dtype=torch.float32)
 
-        # Compute edge weights.
-        edge_weights = torch.tensor([
-            agent_bbox[1] - gt_bbox[1],  # up
-            gt_bbox[2] - agent_bbox[2],  # right
-            gt_bbox[3] - agent_bbox[3],  # down
-            agent_bbox[0] - gt_bbox[0],  # left
-        ])
-        edge_weights = torch.tanh(edge_weights / EDGE_WEIGHT_TEMP)
+        edge_weights = compute_edge_weights(agent_bbox, gt_bbox)
 
         return frame, edge_weights
+
+
+def compute_edge_weights(agent_bbox, gt_bbox) -> torch.Tensor:
+    """
+    Compute edge weights from agent bbox and gt bbox.
+
+    agent_bbox: (4,) tensor, float32
+    gt_bbox: (4,) tensor, float32
+
+    return: (4,) tensor, float32
+        Edge weights in order: (up, right, down, left)
+    """
+    edge_weights = torch.tensor([
+        agent_bbox[1] - gt_bbox[1],  # up
+        gt_bbox[2] - agent_bbox[2],  # right
+        gt_bbox[3] - agent_bbox[3],  # down
+        agent_bbox[0] - gt_bbox[0],  # left
+    ])
+    edge_weights = torch.tanh(edge_weights / EDGE_WEIGHT_TEMP)
+
+    return edge_weights
