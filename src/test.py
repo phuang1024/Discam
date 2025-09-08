@@ -16,27 +16,31 @@ from dataset import compute_edge_weights
 from model import DiscamModel
 
 
-def draw_edge_weights(frame, weights, bbox, color, size=50):
+def draw_edge_weights(frame, weights, bbox, color, size=50, offset=0):
     def draw_line(p1, p2):
         cv2.line(frame, tuple(p1.astype(int)), tuple(p2.astype(int)), color, 2)
 
     # Up
     p1 = (np.array((bbox[0], bbox[1])) + np.array((bbox[2], bbox[1]))) / 2
+    p1[0] += offset
     p2 = p1 + np.array((0, -size)) * weights[0]
     draw_line(p1, p2)
 
     # Right
     p1 = (np.array((bbox[2], bbox[1])) + np.array((bbox[2], bbox[3]))) / 2
+    p1[1] += offset
     p2 = p1 + np.array((size, 0)) * weights[1]
     draw_line(p1, p2)
 
     # Down
     p1 = (np.array((bbox[0], bbox[3])) + np.array((bbox[2], bbox[3]))) / 2
+    p1[0] += offset
     p2 = p1 + np.array((0, size)) * weights[2]
     draw_line(p1, p2)
 
     # Left
     p1 = (np.array((bbox[0], bbox[1])) + np.array((bbox[0], bbox[3]))) / 2
+    p1[1] += offset
     p2 = p1 + np.array((-size, 0)) * weights[3]
     draw_line(p1, p2)
 
@@ -66,7 +70,7 @@ def draw_visualization(frame, gt_bbox, agent_bbox, pred_edge_weights, crop: bool
         cv2.rectangle(frame, (gt_bbox[0], gt_bbox[1]), (gt_bbox[2], gt_bbox[3]), (0, 255, 0), 2)
         cv2.rectangle(frame, (agent_bbox[0], agent_bbox[1]), (agent_bbox[2], agent_bbox[3]), (0, 0, 255), 2)
 
-        draw_edge_weights(frame, pred_edge_weights, agent_bbox, (0, 0, 255))
+        draw_edge_weights(frame, pred_edge_weights, agent_bbox, (0, 0, 255), offset=2)
         gt_edge_weights = compute_edge_weights(agent_bbox, gt_bbox).numpy()
         draw_edge_weights(frame, gt_edge_weights, agent_bbox, (0, 255, 0))
 
@@ -111,7 +115,7 @@ def main():
 
         vis = draw_visualization(img, gt_bbox, agent_bbox, pred_edge_weights, args.crop)
         cv2.imshow("img", vis)
-        cv2.waitKey(100)
+        cv2.waitKey(1)
 
         i += 1
 
