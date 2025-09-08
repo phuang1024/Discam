@@ -1,10 +1,11 @@
 """
-CNN model.
+Model.
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.models import resnet18, ResNet18_Weights
 
 
 class DiscamModel(nn.Module):
@@ -23,31 +24,22 @@ class DiscamModel(nn.Module):
 
         self.res = res
 
-        self.cnn = nn.Sequential(
-            nn.Conv2d(3, 32, 3, stride=2, padding=1),  # 1/2
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 1/4
-            nn.ReLU(),
-            nn.Conv2d(64, 16, 3, padding=1),
-            nn.ReLU(),
-        )
-        out_neurons = (res[0] // 4) * (res[1] // 4) * 16
-        self.head = nn.Sequential(
-            nn.Linear(out_neurons, 128),
-            nn.ReLU(),
-            nn.Linear(128, 4),
+        self.resnet = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        self.resnet.fc = nn.Identity()
+
+        self.fc = nn.Sequential(
+           nn.Linear(512, 256),
+              nn.ReLU(),
+              nn.Linear(256, 4), 
         )
 
-    def forward(self, x):
-        x = self.cnn(x)
-        x = x.view(x.size(0), -1)
-        x = self.head(x)
-        x = F.tanh(x)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward. Returns logits.
+
+        x: (B, 3, H, W) [0, 1]
+        return: (B, 4) [-1, 1]
+        """
+        x = self.resnet(x)
+        x = self.fc(x)
         return x
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)

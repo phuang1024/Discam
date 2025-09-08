@@ -50,7 +50,7 @@ def simulate(videos_dataset, agent, data_dir: Path):
             frame = frame.cpu().permute(1, 2, 0).numpy() * 255
             frame = frame.astype("uint8")
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 40])
+            cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
 
             with open(data_dir / f"{index}.agent.json", "w") as f:
                 json.dump([int(x) for x in agent.bbox], f)

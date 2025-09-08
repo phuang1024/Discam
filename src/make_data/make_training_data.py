@@ -70,7 +70,7 @@ def write_frames(args, cap, bboxes):
             break
         pbar.update(1)
 
-        cv2.imwrite(str(args.output / f"{i}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 40])
+        cv2.imwrite(str(args.output / f"{i}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
         with open(args.output / f"{i}.allbbox.json", "w") as f:
             data = [int(v) for v in bboxes[i]]
             json.dump(data, f)
