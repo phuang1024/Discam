@@ -28,7 +28,8 @@ def simulate(videos_dataset, agent, data_dir: Path):
     agent: Agent to use for simulation.
     data_dir: Where to save data.
     """
-    resize = Resize(MODEL_INPUT_RES)
+    # Resize transform for model input (H, W).
+    resize = Resize(MODEL_INPUT_RES[::-1])
 
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -44,11 +45,8 @@ def simulate(videos_dataset, agent, data_dir: Path):
             frame = frames[step]
 
             # Step agent.
-            frame = frame[
-                :,
-                agent.bbox[1] : agent.bbox[3],
-                agent.bbox[0] : agent.bbox[2],
-            ]
+            bbox = list(map(int, agent.bbox))
+            frame = frame[:, bbox[1] : bbox[3], bbox[0] : bbox[2]]
             frame = resize(frame.unsqueeze(0))[0]
             agent.step(frame)
 
@@ -56,8 +54,6 @@ def simulate(videos_dataset, agent, data_dir: Path):
             frame = frame.cpu().permute(1, 2, 0).numpy() * 255
             frame = frame.astype(np.uint8)
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            cv2.imshow("frame", frame)
-            cv2.waitKey(0)
             cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
 
             with open(data_dir / f"{index}.agent.json", "w") as f:
