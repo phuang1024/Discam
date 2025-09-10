@@ -38,8 +38,16 @@ def simulate(videos_dataset, agent, data_dir: Path):
         # Reset environment.
         frames, bboxes = videos_dataset.get_rand_chunk(SIM_STEPS, SIM_FRAME_SKIP)
         frames = frames.to(DEVICE)
+
         # Set agent bbox to first gt bbox.
-        agent.bbox = (bboxes[0] + torch.randn((4,)) * SIM_START_RANDOM).tolist()
+        #randx, randy = (torch.randn((2,)) * SIM_START_RANDOM).tolist()
+        agent.bbox = bboxes[0].tolist()
+        """
+        agent.bbox[0] += randx
+        agent.bbox[2] += randx
+        agent.bbox[1] += randy
+        agent.bbox[3] += randy
+        """
 
         for step in range(SIM_STEPS):
             frame = frames[step]
