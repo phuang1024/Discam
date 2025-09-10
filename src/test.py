@@ -85,7 +85,7 @@ def main():
     parser.add_argument("--start_from_gt", action="store_true", help="Start simulation from GT bbox.")
     args = parser.parse_args()
 
-    model = DiscamModel(MODEL_INPUT_RES)
+    model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP)
     model.load_state_dict(torch.load(args.results, map_location=DEVICE))
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY)
 

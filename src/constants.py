@@ -11,7 +11,11 @@ MODEL_INPUT_RES = (640, 360)
 ## Agent parameters.
 # Pixels per step.
 AGENT_VELOCITY = 8
-# weight = tanh(diff / temp)
+# Note on the difference between velocity and temp:
+# Temp is used in model output and training: Output = logit / temp.
+#   Ideally, output should be near [-1, 1].
+#   This gives the logits more dynamic range.
+# This is then multiplied with velocity when simulating.
 EDGE_WEIGHT_TEMP = 50
 
 ## Training parameters.
@@ -20,7 +24,7 @@ BATCH_SIZE = 32
 LR = 1e-4
 
 # Number of simulations per epoch.
-SIMS_PER_EPOCH = 10
+SIMS_PER_EPOCH = 5
 # Number of training steps per epoch.
 STEPS_PER_EPOCH = 300
 # Use data from the last N epochs for training.
@@ -30,7 +34,7 @@ DATA_HISTORY = 10
 
 ## Simulation parameters.
 # Number of steps per simulation.
-SIM_STEPS = 100
+SIM_STEPS = 200
 # Frame skip between steps in simulation.
 SIM_FRAME_SKIP = 5
 # Add randomness to initial agent bbox position.

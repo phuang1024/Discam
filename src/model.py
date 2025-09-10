@@ -18,9 +18,10 @@ class DiscamModel(nn.Module):
         Negative means tend away from that edge.
     """
 
-    def __init__(self, res: tuple[int, int]):
+    def __init__(self, res: tuple[int, int], output_temp):
         super().__init__()
         self.res = res
+        self.output_temp = output_temp
 
         self.conv = nn.Sequential(
             nn.Conv2d(3, 8, 3, padding=1),
@@ -56,7 +57,7 @@ class DiscamModel(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Forward. Returns logits.
+        Forward. Returns logits / temp.
 
         x: (B, 3, H, W) [0, 1]
         return: (B, 4) [-1, 1]
@@ -64,4 +65,5 @@ class DiscamModel(nn.Module):
         x = self.conv(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
+        x = x / self.output_temp
         return x

@@ -142,7 +142,7 @@ def main():
     videos_dataset = VideosDataset(args.data)
     print("Using videos from:", args.data)
 
-    model = DiscamModel(MODEL_INPUT_RES).to(DEVICE)
+    model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP).to(DEVICE)
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY)
     print("Model:")
     print(model)
