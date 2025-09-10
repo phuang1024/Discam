@@ -47,6 +47,7 @@ class VideosDataset:
 
         return: (frames, bboxes)
             frames: (size, C, H, W) tensor, float32, in [0, 1] range
+                Uncropped, unresized frames from the video.
             bboxes: (size, 4) tensor, int64
                 (x1, y1, x2, y2) format
         """
@@ -66,13 +67,9 @@ class VideosDataset:
         i = start
         while len(frames) < size:
             frame_path = self.dir / video_name / f"{i}.frame.jpg"
+            frame = read_image(frame_path).float() / 255
+
             bbox_path = self.dir / video_name / f"{i}.allbbox.json"
-
-            frame = cv2.imread(str(frame_path))
-            #frame = cv2.resize(frame, res)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = torch.from_numpy(frame).permute(2, 0, 1).float() / 255
-
             with open(bbox_path, "r") as f:
                 bbox = json.load(f)
             bbox = torch.tensor(bbox, dtype=torch.int64)

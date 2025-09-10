@@ -4,7 +4,6 @@ Model.
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchvision.models import resnet18, ResNet18_Weights
 
 
@@ -28,9 +27,9 @@ class DiscamModel(nn.Module):
         self.resnet.fc = nn.Identity()
 
         self.fc = nn.Sequential(
-           nn.Linear(512, 256),
-              nn.ReLU(),
-              nn.Linear(256, 4), 
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 4), 
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
