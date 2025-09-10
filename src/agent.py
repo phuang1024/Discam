@@ -5,6 +5,12 @@ The agent uses the NN to control a virtual PTZ camera (a bounding box).
 
 
 class Agent:
+    """
+    self.bbox coordinates don't necessarily correspond to pixel indices of the model's input.
+    They are used in the original footage coordinate system (likely 1920x1080).
+    while the model input is defined by MODEL_INPUT_RES.
+    """
+
     def __init__(self, model, video_res, velocity):
         """
         video_res: (width, height) of input video frames.
@@ -18,6 +24,8 @@ class Agent:
     def step(self, frame):
         """
         frame: (3, H, W) RGB float32 tensor [0, 1]
+            Make sure this frame is the correct resolution, and crop (if applicable; during training).
+            Frame is given as is to model.
         return: Predicted edge weights.
             Np array.
         """

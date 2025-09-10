@@ -7,8 +7,10 @@ import json
 from pathlib import Path
 
 import cv2
+import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from torchvision.transforms import Resize
 from tqdm import trange
 
 from agent import Agent
@@ -26,35 +28,42 @@ def simulate(videos_dataset, agent, data_dir: Path):
     agent: Agent to use for simulation.
     data_dir: Where to save data.
     """
+    resize = Resize(MODEL_INPUT_RES)
+
     data_dir.mkdir(parents=True, exist_ok=True)
 
     index = 0
     for sim in trange(SIMS_PER_EPOCH, desc="Simulating"):
         # Reset environment.
-        frames, bboxes = videos_dataset.get_rand_chunk(
-            SIM_STEPS * SIM_FRAME_SKIP,
-            SIM_FRAME_SKIP,
-            MODEL_INPUT_RES,
-        )
+        frames, bboxes = videos_dataset.get_rand_chunk(SIM_STEPS, SIM_FRAME_SKIP)
         frames = frames.to(DEVICE)
-
+        # Set agent bbox to first gt bbox.
         agent.bbox = bboxes[0].tolist()
+
         for step in range(SIM_STEPS):
             frame = frames[step]
-            gt_bbox = bboxes[step]
 
             # Step agent.
+            frame = frame[
+                :,
+                agent.bbox[1] : agent.bbox[3],
+                agent.bbox[0] : agent.bbox[2],
+            ]
+            frame = resize(frame.unsqueeze(0))[0]
             agent.step(frame)
 
             # Save frame and bbox.
             frame = frame.cpu().permute(1, 2, 0).numpy() * 255
-            frame = frame.astype("uint8")
+            frame = frame.astype(np.uint8)
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            cv2.imshow("frame", frame)
+            cv2.waitKey(0)
             cv2.imwrite(str(data_dir / f"{index}.frame.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
 
             with open(data_dir / f"{index}.agent.json", "w") as f:
                 json.dump([int(x) for x in agent.bbox], f)
 
+            gt_bbox = bboxes[step]
             with open(data_dir / f"{index}.gt.json", "w") as f:
                 json.dump([int(x) for x in gt_bbox], f)
 

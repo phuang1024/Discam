@@ -37,11 +37,11 @@ class VideosDataset:
 
                 self.videos[video_dir.name] = max_num + 1
 
-    def get_rand_chunk(self, size, step, res) -> tuple[torch.Tensor, torch.Tensor]:
+    def get_rand_chunk(self, size, step) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Get a continuous chunk of frames and corresponding bboxes, length = `size`.
+        Get a continuous chunk of frames and corresponding bboxes.
 
-        size: Length of chunk.
+        size: Length (i.e. number of frames) of chunk.
         step: Step size between frames in chunk.
         res: (width, height) of frames to load.
 
@@ -63,12 +63,13 @@ class VideosDataset:
         # Read data.
         frames = []
         bboxes = []
-        for i in range(start, start + size * step, step):
+        i = start
+        while len(frames) < size:
             frame_path = self.dir / video_name / f"{i}.frame.jpg"
             bbox_path = self.dir / video_name / f"{i}.allbbox.json"
 
             frame = cv2.imread(str(frame_path))
-            frame = cv2.resize(frame, res)
+            #frame = cv2.resize(frame, res)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = torch.from_numpy(frame).permute(2, 0, 1).float() / 255
 
@@ -78,6 +79,8 @@ class VideosDataset:
 
             frames.append(frame)
             bboxes.append(bbox)
+
+            i += step
 
         frames = torch.stack(frames, dim=0)
         bboxes = torch.stack(bboxes, dim=0)
