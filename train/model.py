@@ -41,7 +41,7 @@ class DiscamModel(nn.Module):
             nn.MaxPool2d(4),
         )
 
-        # For 640x360, this is 40*22.5*16 = 14400
+        # For 640x360, this is 40*22*16 = 14080
         out_neurons = (res[0] // 16) * (res[1] // 16) * 16
         self.fc = nn.Sequential(
             nn.Linear(out_neurons, 1024),
