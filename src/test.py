@@ -100,10 +100,11 @@ def main():
 
         # Run agent step.
         img_t = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        agent_bbox = tuple(map(int, agent.bbox))
+        img_t = img_t[agent_bbox[1] : agent_bbox[3], agent_bbox[0] : agent_bbox[2]]
         img_t = cv2.resize(img_t, MODEL_INPUT_RES)
         img_t = torch.from_numpy(img_t).permute(2, 0, 1).float() / 255.0
         pred_edge_weights = agent.step(img_t)
-        agent_bbox = tuple(map(int, agent.bbox))
 
         # Read GT bbox.
         gt_path = args.data / f"{i}.allbbox.json"
@@ -113,6 +114,7 @@ def main():
         if args.start_from_gt and i == 0:
             agent.set_bbox(gt_bbox)
 
+        agent_bbox = tuple(map(int, agent.bbox))
         vis = draw_visualization(img, gt_bbox, agent_bbox, pred_edge_weights, args.crop)
         cv2.imshow("img", vis)
         cv2.waitKey(1)
