@@ -34,4 +34,4 @@ SIM_STEPS = 100
 # Frame skip between steps in simulation.
 SIM_FRAME_SKIP = 5
 # Add randomness to initial agent bbox position.
-SIM_START_RANDOM = 40
+#SIM_START_RANDOM = 40

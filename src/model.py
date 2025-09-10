@@ -4,7 +4,7 @@ Model.
 
 import torch
 import torch.nn as nn
-from torchvision.models import resnet18, ResNet18_Weights
+#from torchvision.models import resnet18, ResNet18_Weights
 
 
 class DiscamModel(nn.Module):
@@ -20,16 +20,38 @@ class DiscamModel(nn.Module):
 
     def __init__(self, res: tuple[int, int]):
         super().__init__()
-
         self.res = res
 
-        self.resnet = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        self.resnet.fc = nn.Identity()
-
-        self.fc = nn.Sequential(
-            nn.Linear(512, 256),
+        self.conv = nn.Sequential(
+            nn.Conv2d(3, 8, 3, padding=1),
             nn.ReLU(),
-            nn.Linear(256, 4), 
+            nn.BatchNorm2d(8),
+            nn.Conv2d(8, 8, 3, padding=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(8),
+            nn.MaxPool2d(4),
+
+            nn.Conv2d(8, 16, 3, padding=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(16),
+            nn.Conv2d(16, 16, 3, padding=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(16),
+            nn.MaxPool2d(4),
+        )
+
+        # For 640x360, this is 40*22.5*16 = 14400
+        out_neurons = (res[0] // 16) * (res[1] // 16) * 16
+        self.fc = nn.Sequential(
+            nn.Linear(out_neurons, 1024),
+            nn.LeakyReLU(),
+            nn.Linear(1024, 512),
+            nn.LeakyReLU(),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(),
+            nn.Linear(256, 128),
+            nn.LeakyReLU(),
+            nn.Linear(128, 4),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -39,6 +61,7 @@ class DiscamModel(nn.Module):
         x: (B, 3, H, W) [0, 1]
         return: (B, 4) [-1, 1]
         """
-        x = self.resnet(x)
+        x = self.conv(x)
+        x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
