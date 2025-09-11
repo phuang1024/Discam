@@ -1,6 +1,11 @@
 """
-Utils for computing difference between frames,
-using frame alignment.
+Utils for computing difference between frames.
+
+Procedure:
+1. Align frames using ORB feature matching.
+2. Compute absolute difference, and apply threshold and mult.
+3. Blur and downsample to reduce noise.
+4. Compute bounding box of salient areas.
 """
 
 import cv2
@@ -35,11 +40,12 @@ def align_frame(img1, img2):
     return aligned
 
 
-def frame_diff(img1, img2, floor=0.05, mult=5, blur=3):
+def frame_diff(img1, img2, floor=0.05, mult=5):
     """
     Aligns frames and computes absolute difference.
 
-    Returns grayscale (H, W) float32 [0 to 1] image.
+    return: Grayscale image of magnitude of difference.
+        ndarray float32 (H, W) [0, 1]
     """
     aligned = align_frame(img1, img2)
 
@@ -47,11 +53,6 @@ def frame_diff(img1, img2, floor=0.05, mult=5, blur=3):
     diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
 
     diff = ((diff - floor) * mult).clip(0, 1)
-
-    #diff = (diff * 255).astype(np.uint8)
-    #diff = cv2.blur(diff, (blur, blur), 0)
-
-    #diff = diff.astype(np.float32) / 255.0
 
     return diff
 
@@ -61,11 +62,13 @@ def compute_bbox(diff, thres=0.4, downsample=4, blur=3, padding=50):
     Compute bounding box of salient areas
     using techniques to reduce noise.
 
-    diff: (H, W) float32 [0 to 1] image.
-    thres: Saliency threshold, between 0 and 1.
+    diff: ndarray float32 (H, W) [0, 1] image.
+    thres: Threshold, between 0 and 1.
     downsample: Downsample factor.
     blur: Box blur kernel size.
     padding: Padding in pixels.
+    return: (x1, y1, x2, y2) bbox.
+        None if no salient area found.
     """
     diff = (diff * 255).astype(np.uint8)
     h, w = diff.shape

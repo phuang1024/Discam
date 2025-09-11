@@ -21,7 +21,7 @@ class VideosDataset:
     Load frames and bboxes of video.
 
     Note: This is not a traditional PyTorch dataset.
-    It is a handler that loads chunks of frames randomly.
+    It loads chunks of frames randomly.
     """
 
     def __init__(self, dir: Path):
@@ -48,10 +48,10 @@ class VideosDataset:
         res: (width, height) of frames to load.
 
         return: (frames, bboxes)
-            frames: (size, C, H, W) tensor, float32, in [0, 1] range
-                Uncropped, unresized frames from the video.
-            bboxes: (size, 4) tensor, int64
-                (x1, y1, x2, y2) format
+            frames: Uncropped, unresized frames from the video.
+                tensor float32 (size, C, H, W) [0, 1]
+            bboxes: (x1, y1, x2, y2) corresponding to each frame.
+                tensor int64 (size, 4)
         """
         # Sample random video weighted by length.
         video_name = random.choices(
@@ -89,12 +89,14 @@ class VideosDataset:
 
 class SimulatedDataset(Dataset):
     """
-    Conventional PyTorch dataset. Loads simulated data from train.py:simulate()
+    Conventional PyTorch dataset.
+    Loads simulated data generated from train.py:simulate().
 
     XY pairs:
-        x: frame (3, H, W) float32 tensor in [0, 1] range
-        y: expected edge weights (4,) float32 [-1, 1] tensor
-            This is computed with the difference between agent's bbox and gt bbox.
+        x: Image frame.
+            tensor float32 (3, H, W) [0, 1]
+        y: Ground truth edge weights. This is computed using the difference between agent's bbox and gt bbox.
+            tensor float32 (4,) [-1, 1]
     """
 
     def __init__(self, dirs: list[Path]):
@@ -148,13 +150,15 @@ class SimulatedDataset(Dataset):
 
 def compute_edge_weights(agent_bbox, gt_bbox) -> torch.Tensor:
     """
-    Compute edge weights from agent bbox and gt bbox.
+    Compute ground truth edge weights from the difference between agent and gt bbox.
 
-    agent_bbox: (4,) tensor, float32
-    gt_bbox: (4,) tensor, float32
+    agent_bbox:
+        tensor float32 (4,)
+    gt_bbox:
+        tensor float32 (4,)
 
-    return: (4,) tensor, float32
-        Edge weights in order: (up, right, down, left)
+    return: Edge weights in order: (up, right, down, left)
+        tensor float32 [-1, 1]
     """
     edge_weights = torch.tensor([
         agent_bbox[1] - gt_bbox[1],  # up

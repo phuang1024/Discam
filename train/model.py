@@ -4,18 +4,18 @@ Model.
 
 import torch
 import torch.nn as nn
-#from torchvision.models import resnet18, ResNet18_Weights
 
 
 class DiscamModel(nn.Module):
     """
-    CNN model.
+    CNN and fully connected model.
 
     Input: (B, 3, H, W) [0, 1]
     Output: (B, 4) [-1, 1]
-        up, right, down, left
-        Positive means tend toward that edge.
-        Negative means tend away from that edge.
+        (up, right, down, left)
+        Positive means tend toward that edge. Negative means tend away from that edge.
+            I.e. for the bottom edge, positive means move that edge down.
+        Note: Output is logits / temp, so can be outside [-1, 1].
     """
 
     def __init__(self, res: tuple[int, int], output_temp):
@@ -27,17 +27,21 @@ class DiscamModel(nn.Module):
             nn.Conv2d(3, 8, 3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(8),
+
             nn.Conv2d(8, 8, 3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(8),
+
             nn.MaxPool2d(4),
 
             nn.Conv2d(8, 16, 3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(16),
+
             nn.Conv2d(16, 16, 3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(16),
+
             nn.MaxPool2d(4),
         )
 

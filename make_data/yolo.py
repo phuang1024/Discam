@@ -1,5 +1,7 @@
 """
 Utils for using YOLO to detect people.
+
+Note: Currently not used in main pipeline.
 """
 
 import cv2

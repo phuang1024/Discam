@@ -1,5 +1,21 @@
 """
 Global constants, mainly for training.
+
+Note on the difference between velocity and temp:
+Temp is used in model output: output = logit / temp.
+  Ideally, output should be near [-1, 1], because ground truth edge weights are in this range.
+  This gives the logits more dynamic range.
+Output is then multiplied with velocity when simulating, to determine how many pixels to move.
+
+Note on the difference between bbox and edge weights:
+Bounding box is a region of the frame.
+    The agent has a bbox (it's current view).
+    Ground truth bboxes are generated based on motion detection.
+Edge weights is a command to shift the bbox.
+    In deployment, the NN will continuously compute edge weights,
+    which are converted into PTZ movements.
+    In training, a ground truth edge weight is calculated
+    from the difference between the agent bbox and the ground truth bbox.
 """
 
 import torch
@@ -11,11 +27,7 @@ MODEL_INPUT_RES = (640, 360)
 ## Agent parameters.
 # Pixels per step.
 AGENT_VELOCITY = 8
-# Note on the difference between velocity and temp:
-# Temp is used in model output and training: Output = logit / temp.
-#   Ideally, output should be near [-1, 1].
-#   This gives the logits more dynamic range.
-# This is then multiplied with velocity when simulating.
+# Temperature for model output.
 EDGE_WEIGHT_TEMP = 50
 
 ## Training parameters.

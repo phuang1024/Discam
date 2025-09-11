@@ -1,5 +1,9 @@
 """
-Generate training data from bounding box data and video.
+Generate training data for every frame from bounding box data and video.
+
+Run make_bbox_data.py first to generate bounding box data.
+
+Uses linear interpolation and EMA to smooth bounding boxes.
 """
 
 import argparse
@@ -15,8 +19,13 @@ from utils import EMA
 
 def interploate_bboxes(bboxes, total_frames):
     """
-    Interpolate bboxes between given bboxes.
-    Indices range from 0 to total_frames - 1.
+    Use linear interpolation and EMA to calculate bounding boxes for all frames.
+
+    bboxes: Dictionary of {frame_index: bbox}.
+        Indices should range from 0 to total_frames - 1.
+    total_frames: Total number of frames in the video.
+    return:
+        ndarray int32 (total_frames, 4)
     """
     keys = sorted(bboxes.keys())
 
@@ -43,6 +52,9 @@ def interploate_bboxes(bboxes, total_frames):
 
 
 def vis_crop(cap, bboxes):
+    """
+    Crop and visualize each frame.
+    """
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -60,6 +72,9 @@ def vis_crop(cap, bboxes):
 
 
 def write_frames(args, cap, bboxes):
+    """
+    Save each frame and corresponding bbox data.
+    """
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 

@@ -1,5 +1,5 @@
 """
-Test a model.
+Test and visualize model in a simulated environment.
 """
 
 import argparse
@@ -17,6 +17,17 @@ from model import DiscamModel
 
 
 def draw_edge_weights(frame, weights, bbox, color, size=50, offset=0):
+    """
+    Draw perpendicular lines on bbox edge to indicate edge weights.
+
+    frame: BGR image.
+        ndarray uint8 (H, W, 3) [0, 255]
+    weights: Edge weights in order: (up, right, down, left)
+    bbox: (x1, y1, x2, y2)
+    color: BGR color tuple.
+    size: Maximum length of line.
+    offset: Offset parallel to edge (to draw multiple sets of weights without overlap).
+    """
     def draw_line(p1, p2):
         cv2.line(frame, tuple(p1.astype(int)), tuple(p2.astype(int)), color, 2)
 
@@ -49,14 +60,14 @@ def draw_visualization(frame, gt_bbox, agent_bbox, pred_edge_weights, crop: bool
     """
     Draw an image to visualize the model.
 
-    frame: Full image.
-        ndarray, uint8, BGR
+    frame: Full BGR image.
+        ndarray uint8 (H, W, 3) [0, 255]
     gt: Ground truth bbox (x1, y1, x2, y2)
     pred: Predicted bbox
+    crop: See below.
 
     If crop:
         Frame is cropped to model's prediction.
-
     Else:
         Original frame is kept. 
     """
@@ -79,9 +90,9 @@ def draw_visualization(frame, gt_bbox, agent_bbox, pred_edge_weights, crop: bool
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--results", type=Path, required=True, help="Path to results directory.")
-    parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
-    parser.add_argument("--crop", action="store_true", help="Show cropped output.")
+    parser.add_argument("--model", type=Path, required=True, help="Path to model.")
+    parser.add_argument("--data", type=Path, required=True, help="Path to data dir of a single video.")
+    parser.add_argument("--crop", action="store_true", help="Whether to show cropped output.")
     parser.add_argument("--start_from_gt", action="store_true", help="Start simulation from GT bbox.")
     parser.add_argument("--start_from_random", action="store_true", help="Start simulation from random bbox.")
     args = parser.parse_args()

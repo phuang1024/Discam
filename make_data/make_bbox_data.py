@@ -1,9 +1,9 @@
 """
-Generate bounding box data from a video.
+Generate bounding box data every N frames from a video.
 
 Video must be a stationary camera.
 Manually mark quadrilateral field region.
-Detects and bounds motion in the ROI.
+See README.md for more details.
 """
 
 import argparse
@@ -21,18 +21,29 @@ from utils import EMA, bbox_aspect
 
 def make_roi_mask(roi, width, height):
     """
-    Draw quadrilateral ROI.
+    Render quadrilateral ROI.
 
     roi: Data read from JSON file.
+    return: Mask image.
+        ndarray uint8 (H, W) [0, 255]
     """
     mask = np.zeros((height, width), dtype=np.uint8)
     pts = np.array(list(roi.values()), dtype=np.int32)
     cv2.fillPoly(mask, [pts], 255)
-    #mask_bool = mask.astype(bool)
     return mask
 
 
 def vis_bbox(frame, diff, bbox):
+    """
+    Visualize bounding box and differences.
+    Creates cv2 window.
+
+    frame: BGR image.
+        ndarray uint8 (H, W, 3) [0, 255]
+    diff: Frame difference.
+        ndarray float32 (H, W) [0, 1]
+    bbox: (x1, y1, x2, y2) bbox.
+    """
     frame = frame.copy()
 
     x1, y1, x2, y2 = bbox
@@ -48,6 +59,9 @@ def vis_bbox(frame, diff, bbox):
 
 
 def process_frames(args, cap, mask):
+    """
+    Process every N frames and save bounding box data.
+    """
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

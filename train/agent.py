@@ -1,14 +1,24 @@
 """
 This file defines the Agent class.
+
 The agent uses the NN to control a virtual PTZ camera (a bounding box).
+
+This is used for training and testing, simulating a PTZ camera on a fixed frame video.
 """
 
 
 class Agent:
     """
-    self.bbox coordinates don't necessarily correspond to pixel indices of the model's input.
-    They are used in the original footage coordinate system (likely 1920x1080).
-    while the model input is defined by MODEL_INPUT_RES.
+    Virtual PTZ camera agent.
+
+    Agent bounding box is self.bbox.
+
+    TODO data type
+
+    self.bbox coordinates correspond to the original video resolution.
+    This is whatever video is used for training or testing.
+    This means self.bbox does not necessarily correspond to pixel indices of the model's input,
+    because model input res is defined by MODEL_INPUT_RES.
     """
 
     def __init__(self, model, video_res, velocity):
@@ -27,7 +37,7 @@ class Agent:
             Make sure this frame is the correct resolution, and crop (if applicable; during training).
             Frame is given as is to model.
         return: Predicted edge weights.
-            Np array.
+            ndarray float32 (4,)
         """
         frame = frame.unsqueeze(0)  # (1, 3, H, W)
 
@@ -42,7 +52,7 @@ class Agent:
 
     def set_bbox(self, bbox):
         """
-        Checks bounds after.
+        Checks bounds after setting.
 
         bbox: (x1, y1, x2, y2)
         """
@@ -52,6 +62,7 @@ class Agent:
     def check_bbox_bounds(self):
         """
         Ensure bbox is within and smaller than video frame.
+        Maintains original bbox size (unless bbox is larger than frame).
         """
         x1, y1, x2, y2 = self.bbox
 
@@ -94,6 +105,7 @@ def apply_edge_weights(bbox, edges, aspect, velocity, min_size=20):
     edges: (up, right, down, left) in [-1, 1]
     aspect: Target aspect ratio (width / height).
     velocity: Max pixels to move per step.
+    return: New (x1, y1, x2, y2)
     """
     x1, y1, x2, y2 = bbox
     x1 -= velocity * edges[3]

@@ -22,11 +22,11 @@ from model import DiscamModel
 @torch.no_grad()
 def simulate(videos_dataset, agent, data_dir: Path):
     """
-    Simulate data for one epoch of training.
+    Simulate data and save to disk for one epoch of training.
 
     videos_dataset: Instance of VideosDataset to sample from.
     agent: Agent to use for simulation.
-    data_dir: Where to save data.
+    data_dir: Where to save data (epoch path).
     """
     # Resize transform for model input (H, W).
     resize = Resize(MODEL_INPUT_RES[::-1])
@@ -78,8 +78,13 @@ def simulate(videos_dataset, agent, data_dir: Path):
 
 def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_step, save):
     """
+    Simulate and train a single epoch.
+
+    data_dirs: List of directories of **simulated data** to use for training.
+        Not to be confused with original videos, or bbox data from make_data/*.
     tb_writer: TensorBoard SummaryWriter.
     global_step: Current global step for logging.
+    save: Whether to save the model at the end of the epoch.
     """
     dataset = SimulatedDataset(data_dirs)
     dataloader = torch.utils.data.DataLoader(

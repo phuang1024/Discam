@@ -1,5 +1,5 @@
 """
-Utilities.
+Misc utilities for data generation.
 """
 
 
@@ -29,13 +29,15 @@ class EMA:
 def bbox_aspect(bbox, aspect, width, height):
     """
     Adjust bounding box to given aspect ratio.
-    Will always expand box.
+
+    Expand bbox along the shorter axis (compared to target aspect).
     Respects image boundaries.
 
-    Warning: Does nothing if bbox ends up larger than image.
+    Warning: Does not raise error if bbox ends up larger than image.
 
     bbox: (x1, y1, x2, y2)
-    aspect: width / height
+    aspect: Target width / height
+    return: Aspect corrected (x1, y1, x2, y2)
     """
     x1, y1, x2, y2 = bbox
     curr_aspect = (x2 - x1) / (y2 - y1)
