@@ -83,6 +83,7 @@ def main():
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
     parser.add_argument("--crop", action="store_true", help="Show cropped output.")
     parser.add_argument("--start_from_gt", action="store_true", help="Start simulation from GT bbox.")
+    parser.add_argument("--start_from_random", action="store_true", help="Start simulation from random bbox.")
     args = parser.parse_args()
 
     model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP)
@@ -113,6 +114,12 @@ def main():
 
         if args.start_from_gt and i == 0:
             agent.set_bbox(gt_bbox)
+        elif args.start_from_random and i == 0:
+            x1 = np.random.randint(0, VIDEO_RES[0] - 100)
+            y1 = np.random.randint(0, VIDEO_RES[1] - 100)
+            x2 = np.random.randint(x1 + 50, VIDEO_RES[0])
+            y2 = np.random.randint(y1 + 50, VIDEO_RES[1])
+            agent.set_bbox((x1, y1, x2, y2))
 
         agent_bbox = tuple(map(int, agent.bbox))
         vis = draw_visualization(img, gt_bbox, agent_bbox, pred_edge_weights, args.crop)
