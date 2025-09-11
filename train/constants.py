@@ -29,13 +29,16 @@ SIMS_PER_EPOCH = 5
 STEPS_PER_EPOCH = 300
 # Use data from the last N epochs for training.
 DATA_HISTORY = 10
-# Number of epochs per training session.
-#EPOCHS_PER_SESSION = 10
+# Frequency of applying augmentations.
+AUG_FREQ = 0.2
 
 ## Simulation parameters.
 # Number of steps per simulation.
 SIM_STEPS = 200
 # Frame skip between steps in simulation.
 SIM_FRAME_SKIP = 5
-# Add randomness to initial agent bbox position.
-#SIM_START_RANDOM = 40
+# Frequency of random perturbations during simulation.
+SIM_RAND_FREQ = 0.05
+# Magnitude of random perturbations. Applied as edge weights for a single step.
+# So the expected movement is SIM_RAND_MAG * AGENT_VELOCITY.
+SIM_RAND_MAG = 10

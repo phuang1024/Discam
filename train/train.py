@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import Resize
 from tqdm import trange
 
-from agent import Agent
+from agent import Agent, apply_edge_weights
 from constants import *
 from dataset import VideosDataset, SimulatedDataset
 from model import DiscamModel
@@ -40,17 +40,17 @@ def simulate(videos_dataset, agent, data_dir: Path):
         frames = frames.to(DEVICE)
 
         # Set agent bbox to first gt bbox.
-        #randx, randy = (torch.randn((2,)) * SIM_START_RANDOM).tolist()
         agent.bbox = bboxes[0].tolist()
-        """
-        agent.bbox[0] += randx
-        agent.bbox[2] += randx
-        agent.bbox[1] += randy
-        agent.bbox[3] += randy
-        """
 
         for step in range(SIM_STEPS):
             frame = frames[step]
+
+            # Apply random perturb
+            if np.random.random() < SIM_RAND_FREQ:
+                rand_weights = np.random.randn(4) * SIM_RAND_MAG
+                aspect = MODEL_INPUT_RES[0] / MODEL_INPUT_RES[1]
+                new_bbox = apply_edge_weights(agent.bbox, rand_weights, aspect, AGENT_VELOCITY)
+                agent.set_bbox(new_bbox)
 
             # Step agent.
             bbox = list(map(int, agent.bbox))

@@ -132,7 +132,8 @@ class SimulatedDataset(Dataset):
 
         frame_path = dir / f"{index}.frame.jpg"
         frame = read_image(str(frame_path)).float() / 255
-        frame = self.image_augs(frame)
+        if random.random() < AUG_FREQ:
+            frame = self.image_augs(frame)
 
         agent_path = dir / f"{index}.agent.json"
         gt_path = dir / f"{index}.gt.json"
