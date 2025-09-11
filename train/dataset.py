@@ -1,13 +1,15 @@
 """
 Dataset classes for training.
+
+Running this file will show a visualization of augmentations.
 """
 
 import json
 import random
 from pathlib import Path
 
-import cv2
 import torch
+import torchvision.transforms.v2 as T
 from torch.utils.data import Dataset
 from torchvision.io import read_image
 
@@ -109,6 +111,14 @@ class SimulatedDataset(Dataset):
                         length = num
             self.lengths.append(length)
 
+        # Augmentations
+        self.image_augs = T.Compose([
+            T.RandomRotation(degrees=10),
+            T.ElasticTransform(alpha=10),
+            T.RandomResizedCrop(MODEL_INPUT_RES[::-1], scale=(0.8, 1.0), ratio=(0.9, 1 / 0.9)),
+            T.ColorJitter(brightness=0.4, contrast=0.3, saturation=0.4, hue=0.3),
+        ])
+
     def __len__(self):
         return sum(self.lengths)
 
@@ -121,15 +131,15 @@ class SimulatedDataset(Dataset):
         dir = self.dirs[dir_index]
 
         frame_path = dir / f"{index}.frame.jpg"
+        frame = read_image(str(frame_path)).float() / 255
+        frame = self.image_augs(frame)
+
         agent_path = dir / f"{index}.agent.json"
         gt_path = dir / f"{index}.gt.json"
-
-        frame = read_image(str(frame_path)).float() / 255
         with open(agent_path, "r") as f:
             agent_bbox = torch.tensor(json.load(f), dtype=torch.float32)
         with open(gt_path, "r") as f:
             gt_bbox = torch.tensor(json.load(f), dtype=torch.float32)
-
         edge_weights = compute_edge_weights(agent_bbox, gt_bbox)
 
         return frame, edge_weights
@@ -154,3 +164,26 @@ def compute_edge_weights(agent_bbox, gt_bbox) -> torch.Tensor:
     edge_weights = torch.tanh(edge_weights / EDGE_WEIGHT_TEMP)
 
     return edge_weights
+
+
+if __name__ == "__main__":
+    import argparse
+    import matplotlib.pyplot as plt
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data", type=Path, help="NOTE: Should be a simulated epoch from training.")
+    args = parser.parse_args()
+
+    dataset = SimulatedDataset([args.data])
+
+    to_pil = T.ToPILImage()
+    for i in range(15):
+        img, _ = dataset[i]
+        img = to_pil(img)
+
+        plt.subplot(5, 3, i + 1)
+        plt.imshow(img)
+        plt.axis("off")
+
+    plt.tight_layout()
+    plt.savefig("augs.png", dpi=300)
