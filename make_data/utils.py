@@ -2,13 +2,15 @@
 Misc utilities for data generation.
 """
 
+import numpy as np
+
 
 class EMA:
     """
     Temporal exponential moving average.
     """
 
-    def __init__(self, alpha=0.8):
+    def __init__(self, alpha):
         """
         alpha: Smoothing factor, between 0 and 1.
         """
@@ -20,13 +22,12 @@ class EMA:
         x: New input, numpy array.
         """
         if self.ema is None:
-            self.ema = x
-        else:
-            self.ema = (self.ema * self.alpha) + (x * (1 - self.alpha))
+            self.ema = np.zeros_like(x)
+        self.ema = (self.ema * self.alpha) + (x * (1 - self.alpha))
         return self.ema
 
 
-def bbox_aspect(bbox, aspect, width, height):
+def bbox_aspect_correction(bbox, aspect, width, height):
     """
     Adjust bounding box to given aspect ratio.
 

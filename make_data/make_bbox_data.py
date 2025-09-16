@@ -15,8 +15,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from frame_diff import frame_diff, compute_bbox
-from utils import EMA, bbox_aspect
+from frame_diff import DiffFilter, frame_diff, compute_bbox
+from utils import bbox_aspect_correction
 
 
 def make_roi_mask(roi, width, height):
@@ -70,8 +70,7 @@ def process_frames(args, cap, mask):
     write_index = 0
     frame_queue = deque(maxlen=args.compare_step)
 
-    diff_ema = EMA()
-    diff_mult = 2
+    diff_filter = DiffFilter()
 
     pbar = tqdm(total=total_frames)
     while True:
@@ -85,14 +84,14 @@ def process_frames(args, cap, mask):
         if read_index % args.frame_step == 0:
             frame1 = frame_queue[0]
             frame2 = frame_queue[-1]
+
             diff = frame_diff(frame1, frame2)
-            diff = diff_ema.update(diff)
-            diff = (diff * diff_mult).clip(0, 1)
+            diff = diff_filter.process(diff)
             diff = diff * mask
 
             bbox = compute_bbox(diff, thres=0.2)
             assert bbox is not None
-            bbox = bbox_aspect(bbox, aspect=width / height, width=width, height=height)
+            bbox = bbox_aspect_correction(bbox, aspect=width / height, width=width, height=height)
             #vis_bbox(frame, diff, bbox)
 
             # Write frame

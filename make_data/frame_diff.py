@@ -2,14 +2,32 @@
 Utils for computing difference between frames.
 
 Procedure:
-1. Align frames using ORB feature matching.
-2. Compute absolute difference, and apply threshold and mult.
-3. Blur and downsample to reduce noise.
-4. Compute bounding box of salient areas.
+
+1. Frame difference:
+Let img1, img2 be two frames.
+Align img1 and img2 with ORB feature matching.
+diff = abs(img1 - img2)
+
+2. Temporal filters:
+   There are two goals with this:
+   - Reduce transient noise.
+   - Amplify changes over longer spaces.
+   We keep an excitability / inhibition map.
+diff = EMA(diff)
+inhibit = EMA(diff)  # Double EMA, this one with higher alpha.
+diff = diff - inhibit
+
+3. Bounding box:
+diff = downsample(diff)
+diff = median_blur(diff)
+diff = diff > threshold
+bbox = bbox(diff)
 """
 
 import cv2
 import numpy as np
+
+from utils import EMA
 
 
 def align_frame(img1, img2):
@@ -40,9 +58,10 @@ def align_frame(img1, img2):
     return aligned
 
 
-def frame_diff(img1, img2, floor=0.05, mult=5):
+def frame_diff(img1, img2, mult=5, add=0):
     """
     Aligns frames and computes absolute difference.
+    Adds linear scaling/offset, and clips.
 
     return: Grayscale image of magnitude of difference.
         ndarray float32 (H, W) [0, 1]
@@ -52,12 +71,46 @@ def frame_diff(img1, img2, floor=0.05, mult=5):
     diff = cv2.absdiff(aligned, img2)
     diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
 
-    diff = ((diff - floor) * mult).clip(0, 1)
+    diff = (diff + add) * mult
+    diff = np.clip(diff, 0, 1)
 
     return diff
 
 
-def compute_bbox(diff, thres=0.4, downsample=4, blur=3, padding=50):
+class DiffFilter:
+    """
+    Temporal filter for frame diffs.
+    """
+
+    def __init__(self, inhibit_weight=1):
+        self.diff_ema = EMA(0.6)
+        self.inhibit_ema = EMA(0.9)
+        self.inhibit_weight = inhibit_weight
+
+    def process(self, diff, mult=2):
+        """
+        Process new diff frame.
+
+        diff: ndarray float32 (H, W) [0, 1] image.
+        return: Filtered diff.
+            ndarray float32 (H, W) [0, 1] image.
+        """
+        diff = self.diff_ema.update(diff)
+        inhibit = self.inhibit_ema.update(diff)
+
+        # Dialate inhibit
+        kernel = np.ones((5, 5), np.uint8)
+        inhibit = cv2.dilate(inhibit, kernel, iterations=2)
+
+        diff = diff - inhibit * self.inhibit_weight
+
+        diff = diff * mult
+        diff = np.clip(diff, 0, 1)
+
+        return diff
+
+
+def compute_bbox(diff, thres, downsample=4, blur=3, padding=50):
     """
     Compute bounding box of salient areas
     using techniques to reduce noise.
