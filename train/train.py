@@ -149,7 +149,7 @@ def main():
     print("Using videos from:", args.data)
 
     model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP).to(DEVICE)
-    agent = Agent(model, VIDEO_RES, AGENT_VELOCITY)
+    agent = Agent(model, VIDEO_RES, AGENT_VELOCITY * SIM_FRAME_SKIP)
     print("Model:")
     print(model)
     print("Number of parameters:", sum(p.numel() for p in model.parameters()))

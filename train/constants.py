@@ -26,9 +26,9 @@ MODEL_INPUT_RES = (640, 360)
 
 ## Agent parameters.
 # Pixels per step.
-AGENT_VELOCITY = 8
+AGENT_VELOCITY = 5
 # Temperature for model output.
-EDGE_WEIGHT_TEMP = 50
+EDGE_WEIGHT_TEMP = 100
 
 ## Training parameters.
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
