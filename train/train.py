@@ -133,6 +133,7 @@ def main():
     parser.add_argument("--results", type=Path, required=True, help="Path to results directory.")
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs to train.")
+    parser.add_argument("--resume", type=Path, help="Path to model.pt to resume from.")
     parser.add_argument("--save_every", type=int, default=5, help="Save every N epochs.")
     args = parser.parse_args()
     args.results.mkdir(parents=True, exist_ok=True)
@@ -144,7 +145,7 @@ def main():
     print("  Device:", DEVICE)
     print("  Results path:", args.results)
 
-    videos_dataset = VideosDataset(args.data)
+    videos_dataset = VideosDataset(args.data, BBOX_FRAME_OFFSET)
     print("Using videos from:", args.data)
 
     model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP).to(DEVICE)
@@ -152,6 +153,10 @@ def main():
     print("Model:")
     print(model)
     print("Number of parameters:", sum(p.numel() for p in model.parameters()))
+
+    if args.resume is not None:
+        print("Resuming from", args.resume)
+        model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
     prev_data_dirs = []
     for epoch in range(args.epochs):

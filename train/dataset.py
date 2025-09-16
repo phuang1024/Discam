@@ -24,8 +24,15 @@ class VideosDataset:
     It loads chunks of frames randomly.
     """
 
-    def __init__(self, dir: Path):
+    def __init__(self, dir: Path, offset: int):
+        """
+        dir: Directory containing subdirectories of processed video data.
+        offset: Number of frames to offset bbox relative to image.
+            Nonnegative number.
+            Higher value means a frame gets a future bbox.
+        """
         self.dir = dir
+        self.offset = offset
 
         self.videos = {}
         for video_dir in dir.iterdir():
@@ -37,7 +44,7 @@ class VideosDataset:
                         if num > max_num:
                             max_num = num
 
-                self.videos[video_dir.name] = max_num + 1
+                self.videos[video_dir.name] = max_num + 1 - offset
 
     def get_rand_chunk(self, size, step) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -71,7 +78,7 @@ class VideosDataset:
             frame_path = self.dir / video_name / f"{i}.frame.jpg"
             frame = read_image(frame_path).float() / 255
 
-            bbox_path = self.dir / video_name / f"{i}.allbbox.json"
+            bbox_path = self.dir / video_name / f"{i + self.offset}.allbbox.json"
             with open(bbox_path, "r") as f:
                 bbox = json.load(f)
             bbox = torch.tensor(bbox, dtype=torch.int64)

@@ -35,6 +35,9 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 32
 LR = 1e-4
 
+# Offset between bbox and frame.
+BBOX_FRAME_OFFSET = 10
+
 # Number of simulations per epoch.
 SIMS_PER_EPOCH = 5
 # Number of training steps per epoch.
@@ -52,5 +55,5 @@ SIM_FRAME_SKIP = 5
 # Frequency of random perturbations during simulation.
 SIM_RAND_FREQ = 0.05
 # Magnitude of random perturbations. Applied as edge weights for a single step.
-# So the expected movement is SIM_RAND_MAG * AGENT_VELOCITY.
+# So the average randomness is SIM_RAND_MAG * AGENT_VELOCITY.
 SIM_RAND_MAG = 10
