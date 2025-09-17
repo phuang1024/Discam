@@ -57,7 +57,7 @@ def frame_diff(img1, img2, floor=0.05, mult=5):
     return diff
 
 
-def compute_bbox(diff, thres=0.4, downsample=4, blur=3, padding=50):
+def compute_bbox(diff, thres=0.3, downsample=4, blur=3, padding=50):
     """
     Compute bounding box of salient areas
     using techniques to reduce noise.
