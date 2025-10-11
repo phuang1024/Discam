@@ -74,6 +74,7 @@ def process_frames(args, cap, mask):
     diff_mult = 2
 
     pbar = tqdm(total=total_frames)
+    bbox = None
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -90,7 +91,11 @@ def process_frames(args, cap, mask):
             diff = (diff * diff_mult).clip(0, 1)
             diff = diff * mask
 
-            bbox = compute_bbox(diff, thres=0.2)
+            curr_bbox = compute_bbox(diff, thres=0.2)
+            if curr_bbox is not None:
+                bbox = curr_bbox
+            else:
+                print("Warning: No bbox detected for frame", read_index)
             assert bbox is not None
             bbox = bbox_aspect(bbox, aspect=width / height, width=width, height=height)
             #vis_bbox(frame, diff, bbox)

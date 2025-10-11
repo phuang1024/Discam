@@ -173,6 +173,14 @@ def compute_edge_weights(agent_bbox, gt_bbox) -> torch.Tensor:
         gt_bbox[3] - agent_bbox[3],  # down
         agent_bbox[0] - gt_bbox[0],  # left
     ])
+
+    """
+    # Scale positive edge weights.
+    for i in range(4):
+        if edge_weights[i] > 0:
+            edge_weights[i] *= 2
+    """
+
     edge_weights = torch.tanh(edge_weights / EDGE_WEIGHT_TEMP)
 
     return edge_weights

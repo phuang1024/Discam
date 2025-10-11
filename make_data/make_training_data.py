@@ -51,6 +51,29 @@ def interploate_bboxes(bboxes, total_frames):
     return ret
 
 
+def max_filter(bboxes, size=15):
+    """
+    Filter bboxes with a max area filter.
+    I.e. a min filter for top and left edges,
+    and a max filter for bottom and right edges.
+    """
+    new_bboxes = bboxes.copy()
+    half = size // 2
+    total_frames = len(bboxes)
+    for i in range(total_frames):
+        start = max(0, i - half)
+        end = min(total_frames, i + half + 1)
+
+        x1 = np.min(bboxes[start:end, 0])
+        y1 = np.min(bboxes[start:end, 1])
+        x2 = np.max(bboxes[start:end, 2])
+        y2 = np.max(bboxes[start:end, 3])
+
+        new_bboxes[i] = [x1, y1, x2, y2]
+
+    return new_bboxes
+
+
 def vis_crop(cap, bboxes):
     """
     Crop and visualize each frame.
@@ -109,10 +132,11 @@ def main():
     cap = cv2.VideoCapture(str(args.video))
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    bboxes_interp = interploate_bboxes(bboxes, total_frames)
+    bboxes = interploate_bboxes(bboxes, total_frames)
+    #bboxes = max_filter(bboxes)
 
     #vis_crop(cap, bboxes_interp)
-    write_frames(args, cap, bboxes_interp)
+    write_frames(args, cap, bboxes)
 
 
 if __name__ == "__main__":

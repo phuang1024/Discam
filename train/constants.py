@@ -11,11 +11,13 @@ Note on the difference between bbox and edge weights:
 Bounding box is a region of the frame.
     The agent has a bbox (it's current view).
     Ground truth bboxes are generated based on motion detection.
+    Bboxes are in (x1, y1, x2, y2) format.
 Edge weights is a command to shift the bbox.
     In deployment, the NN will continuously compute edge weights,
     which are converted into PTZ movements.
     In training, a ground truth edge weight is calculated
     from the difference between the agent bbox and the ground truth bbox.
+    Positive edge weight means expand edge (increase bbox area).
 """
 
 import torch
