@@ -106,19 +106,42 @@ class SimulatedDataset(Dataset):
             tensor float32 (4,) [-1, 1]
     """
 
+    lengths: list[tuple[int, int, int]]
+    """
+    To use RNN, not all frames in a dir are usable.
+    Specifically, the first few frames cannot be used.
+    lengths[i] = (total_count, usable_count, start_index)
+        total_count: Total number of frames in dir.
+        usable_count: Number of usable frames in dir.
+        start_index: First usable frame index in dir.
+    """
+
     def __init__(self, dirs: list[Path]):
+        """
+        dirs: Each dir is data simulated from a epoch.
+        """
+        assert BBOX_FRAME_OFFSET >= 0
+
         self.dirs = dirs
 
         # Lengths of individual dirs.
         self.lengths = []
         for d in dirs:
-            length = 0
+            total_count = 0
             for f in d.iterdir():
                 if "jpg" in f.suffix:
                     num = int(f.stem.split(".")[0])
-                    if num > length:
-                        length = num
-            self.lengths.append(length)
+                    if num > total_count:
+                        total_count = num
+
+            start_i = (RNN_FRAMES - 1) * RNN_STEP
+            usable_count = total_count - start_i
+
+            if usable_count > 0:
+                self.lengths.append((total_count, usable_count, start_i))
+            else:
+                print(f"Warning: Dir {d} has no usable frames and will be skipped.")
+                self.lengths.append((total_count, 0, start_i))
 
         # Augmentations
         self.image_augs = T.Compose([
@@ -129,20 +152,29 @@ class SimulatedDataset(Dataset):
         ])
 
     def __len__(self):
-        return sum(self.lengths)
+        return sum(x[1] for x in self.lengths)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
         # Find which dir the index belongs to.
         dir_index = 0
-        while index >= self.lengths[dir_index]:
-            index -= self.lengths[dir_index]
+        while index >= self.lengths[dir_index][1]:
+            index -= self.lengths[dir_index][1]
             dir_index += 1
         dir = self.dirs[dir_index]
+        index += self.lengths[dir_index][2]
 
-        frame_path = dir / f"{index}.frame.jpg"
-        frame = read_image(str(frame_path)).float() / 255
+        frames = []
+        for i in range(RNN_FRAMES):
+            frame_i = index - i * RNN_STEP
+            assert frame_i >= 0 and frame_i < self.lengths[dir_index][0]
+            frame_path = dir / f"{frame_i}.frame.jpg"
+            frames.append(read_image(str(frame_path)).float() / 255)
+        frame = torch.cat(frames, dim=0)  # (3*RNN_FRAMES, H, W)
+
+        """
         if random.random() < AUG_FREQ:
             frame = self.image_augs(frame)
+        """
 
         agent_path = dir / f"{index}.agent.json"
         gt_path = dir / f"{index}.gt.json"

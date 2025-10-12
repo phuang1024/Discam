@@ -40,7 +40,8 @@ def simulate(videos_dataset, agent, data_dir: Path):
         frames = frames.to(DEVICE)
 
         # Set agent bbox to first gt bbox.
-        agent.bbox = bboxes[0].tolist()
+        agent.set_bbox(bboxes[0].tolist())
+        agent.clear_buffer()
 
         for step in range(SIM_STEPS):
             frame = frames[step]

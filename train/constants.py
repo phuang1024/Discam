@@ -32,12 +32,18 @@ AGENT_VELOCITY = 5
 # Temperature for model output.
 EDGE_WEIGHT_TEMP = 100
 
+## Model parameters.
+# Number of frames for recurrence.
+RNN_FRAMES = 3
+# Frame step of recurrence frames.
+RNN_STEP = 20
+
 ## Training parameters.
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 32
 LR = 1e-4
 
-# Offset between bbox and frame.
+# Offset between bbox frame and image frame. Positive means use a bbox from the future.
 BBOX_FRAME_OFFSET = 10
 
 # Number of simulations per epoch.

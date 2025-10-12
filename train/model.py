@@ -5,12 +5,16 @@ Model.
 import torch
 import torch.nn as nn
 
+from constants import *
+
 
 class DiscamModel(nn.Module):
     """
     CNN and fully connected model.
 
-    Input: (B, 3, H, W) [0, 1]
+    Input: (B, 3*N, H, W) [0, 1]
+        N previous frames (for recurrence),
+            with the current frame being the first three channels (0 to 2).
     Output: (B, 4) [-1, 1]
         (up, right, down, left)
         Positive means tend toward that edge. Negative means tend away from that edge.
@@ -24,7 +28,7 @@ class DiscamModel(nn.Module):
         self.output_temp = output_temp
 
         self.conv = nn.Sequential(
-            nn.Conv2d(3, 8, 3, padding=1),
+            nn.Conv2d(3 * RNN_FRAMES, 8, 3, padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(8),
 

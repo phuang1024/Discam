@@ -6,6 +6,10 @@ The agent uses the NN to control a virtual PTZ camera (a bounding box).
 This is used for training and testing, simulating a PTZ camera on a fixed frame video.
 """
 
+from collections import deque
+
+from constants import *
+
 
 class Agent:
     """
@@ -31,6 +35,13 @@ class Agent:
 
         self.bbox = (0, 0, video_res[0] / 2, video_res[1] / 2)
 
+        # Frames for RNN input. Most recent is index 0.
+        buffer_len = max(1, (RNN_FRAMES - 1) * RNN_STEP + 1)
+        self.frames = deque(maxlen=buffer_len)
+
+    def clear_buffer(self):
+        self.frames.clear()
+
     def step(self, frame):
         """
         frame: (3, H, W) RGB float32 tensor [0, 1]
@@ -40,8 +51,18 @@ class Agent:
             ndarray float32 (4,)
         """
         frame = frame.unsqueeze(0)  # (1, 3, H, W)
+        self.frames.appendleft(frame)
 
-        pred = self.model(frame)[0]
+        rnn_frames = []
+        for i in range(RNN_FRAMES):
+            idx = i * RNN_STEP
+            if idx < len(self.frames):
+                rnn_frames.append(self.frames[idx])
+            else:
+                rnn_frames.append(self.frames[-1])
+
+        x = torch.cat(rnn_frames, dim=1)  # (1, 3*N, H, W)
+        pred = self.model(x)[0]
         pred = pred.detach().cpu().numpy()
 
         aspect = self.video_res[0] / self.video_res[1]
