@@ -21,13 +21,20 @@ class Agent:
     because model input res is defined by MODEL_INPUT_RES.
     """
 
-    def __init__(self, model, video_res, velocity):
+    def __init__(self, model, video_res, velocity, neg_edge_weight_fac=1):
         """
-        video_res: (width, height) of input video frames.
+        video_res: (width, height) of original video footage.
+            Aspect ratio of bbox will match this.
+        velocity: Agent velocity.
+            I.e. AGENT_VELOCITY in constants.
+        neg_edge_weight_fac: Factor to multiply negative edge weights by.
+            A value less than 1 makes the bbox tend toward larger sizes.
+            I.e. x = x if x > 0; x * neg_edge_weight_fac else
         """
         self.model = model
         self.video_res = video_res
         self.velocity = velocity
+        self.neg_edge_weight_fac = neg_edge_weight_fac
 
         self.bbox = (0, 0, video_res[0] / 2, video_res[1] / 2)
 
@@ -43,6 +50,9 @@ class Agent:
 
         pred = self.model(frame)[0]
         pred = pred.detach().cpu().numpy()
+        for i in range(4):
+            if pred[i] < 0:
+                pred[i] *= self.neg_edge_weight_fac
 
         aspect = self.video_res[0] / self.video_res[1]
         bbox = apply_edge_weights(self.bbox, pred, aspect, self.velocity)
