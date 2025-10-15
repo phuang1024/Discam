@@ -2,18 +2,21 @@
 Utils relating to optical flow.
 """
 
+import pickle
 from collections import deque
 
 import cv2
 import numpy as np
 from tqdm import tqdm
 
+from utils import read_args
+
 # Number of frames per optical flow chunk.
 CHUNK_SIZE = 60
 # Points must track for at least this many frames to be considered.
 MIN_DURATION = CHUNK_SIZE // 2
-# Pixels per frame threshold. Actually, this is min speed.
-MIN_SPEED = 1
+# Pixels per frame speed threshold.
+MIN_SPEED = 1.5
 # Players with lower Y coords are farther from the camera, so scale velocity up.
 SPEED_Y_SCALING = 4
 
@@ -81,20 +84,28 @@ def filter_trajectories(all_trajs, y_min, y_max):
     all_trajs = [traj for traj in all_trajs if len(traj) >= MIN_DURATION]
 
     # For each frame, get the points with sufficient velocity.
-    speeds = np.zeros(len(all_trajs))
+    # Take speed over time, and take 50th percentile.
+    all_speeds = []
     for i in range(len(all_trajs)):
+        curr_speeds = []
         for j in range(1, len(all_trajs[i])):
-            speeds[i] += np.linalg.norm(all_trajs[i][j] - all_trajs[i][j - 1])
-        speeds[i] /= len(all_trajs[i])
+            s = np.linalg.norm(all_trajs[i][j] - all_trajs[i][j - 1])
+            curr_speeds.append(s)
+        if len(curr_speeds) == 0:
+            all_speeds.append(0)
+            continue
 
         # Scale velocity by Y position.
         y = all_trajs[i][0][1]
         scale = np.interp(y, [y_min, y_max], [SPEED_Y_SCALING, 1])
         scale = np.clip(scale, 1, SPEED_Y_SCALING)
-        speeds[i] *= scale
 
-    good_trajs = speeds >= MIN_SPEED
-    all_trajs = [traj for i, traj in enumerate(all_trajs) if good_trajs[i]]
+        curr_speeds = sorted(curr_speeds)
+        median = curr_speeds[len(curr_speeds) // 2]
+
+        all_speeds.append(median * scale)
+
+    all_trajs = [traj for i, traj in enumerate(all_trajs) if all_speeds[i] >= MIN_SPEED]
 
     return all_trajs
 
@@ -148,23 +159,13 @@ def chunked_optical_flow(video_path, bounds, max_frames=None):
                 points[i - CHUNK_SIZE + j].append(point)
 
 
-def vis_optical_flow(video_path, points):
-    """
-    Visualize salient points per frames.
-    """
-    video = cv2.VideoCapture(str(video_path))
+def main():
+    args, bounds = read_args()
 
-    i = 0
-    while True:
-        ret, frame = video.read()
-        if not ret:
-            break
-        if i >= len(points):
-            break
+    points = chunked_optical_flow(args.video, bounds)
+    with open(args.output / "points.pkl", "wb") as f:
+        pickle.dump(points, f)
 
-        for p in points[i]:
-            cv2.circle(frame, tuple(p.astype(int)), 2, (0, 0, 255), -1)
-        cv2.imshow("frame", frame)
-        cv2.waitKey(10)
 
-        i += 1
+if __name__ == "__main__":
+    main()
