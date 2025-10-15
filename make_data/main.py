@@ -4,12 +4,9 @@ Make ground truth bounding box data of a video.
 
 import argparse
 import json
-from collections import deque
 from pathlib import Path
 
-import cv2
-
-from optical_flow import chunked_optical_flow
+from optical_flow import chunked_optical_flow, vis_optical_flow
 
 
 def main():
@@ -24,7 +21,8 @@ def main():
     with open(bounds_path, "r") as f:
         bounds = json.load(f)
 
-    chunked_optical_flow(args.video, bounds)
+    points = chunked_optical_flow(args.video, bounds, 500)
+    vis_optical_flow(args.video, points)
 
 
 if __name__ == "__main__":
