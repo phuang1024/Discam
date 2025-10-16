@@ -31,7 +31,6 @@ def vis_optical_flow(video_path, points):
 
 def main():
     args, bounds = read_args()
-
     with open(args.output / "points.pkl", "rb") as f:
         points = pickle.load(f)
 
