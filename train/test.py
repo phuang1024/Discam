@@ -99,7 +99,10 @@ def main():
 
     model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP)
     model.load_state_dict(torch.load(args.model, map_location=DEVICE))
-    agent = Agent(model, VIDEO_RES, AGENT_VELOCITY, 0.5)
+    agent = Agent(model, VIDEO_RES, AGENT_VELOCITY,
+        min_bbox_size=400,
+        neg_edge_weight_fac=0.5,
+    )
 
     i = 0
     while True:

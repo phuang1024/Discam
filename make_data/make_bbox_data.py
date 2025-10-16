@@ -18,6 +18,8 @@ from tqdm import tqdm
 from frame_diff import frame_diff, compute_bbox
 from utils import EMA, bbox_aspect
 
+Y_SALIENCE_SCALE = 3
+
 
 def make_roi_mask(roi, width, height):
     """
@@ -58,9 +60,12 @@ def vis_bbox(frame, diff, bbox):
     cv2.waitKey(1)
 
 
-def process_frames(args, cap, mask):
+def process_frames(args, cap, bin_mask, scale_mask):
     """
     Process every N frames and save bounding box data.
+
+    bin_mask: Binary mask of ROI.
+    scale_mask: Linear scale mask from 1 to Y_SALIENCE_SCALE from bottom to top of field.
     """
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -88,12 +93,12 @@ def process_frames(args, cap, mask):
             diff = frame_diff(frame1, frame2)
             diff = diff_ema.update(diff)
             diff = (diff * diff_mult).clip(0, 1)
-            diff = diff * mask
+            diff = diff * bin_mask
 
-            bbox = compute_bbox(diff, thres=0.2)
+            bbox = compute_bbox(diff, scale_mask, thres=0.2)
             assert bbox is not None
             bbox = bbox_aspect(bbox, aspect=width / height, width=width, height=height)
-            #vis_bbox(frame, diff, bbox)
+            vis_bbox(frame, diff, bbox)
 
             # Write frame
             with open(args.output / f"{read_index}.bbox.json", "w") as f:
@@ -127,16 +132,24 @@ def main():
     # Open video file.
     cap = cv2.VideoCapture(str(args.video))
 
-    # Make ROI mask.
-    mask = make_roi_mask(
+    # Make ROI binary mask.
+    bin_mask = make_roi_mask(
         roi,
         int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
     )
-    cv2.imwrite(str(args.output / "mask.png"), mask)
-    mask = mask.astype(bool).astype(np.float32)
+    bin_mask = bin_mask.astype(bool).astype(np.float32)
 
-    process_frames(args, cap, mask)
+    # Make linear scale mask
+    scale_mask = np.empty(bin_mask.shape, dtype=np.float32)
+    y_min = min(v[1] for v in roi.values())
+    y_max = max(v[1] for v in roi.values())
+    for y in range(scale_mask.shape[0]):
+        value = np.interp(y, (y_min, y_max), (Y_SALIENCE_SCALE, 1))
+        value = np.clip(value, 1, Y_SALIENCE_SCALE)
+        scale_mask[y, :] = value
+
+    process_frames(args, cap, bin_mask, scale_mask)
 
 
 if __name__ == "__main__":

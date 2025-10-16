@@ -21,12 +21,13 @@ class Agent:
     because model input res is defined by MODEL_INPUT_RES.
     """
 
-    def __init__(self, model, video_res, velocity, neg_edge_weight_fac=1):
+    def __init__(self, model, video_res, velocity, min_bbox_size=None, neg_edge_weight_fac=1):
         """
         video_res: (width, height) of original video footage.
             Aspect ratio of bbox will match this.
         velocity: Agent velocity.
             I.e. AGENT_VELOCITY in constants.
+        min_bbox_size: Minimum width of bbox in pixels.
         neg_edge_weight_fac: Factor to multiply negative edge weights by.
             A value less than 1 makes the bbox tend toward larger sizes.
             I.e. x = x if x > 0; x * neg_edge_weight_fac else
@@ -34,6 +35,7 @@ class Agent:
         self.model = model
         self.video_res = video_res
         self.velocity = velocity
+        self.min_bbox_size = min_bbox_size
         self.neg_edge_weight_fac = neg_edge_weight_fac
 
         self.bbox = (0, 0, video_res[0] / 2, video_res[1] / 2)
@@ -62,11 +64,30 @@ class Agent:
 
     def set_bbox(self, bbox):
         """
-        Checks bounds after setting.
+        Checks:
+        - Bounds of video frame.
+        - Minimum size (if applicable).
 
         bbox: (x1, y1, x2, y2)
         """
         self.bbox = bbox
+
+        if self.min_bbox_size is not None:
+            x1, y1, x2, y2 = self.bbox
+            if x2 - x1 < self.min_bbox_size:
+                scale_fac = self.min_bbox_size / (x2 - x1)
+
+                center_x = (x1 + x2) / 2
+                x1 = center_x - self.min_bbox_size / 2
+                x2 = center_x + self.min_bbox_size / 2
+
+                center_y = (y1 + y2) / 2
+                new_h = (y2 - y1) * scale_fac
+                y1 = center_y - new_h / 2
+                y2 = center_y + new_h / 2
+
+                self.bbox = (x1, y1, x2, y2)
+
         self.check_bbox_bounds()
 
     def check_bbox_bounds(self):

@@ -57,12 +57,13 @@ def frame_diff(img1, img2, floor=0.05, mult=5):
     return diff
 
 
-def compute_bbox(diff, thres=0.3, downsample=4, blur=3, padding=50):
+def compute_bbox(diff, scale_mask, thres=0.15, downsample=4, blur=5, padding=50):
     """
     Compute bounding box of salient areas
     using techniques to reduce noise.
 
     diff: ndarray float32 (H, W) [0, 1] image.
+    scale_mask: See make_bbox_data.py
     thres: Threshold, between 0 and 1.
     downsample: Downsample factor.
     blur: Box blur kernel size.
@@ -75,6 +76,9 @@ def compute_bbox(diff, thres=0.3, downsample=4, blur=3, padding=50):
     diff = cv2.resize(diff, (w // downsample, h // downsample), cv2.INTER_AREA)
 
     diff = cv2.blur(diff, (blur, blur), 0)
+
+    scale_mask = scale_mask[::downsample, ::downsample]
+    diff = diff * scale_mask
 
     thres = int(thres * 255)
     diff = diff > thres
