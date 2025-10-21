@@ -76,6 +76,15 @@ def simulate(videos_dataset, agent, data_dir: Path):
             index += 1
 
 
+def lrelu_mse(pred, target, factor=1):
+    """
+    MSE loss, where terms where target[i] < pred[i] are scaled by a factor greater than one.
+    """
+    mse = (pred - target) ** 2
+    mask = (target < pred).float() * (factor - 1) + 1
+    return (mse * mask).mean()
+
+
 def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_step, save):
     """
     Simulate and train a single epoch.
@@ -110,7 +119,8 @@ def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_
 
             optimizer.zero_grad()
             pred = model(x)
-            loss = criterion(pred, y)
+            #loss = criterion(pred, y)
+            loss = lrelu_mse(pred, y, factor=LOSS_EXPAND_FACTOR)
             loss.backward()
             optimizer.step()
 
