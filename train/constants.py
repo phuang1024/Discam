@@ -3,8 +3,8 @@ Global constants, mainly for training.
 
 Note on the difference between velocity and temp:
 Temp is used in model output: output = logit / temp.
-  Ideally, output should be near [-1, 1], because ground truth edge weights are in this range.
-  This gives the logits more dynamic range.
+    Ideally, output should be near [-1, 1], because ground truth edge weights are in this range.
+    This gives the logits more dynamic range.
 Output is then multiplied with velocity when simulating, to determine how many pixels to move.
 
 Note on the difference between bbox and edge weights:
@@ -19,6 +19,8 @@ Edge weights is a command to shift the bbox.
     from the difference between the agent bbox and the ground truth bbox.
     Positive edge weight means expand edge (increase bbox area).
 """
+
+import json
 
 import torch
 
@@ -62,3 +64,20 @@ SIM_RAND_FREQ = 0.05
 # Magnitude of random perturbations. Applied as edge weights for a single step.
 # So the average randomness is SIM_RAND_MAG * AGENT_VELOCITY.
 SIM_RAND_MAG = 10
+
+
+def save_constants(path: str, extra_data: dict):
+    """
+    Save constants to a text file.
+
+    extra_data: Additional data to save.
+    """
+    data = {}
+    for k, v in globals().items():
+        if k.isupper() and not k.startswith("_"):
+            data[k] = str(v)
+
+    data.update(extra_data)
+
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
