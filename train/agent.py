@@ -21,7 +21,7 @@ class Agent:
     because model input res is defined by MODEL_INPUT_RES.
     """
 
-    def __init__(self, model, video_res, velocity, min_bbox_size=None, neg_edge_weight_fac=1):
+    def __init__(self, model, video_res, velocity):#, min_bbox_size=None, neg_edge_weight_fac=1):
         """
         video_res: (width, height) of original video footage.
             Aspect ratio of bbox will match this.
@@ -35,8 +35,8 @@ class Agent:
         self.model = model
         self.video_res = video_res
         self.velocity = velocity
-        self.min_bbox_size = min_bbox_size
-        self.neg_edge_weight_fac = neg_edge_weight_fac
+        #self.min_bbox_size = min_bbox_size
+        #self.neg_edge_weight_fac = neg_edge_weight_fac
 
         self.bbox = (0, 0, video_res[0] / 2, video_res[1] / 2)
 
@@ -52,9 +52,11 @@ class Agent:
 
         pred = self.model(frame)[0]
         pred = pred.detach().cpu().numpy()
+        """
         for i in range(4):
             if pred[i] < 0:
                 pred[i] *= self.neg_edge_weight_fac
+        """
 
         aspect = self.video_res[0] / self.video_res[1]
         bbox = apply_edge_weights(self.bbox, pred, aspect, self.velocity)
@@ -72,6 +74,7 @@ class Agent:
         """
         self.bbox = bbox
 
+        """
         if self.min_bbox_size is not None:
             x1, y1, x2, y2 = self.bbox
             if x2 - x1 < self.min_bbox_size:
@@ -87,6 +90,7 @@ class Agent:
                 y2 = center_y + new_h / 2
 
                 self.bbox = (x1, y1, x2, y2)
+        """
 
         self.check_bbox_bounds()
 

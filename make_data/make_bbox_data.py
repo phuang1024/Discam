@@ -98,7 +98,7 @@ def process_frames(args, cap, bin_mask, scale_mask):
             bbox = compute_bbox(diff, scale_mask, thres=0.2)
             assert bbox is not None
             bbox = bbox_aspect(bbox, aspect=width / height, width=width, height=height)
-            vis_bbox(frame, diff, bbox)
+            #vis_bbox(frame, diff, bbox)
 
             # Write frame
             with open(args.output / f"{read_index}.bbox.json", "w") as f:
