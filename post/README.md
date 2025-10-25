@@ -95,6 +95,7 @@ result Break
 ```bash
 python crop.py stab.mp4 cropped.mp4 points.txt
 # Output is saved as cropped.mp4
+# Also saves cropped.mp4.txt which has YT chapter markings.
 ```
 
 ## Color adjustment

@@ -20,13 +20,16 @@ def check_no_overlap(game):
         end_frame = p.end
 
 
-def crop(args, game):
+def crop(args, game) -> list[tuple[int, str]]:
     """
     Crop and annotate.
+    Returns YT chapter markings as a list of (timestamp in seconds, title).
     """
     def put_text(frame, text, pos):
         cv2.putText(frame, text, pos,
             cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+
+    chapters = []
 
     in_video = cv2.VideoCapture(args.input)
     out_video = cv2.VideoWriter(
@@ -42,6 +45,11 @@ def crop(args, game):
     score_us = 0
     score_them = 0
     for point_i, point in enumerate(game.points):
+        chapters.append((
+            int(point.start / in_video.get(cv2.CAP_PROP_FPS)),
+            f"P{point_i + 1}: {point.line}",
+        ))
+
         if point.score == 1:
             score_us += 1
         elif point.score == -1:
@@ -61,6 +69,7 @@ def crop(args, game):
                 put_text(frame, game.title, (50, 100))
 
             if t < LINE_TIME:
+                put_text(frame, f"Point {point_i + 1}", (50, frame.shape[0] - 150))
                 put_text(frame, point.line, (50, frame.shape[0] - 100))
 
             if t >= (point.end - point.start) - RESULT_TIME:
@@ -75,6 +84,21 @@ def crop(args, game):
     in_video.release()
     out_video.release()
 
+    return chapters
+
+
+def write_chapters(chapters, file):
+    with open(file, "w") as f:
+        for seconds, title in chapters:
+            hrs = seconds // 3600
+            mins = seconds // 60
+            secs = seconds % 60
+
+            time_str = f"{hrs:02}:" if hrs > 0 else ""
+            time_str += f"{mins:02}:{secs:02}"
+
+            f.write(f"{time_str} {title}\n")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -86,7 +110,8 @@ def main():
     game = parse_file(args.points)
     check_no_overlap(game)
 
-    crop(args, game)
+    chapters = crop(args, game)
+    write_chapters(chapters, args.output + ".txt")
 
 
 if __name__ == "__main__":
