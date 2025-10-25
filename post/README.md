@@ -3,45 +3,16 @@
 Programmatic utilities for post processing film.
 
 Capabilities and pipeline:
-1. Video stabilization with FFmpeg.
-2. Video crop to game points (i.e. remove footage in between points).
-   Also add annotations.
-3. Color improvement.
+1. Video crop and stabilization with FFmpeg.
+2. Add annotations to video and improve color.
+   Also generates YT chapter markings of points.
 
-Other features:
-- Generate YT chapter markings of points.
-- Text annotate on video.
+# Points file format
 
+The points file specifies the timestamps of the start and end of each point of the game,
+as well as annotations to add to the video.
 
-# Detailed pipeline description
-
-All three steps take input and output videos.
-
-It is recommended to run the three steps in the given sequence.
-
-## Stabilization
-
-Usage:
-
-```bash
-./stab.sh input.mp4 stab.mp4
-# Output is saved as stab.mp4
-```
-
-- Uses FFmpeg video stabilization. See script for hard coded parameters.
-- Generates `transforms.trf` as an intermediate file.
-- Converts video to 1080p24. Compresses video.
-
-## Crop
-
-Temporal crop to points of the game.
-
-### File format
-
-First, write a points file, e.g. `points.txt`.
-Use a video viewer with frame numbers like Blender to help.
-It is recommended to leave a bit of time (e.g. 2s, or when the pull starts) at the crop of each point.
-This accounts for time taken by annotations.
+Use a video viewer with frame numbers to help.
 
 Points text file format:
 
@@ -90,23 +61,25 @@ score 1
 result Break
 ```
 
-### Usage
+# Crop and stabilization
 
 ```bash
-python crop.py stab.mp4 cropped.mp4 points.txt
-# Output is saved as cropped.mp4
-# Also saves cropped.mp4.txt which has YT chapter markings.
+python crop_stab.py input.mp4 crop_stab.mp4 points.txt
+# Output is saved as crop_stab.mp4
 ```
 
-## Color adjustment
+- Uses FFmpeg video crop and stabilization. See script for hard coded parameters.
+- Generates `cropped.input.mp4` as an intermediate file.
+- Generates `transforms.trf` as an intermediate file.
+- Converts video to 1080p24. Compresses video.
 
-### Features
+# Annotations and color correction
 
-TODO
-
-### Usage
+Add text annotations to the video.
+Assumes video has been cropped.
 
 ```bash
-python color.py cropped.mp4 final.mp4
+python color_text.py crop_stab.mp4 final.mp4 points.txt
 # Output is saved as final.mp4
+# Also saves final.mp4.txt which has YT chapter markings.
 ```
