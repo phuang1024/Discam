@@ -76,16 +76,7 @@ def simulate(videos_dataset, agent, data_dir: Path):
             index += 1
 
 
-def lrelu_mse(pred, target, factor=1):
-    """
-    MSE loss, where terms where target[i] < pred[i] are scaled by a factor greater than one.
-    """
-    mse = (pred - target) ** 2
-    mask = (target < pred).float() * (factor - 1) + 1
-    return (mse * mask).mean()
-
-
-def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_step, save):
+def train_epoch(model, data_dirs: list[Path], tb_writer, global_step):
     """
     Simulate and train a single epoch.
 
@@ -93,7 +84,6 @@ def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_
         Not to be confused with original videos, or bbox data from make_data/*.
     tb_writer: TensorBoard SummaryWriter.
     global_step: Current global step for logging.
-    save: Whether to save the model at the end of the epoch.
     """
     dataset = SimulatedDataset(data_dirs)
     dataloader = torch.utils.data.DataLoader(
@@ -119,8 +109,7 @@ def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_
 
             optimizer.zero_grad()
             pred = model(x)
-            #loss = criterion(pred, y)
-            loss = lrelu_mse(pred, y, factor=LOSS_EXPAND_FACTOR)
+            loss = criterion(pred, y)
             loss.backward()
             optimizer.step()
 
@@ -132,10 +121,33 @@ def train_epoch(model, save_dir: Path, data_dirs: list[Path], tb_writer, global_
                 break
     pbar.close()
 
-    if save:
-        model_path = save_dir / "model.pt"
-        print("Saving to", model_path)
-        torch.save(model.state_dict(), model_path)
+
+def roll_sim_data(data_dir: Path):
+    """
+    Delete oldest sim data dir, and rename others to shift down by 1.
+    data_dir/sim_data
+        0/
+        1/
+        2/
+        ...
+    0 is the most recent.
+    """
+    # Remove oldest.
+    oldest_dir = data_dir / "sim_data" / str(DATA_HISTORY - 1)
+    if oldest_dir.exists():
+        for file in oldest_dir.iterdir():
+            if "frame" in file.name or "agent" in file.name or "gt" in file.name:
+                file.unlink()
+            else:
+                raise ValueError("Unexpected file in sim data dir:", file)
+        oldest_dir.rmdir()
+
+    # Shift others down by 1.
+    for i in reversed(range(DATA_HISTORY - 1)):
+        src_dir = data_dir / "sim_data" / str(i)
+        dst_dir = data_dir / "sim_data" / str(i + 1)
+        if src_dir.exists():
+            src_dir.rename(dst_dir)
 
 
 def main():
@@ -144,9 +156,18 @@ def main():
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs to train.")
     parser.add_argument("--resume", type=Path, help="Path to model.pt to resume from.")
-    parser.add_argument("--save_every", type=int, default=5, help="Save every N epochs.")
     args = parser.parse_args()
     args.results.mkdir(parents=True, exist_ok=True)
+
+    experiment_name = args.results.name
+    print("Experiment name:", experiment_name)
+
+    save_constants(args.results / "constants.json", {
+        "--results": str(args.results),
+        "--data": str(args.data),
+        "--epochs": args.epochs,
+        "--resume": str(args.resume),
+    })
 
     tb_writer = SummaryWriter(log_dir=args.results / "logs")
     global_step = 0
@@ -160,37 +181,38 @@ def main():
 
     model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP).to(DEVICE)
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY * SIM_FRAME_SKIP)
-    print("Model:")
-    print(model)
-    print("Number of parameters:", sum(p.numel() for p in model.parameters()))
+
+    with open(args.results / "model.txt", "w") as f:
+        print(model, file=f)
+        print(file=f)
+        num_params = sum(p.numel() for p in model.parameters())
+        print("Number of parameters:", num_params, file=f)
 
     if args.resume is not None:
         print("Resuming from", args.resume)
         model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
-    prev_data_dirs = []
     for epoch in range(args.epochs):
         print("Begin epoch", epoch)
-        epoch_path = args.results / f"epoch{epoch}"
-        epoch_path.mkdir(parents=True, exist_ok=True)
-        print("  Epoch path:", epoch_path)
+        roll_sim_data(args.results)
 
         print("  Simulating...")
-        data_dir = epoch_path / "data"
-        simulate(videos_dataset, agent, epoch_path / "data")
-        prev_data_dirs.append(data_dir)
+        simulate(videos_dataset, agent, args.results / "sim_data" / "0")
 
-        data_dirs = prev_data_dirs[max(0, epoch - DATA_HISTORY + 1):]
         print("  Training...")
+        data_dirs = list((args.results / "sim_data").glob("*"))
         print("    Using data from:", data_dirs)
-        train_epoch(model, epoch_path, data_dirs, tb_writer, global_step, (epoch + 1) % args.save_every == 0)
+        train_epoch(model, data_dirs, tb_writer, global_step)
         global_step += STEPS_PER_EPOCH
 
         print("  End epoch", epoch)
 
-        save_path = args.results / f"latest.pt"
-        print("  Saving latest to", save_path)
-        torch.save(model.state_dict(), save_path)
+        save_paths = [args.results / f"{experiment_name}_latest.pt"]
+        if (epoch + 1) % 10 == 0:
+            save_paths.append(args.results / f"{experiment_name}_e{epoch}.pt")
+        print("  Saving latest to", save_paths)
+        for p in save_paths:
+            torch.save(model.state_dict(), p)
 
 
 if __name__ == "__main__":
