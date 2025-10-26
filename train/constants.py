@@ -62,8 +62,8 @@ SIM_FRAME_SKIP = 5
 # Frequency of random perturbations during simulation.
 SIM_RAND_FREQ = 0.05
 # Magnitude of random perturbations. Applied as edge weights for a single step.
-# So the average randomness is SIM_RAND_MAG * AGENT_VELOCITY.
-SIM_RAND_MAG = 10
+# So the average randomness is SIM_RAND_MAG * (AGENT_VELOCITY * SIM_FRAME_SKIP) pixels.
+SIM_RAND_MAG = 30
 
 
 def save_constants(path: str, extra_data: dict):

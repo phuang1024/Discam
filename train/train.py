@@ -181,9 +181,12 @@ def main():
 
     model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP).to(DEVICE)
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY * SIM_FRAME_SKIP)
-    print("Model:")
-    print(model)
-    print("Number of parameters:", sum(p.numel() for p in model.parameters()))
+
+    with open(args.results / "model.txt", "w") as f:
+        print(model, file=f)
+        print(file=f)
+        num_params = sum(p.numel() for p in model.parameters())
+        print("Number of parameters:", num_params, file=f)
 
     if args.resume is not None:
         print("Resuming from", args.resume)
