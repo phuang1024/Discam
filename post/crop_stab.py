@@ -30,7 +30,7 @@ def crop(in_file, out_file, game):
         FFMPEG,
         "-i", str(in_file),
         "-filter_complex", trim_arg, "-map", "[outv]", "-map", "[outa]",
-        "-c:v", "libx265", "-c:a", "mp3",
+        "-c:v", "libx264", "-c:a", "mp3",
         "-s", "1920x1080", "-r", "24", "-crf", "26",
         str(out_file),
     ]
@@ -49,7 +49,7 @@ def stabilize(in_file, out_file):
         FFMPEG,
         "-i", str(in_file),
         "-vf", "vidstabtransform=input=transforms.trf:smoothing=30:zoom=10",
-        "-c:v", "libx265", "-c:a", "copy",
+        "-c:v", "libx264", "-c:a", "copy",
         "-crf", "26",
         str(out_file),
     ], check=True)
@@ -64,7 +64,7 @@ def main():
 
     game = parse_file(args.points)
 
-    inter_file = args.input.with_stem("cropped." + args.input.stem)
+    inter_file = args.input.with_suffix(".cropped.mp4")
     crop(args.input, inter_file, game)
     stabilize(inter_file, args.output)
 

@@ -34,7 +34,7 @@ result <result>
 
 - Empty lines do not matter.
 - Each line is a single word key (e.g. `title`), then any number of spaces, then the value.
-  Write the text `\n` to indicate a newline in the value.
+  Write the text `\n` to indicate a newline in the title value only.
 - Keys:
     - `title`: Title annotated at beginning.
     - `point`: Signifies a new point. Value should be two integers space separated,
@@ -81,5 +81,5 @@ Assumes video has been cropped.
 ```bash
 python color_text.py crop_stab.mp4 final.mp4 points.txt
 # Output is saved as final.mp4
-# Also saves final.mp4.txt which has YT chapter markings.
+# Also saves final.mp4_chapters.txt which has YT chapter markings.
 ```
