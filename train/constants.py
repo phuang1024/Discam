@@ -46,21 +46,22 @@ LOSS_EXPAND_FACTOR = 2
 BBOX_FRAME_OFFSET = 10
 
 # Number of simulations per epoch.
-SIMS_PER_EPOCH = 5
+SIMS_PER_EPOCH = 10
 # Number of training steps per epoch.
 STEPS_PER_EPOCH = 300
 # Use data from the last N epochs for training.
-DATA_HISTORY = 10
+DATA_HISTORY = 20
 # Frequency of applying augmentations.
 AUG_FREQ = 0.2
 
 ## Simulation parameters.
 # Number of steps per simulation.
-SIM_STEPS = 200
+# So, each simulation spans SIM_STEPS * SIM_FRAME_SKIP frames of the video.
+SIM_STEPS = 100
 # Frame skip between steps in simulation.
 SIM_FRAME_SKIP = 5
 # Frequency of random perturbations during simulation.
-SIM_RAND_FREQ = 0.05
+SIM_RAND_FREQ = 0.1
 # Magnitude of random perturbations. Applied as edge weights for a single step.
 # So the average randomness is SIM_RAND_MAG * (AGENT_VELOCITY * SIM_FRAME_SKIP) pixels.
 SIM_RAND_MAG = 30
