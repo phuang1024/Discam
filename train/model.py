@@ -24,39 +24,27 @@ class DiscamModel(nn.Module):
         self.output_temp = output_temp
 
         self.conv = nn.Sequential(
-            nn.Conv2d(3, 8, 3, padding=1),
+            nn.Conv2d(3, 4, 3, padding=1),
             nn.ReLU(),
-            nn.BatchNorm2d(8),
-
-            nn.Conv2d(8, 8, 3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(8),
-
+            nn.BatchNorm2d(4),
             nn.MaxPool2d(4),
 
-            nn.Conv2d(8, 16, 3, padding=1),
+            nn.Conv2d(4, 8, 3, padding=1),
             nn.ReLU(),
-            nn.BatchNorm2d(16),
-
-            nn.Conv2d(16, 16, 3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(16),
-
+            nn.BatchNorm2d(8),
             nn.MaxPool2d(4),
         )
 
-        # For 640x360, this is 40*22*16 = 14080
-        out_neurons = (res[0] // 16) * (res[1] // 16) * 16
+        # For 640x360, this is 40*22*8
+        out_neurons = (res[0] // 16) * (res[1] // 16) * 8
         self.fc = nn.Sequential(
             nn.Linear(out_neurons, 1024),
             nn.LeakyReLU(),
-            nn.Linear(1024, 512),
+            nn.Linear(1024, 256),
             nn.LeakyReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(256, 64),
             nn.LeakyReLU(),
-            nn.Linear(256, 128),
-            nn.LeakyReLU(),
-            nn.Linear(128, 4),
+            nn.Linear(64, 4),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
