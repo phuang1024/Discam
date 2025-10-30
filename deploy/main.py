@@ -11,13 +11,22 @@ Threading:
   Fetches latest frame from a shared frame buffer with main thread.
 """
 
+import os
+import sys
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(
+    os.path.dirname(ROOT),
+    "train",
+))
+
 import argparse
 import time
 from datetime import datetime
 from pathlib import Path
 from threading import Thread
 
-from constants import *
+from constants2 import *
+from ptz import ptz_control_thread, nn_inference_thread
 from recorder import camera_read_thread, video_write_thread
 
 
@@ -32,15 +41,21 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Spawn threads.
-    frameq = deque()
-    state = ThreadState(frameq=frameq)
+    state = ThreadState(
+        frameq=deque(),
+        nn_output=deque(maxlen=5),
+    )
 
     camera_read_t = Thread(target=camera_read_thread, args=(state,))
     video_write_t = Thread(target=video_write_thread, args=(state, out_dir,))
+    ptz_control_t = Thread(target=ptz_control_thread, args=(state,))
+    nn_inference_t = Thread(target=nn_inference_thread, args=(state, args.model,))
 
     threads = (
         camera_read_t,
         video_write_t,
+        ptz_control_t,
+        nn_inference_t,
     )
     for t in threads:
         t.start()

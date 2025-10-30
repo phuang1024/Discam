@@ -10,7 +10,7 @@ from subprocess import Popen, PIPE, DEVNULL
 import cv2
 import numpy as np
 
-from constants import *
+from constants2 import *
 
 FFMPEG = shutil.which("ffmpeg")
 assert FFMPEG is not None

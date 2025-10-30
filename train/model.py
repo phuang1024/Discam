@@ -5,6 +5,8 @@ Model.
 import torch
 import torch.nn as nn
 
+from constants import *
+
 
 class DiscamModel(nn.Module):
     """
@@ -18,7 +20,7 @@ class DiscamModel(nn.Module):
         Note: Output is logits / temp, so can be outside [-1, 1].
     """
 
-    def __init__(self, res: tuple[int, int], output_temp):
+    def __init__(self, res: tuple[int, int] = MODEL_INPUT_RES, output_temp = EDGE_WEIGHT_TEMP):
         super().__init__()
         self.res = res
         self.output_temp = output_temp

@@ -97,7 +97,7 @@ def main():
     parser.add_argument("--start_from_random", action="store_true", help="Start simulation from random bbox.")
     args = parser.parse_args()
 
-    model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP)
+    model = DiscamModel()
     model.load_state_dict(torch.load(args.model, map_location=DEVICE))
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY,
         #min_bbox_size=400,

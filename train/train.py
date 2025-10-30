@@ -179,7 +179,7 @@ def main():
     videos_dataset = VideosDataset(args.data, BBOX_FRAME_OFFSET)
     print("Using videos from:", args.data)
 
-    model = DiscamModel(MODEL_INPUT_RES, EDGE_WEIGHT_TEMP).to(DEVICE)
+    model = DiscamModel().to(DEVICE)
     agent = Agent(model, VIDEO_RES, AGENT_VELOCITY * SIM_FRAME_SKIP)
 
     with open(args.results / "model.txt", "w") as f:
