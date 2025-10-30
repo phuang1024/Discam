@@ -25,7 +25,10 @@ FPS = 24
 WIDTH = 640
 HEIGHT = 480
 # Number of frames in each recording chunk.
-RECORD_CHUNK_SIZE = 60 * 24
+RECORD_CHUNK_SIZE = 5 * 24
 
 # NN inference interval (in seconds).
 NN_INTERVAL = 1
+
+# PTZ control interval.
+PTZ_INTERVAL = 0.1

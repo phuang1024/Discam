@@ -18,6 +18,7 @@ Edge weights is a command to shift the bbox.
     In training, a ground truth edge weight is calculated
     from the difference between the agent bbox and the ground truth bbox.
     Positive edge weight means expand edge (increase bbox area).
+    Edge weights are (up, right, down, left).
 """
 
 import json

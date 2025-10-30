@@ -14,12 +14,17 @@ from constants2 import *
 
 
 def ptz_control_thread(state: ThreadState):
-    pass
+    while state.run:
+        # TODO ptz algorithm
+
+        time.sleep(PTZ_INTERVAL)
 
 
+@torch.no_grad()
 def nn_inference_thread(state: ThreadState, model_path: Path):
     model = DiscamModel().to(DEVICE)
     model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    model.eval()
 
     while state.run:
         if len(state.frameq) == 0:
@@ -32,11 +37,9 @@ def nn_inference_thread(state: ThreadState, model_path: Path):
         frame = frame.astype("float32") / 255.0
         frame = torch.from_numpy(frame)
         frame = frame.permute(2, 0, 1).unsqueeze(0).to(DEVICE)
-        with torch.no_grad():
-            output = model(frame)
+        output = model(frame)
 
         output = output.cpu().squeeze(0).numpy()
         state.nn_output.append(output)
 
-        print(state.nn_output)
         time.sleep(NN_INTERVAL)
