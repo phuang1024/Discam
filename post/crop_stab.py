@@ -33,7 +33,7 @@ def crop(in_file, out_file, game, fps):
         "-i", str(in_file),
         "-filter_complex", trim_arg, "-map", "[outv]", "-map", "[outa]",
         "-c:v", "libx264", "-c:a", "mp3",
-        "-s", "1920x1080", "-r", "24", "-crf", "26",
+        "-s", "1920x1080", "-r", "30", "-crf", "24",
         str(out_file),
     ]
     run(ffmpeg_args, check=True)
@@ -52,7 +52,7 @@ def stabilize(in_file, out_file):
         "-i", str(in_file),
         "-vf", "vidstabtransform=input=transforms.trf:smoothing=30:zoom=10",
         "-c:v", "libx264", "-c:a", "copy",
-        "-crf", "26",
+        "-crf", "24",
         str(out_file),
     ], check=True)
 

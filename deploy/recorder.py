@@ -68,7 +68,7 @@ class Recorder:
             "-r", str(FPS),
             "-i", "-",
             "-c:v", "libx264",
-            "-crf", "26",
+            "-crf", "24",
             str(self.curr_file),
         ]
         self.ffmpeg = Popen(args, stdin=PIPE, stdout=DEVNULL, stderr=DEVNULL)
