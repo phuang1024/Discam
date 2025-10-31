@@ -80,13 +80,23 @@ class Recorder:
 
 
 def camera_read_thread(state: ThreadState):
-    camera = cv2.VideoCapture(0)
+    print("Opening camera", CAMERA_PATH)
+    cap = cv2.VideoCapture(CAMERA_PATH)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
+    cap.set(cv2.CAP_PROP_FPS, FPS)
+
+    # Warm up
+    for _ in range(10):
+        ret, frame = cap.read()
 
     while state.run:
-        ret, frame = camera.read()
+        ret, frame = cap.read()
         if not ret:
             continue
 
+        print("new frame")
         state.frameq.append(frame)
 
 
