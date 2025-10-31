@@ -7,18 +7,20 @@ import shutil
 from pathlib import Path
 from subprocess import run
 
-from pointstxt import parse_file
+from pointstxt import parse_file, get_fps
 
 FFMPEG = shutil.which("ffmpeg")
 assert FFMPEG is not None
 
 
-def crop(in_file, out_file, game):
+def crop(in_file, out_file, game, fps):
     # Generate ffmpeg trim argument
     trim_arg = ""
     for i, point in enumerate(game.points):
-        trim_arg += f"[0:v]trim=start={point.start}:end={point.end},setpts=PTS-STARTPTS[v{i}];"
-        trim_arg += f"[0:a]atrim=start={point.start}:end={point.end},asetpts=PTS-STARTPTS[a{i}];"
+        start = f"{point.start / fps:.1f}"
+        end = f"{point.end / fps:.1f}"
+        trim_arg += f"[0:v]trim=start={start}:end={end},setpts=PTS-STARTPTS[v{i}];"
+        trim_arg += f"[0:a]atrim=start={start}:end={end},asetpts=PTS-STARTPTS[a{i}];"
 
     end_trim_arg = ""
     for i in range(len(game.points)):
@@ -62,10 +64,11 @@ def main():
     parser.add_argument("points", type=Path)
     args = parser.parse_args()
 
-    game = parse_file(args.points)
+    fps = get_fps(args.input)
+    game = parse_file(args.points, fps)
 
     inter_file = args.input.with_suffix(".cropped.mp4")
-    crop(args.input, inter_file, game)
+    crop(args.input, inter_file, game, fps)
     stabilize(inter_file, args.output)
 
 

@@ -61,7 +61,7 @@ class Recorder:
         self.stop_ffmpeg()
 
         self.curr_file = self.out_dir / file_name
-        self.ffmpeg = Popen([
+        args = [
             FFMPEG,
             "-f", "rawvideo", "-pix_fmt", "bgr24",
             "-s", f"{WIDTH}x{HEIGHT}",
@@ -70,7 +70,8 @@ class Recorder:
             "-c:v", "libx264",
             "-crf", "26",
             str(self.curr_file),
-        ], stdin=PIPE, stdout=DEVNULL, stderr=DEVNULL)
+        ]
+        self.ffmpeg = Popen(args, stdin=PIPE, stdout=DEVNULL, stderr=DEVNULL)
 
         print("Started new FFmpeg subprocess:", self.curr_file)
 

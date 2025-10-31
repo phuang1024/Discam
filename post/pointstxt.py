@@ -4,6 +4,8 @@ Utilities for parsing the points.txt file, used in crop.py
 
 from dataclasses import dataclass
 
+import cv2
+
 
 @dataclass
 class Game:
@@ -14,16 +16,18 @@ class Game:
 
 @dataclass
 class Point:
+    # Frame start in original video.
     start: int = 0
+    # Frame start after cropping out non-points, in the output file.
     start_post_crop: int = 0
-    """Frame start after cropping out non-points."""
+    # Frame end in original video.
     end: int = 0
     line: str = ""
     score: int = 0
     result: str = ""
 
 
-def parse_file(path: str):
+def parse_file(path: str, fps: float):
     game = Game(points=[], title=[])
 
     with open(path, "r") as f:
@@ -37,7 +41,9 @@ def parse_file(path: str):
             if key == "title":
                 game.title = value.split("\\n")
             elif key == "point":
-                start, end = map(int, value.split())
+                start, end = value.split()
+                start = int(parse_timestamp(start) * fps)
+                end = int(parse_timestamp(end) * fps)
                 game.points.append(Point(start=start, start_post_crop=frame_post_crop, end=end))
                 frame_post_crop += end - start
             elif key == "line":
@@ -51,6 +57,21 @@ def parse_file(path: str):
     return game
 
 
+def parse_timestamp(ts: str) -> int:
+    """
+    Returns the seconds equivalent of a timestamp in one of the formats:
+    - S
+    - M:S
+    - H:M:S
+    """
+    parts = list(map(int, ts.split(":")))
+    assert 1 <= len(parts) <= 3, "Invalid timestamp format"
+    seconds = 0
+    for part in parts:
+        seconds = seconds * 60 + part
+    return seconds
+
+
 def check_no_overlap(game):
     """
     Ensure a point ends before the next begins.
@@ -60,3 +81,10 @@ def check_no_overlap(game):
         if p.start < end_frame:
             raise ValueError(f"Point overlap detected at {p}")
         end_frame = p.end
+
+
+def get_fps(path):
+    cap = cv2.VideoCapture(path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    return fps

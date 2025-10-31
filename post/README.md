@@ -37,8 +37,8 @@ result <result>
   Write the text `\n` to indicate a newline in the title value only.
 - Keys:
     - `title`: Title annotated at beginning.
-    - `point`: Signifies a new point. Value should be two integers space separated,
-      indicating the start and end frame of the point.
+    - `point`: Signifies a new point.
+      Value should be the start and end timestamps of the point in `H:M:S` format.
     - `line`: Annotation put at beginning of point.
     - `score`: Numerical score as `1`, `-1`. `+1` is OK too.
       `1` means "we" score a point, `-1` means "they" score a point.
@@ -50,12 +50,12 @@ Example points text file:
 ```
 title No Wisco 2025\nSaturday Game 1
 
-point 240 720
+point 10.5 50
 line Player1 Player2 ...
 score 1
 result Clean hold
 
-point 900 1500
+point 67.8 135.6
 line Player1 Player2 ...
 score 1
 result Break

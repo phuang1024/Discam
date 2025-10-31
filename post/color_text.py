@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import cv2
 
-from pointstxt import parse_file
+from pointstxt import parse_file, get_fps
 
 Annotation = namedtuple("Annotation", ["start", "end", "text", "x", "y"])
 
@@ -106,6 +106,7 @@ def color_and_annotate(args, game):
                 break
 
         out_video.stdin.write(frame.tobytes())
+        out_video.stdin.flush()
         if out_video.returncode is not None:
             print("FFMPEG process ended unexpectedly")
             break
@@ -141,7 +142,8 @@ def main():
     parser.add_argument("points")
     args = parser.parse_args()
 
-    game = parse_file(args.points)
+    fps = get_fps(args.input)
+    game = parse_file(args.points, fps)
 
     write_chapters(game, args.output + "_chapters.txt")
     color_and_annotate(args, game)
