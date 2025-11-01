@@ -29,7 +29,7 @@ def crop(in_file, out_file, game, fps):
     trim_arg += end_trim_arg
 
     ffmpeg_args = [
-        FFMPEG,
+        FFMPEG, "-y",
         "-i", str(in_file),
         "-filter_complex", trim_arg, "-map", "[outv]", "-map", "[outa]",
         "-c:v", "libx264", "-c:a", "mp3",
@@ -41,14 +41,14 @@ def crop(in_file, out_file, game, fps):
 
 def stabilize(in_file, out_file):
     run([
-        FFMPEG,
+        FFMPEG, "-y",
         "-i", str(in_file),
         "-vf", "vidstabdetect=shakiness=6:result=transforms.trf",
         "-f", "null", "-",
     ], check=True)
 
     run([
-        FFMPEG,
+        FFMPEG, "-y",
         "-i", str(in_file),
         "-vf", "vidstabtransform=input=transforms.trf:smoothing=30:zoom=10",
         "-c:v", "libx264", "-c:a", "copy",
