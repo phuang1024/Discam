@@ -7,6 +7,9 @@ import torch.nn as nn
 
 from constants import *
 
+DINO = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg")
+DINO.eval()
+
 
 class DiscamModel(nn.Module):
     """
@@ -20,33 +23,22 @@ class DiscamModel(nn.Module):
         Note: Output is logits / temp, so can be outside [-1, 1].
     """
 
-    def __init__(self, res: tuple[int, int] = MODEL_INPUT_RES, output_temp = EDGE_WEIGHT_TEMP):
+    def __init__(
+            self,
+            res: tuple[int, int] = MODEL_INPUT_RES,
+            output_temp = EDGE_WEIGHT_TEMP,
+            num_hidden_layers: int = 2,
+    ):
         super().__init__()
         self.res = res
         self.output_temp = output_temp
+        self.num_hidden_layers = num_hidden_layers
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(3, 4, 3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(4),
-            nn.MaxPool2d(4),
-
-            nn.Conv2d(4, 8, 3, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(8),
-            nn.MaxPool2d(4),
-        )
-
-        # For 640x360, this is 40*22*8
-        out_neurons = (res[0] // 16) * (res[1] // 16) * 8
-        self.fc = nn.Sequential(
-            nn.Linear(out_neurons, 1024),
+        num_input_neurons = self.num_hidden_layers * 384 * (res[0] // 14) * (res[1] // 14)
+        self.head = nn.Sequential(
+            nn.Linear(num_input_neurons, 256),
             nn.LeakyReLU(),
-            nn.Linear(1024, 256),
-            nn.LeakyReLU(),
-            nn.Linear(256, 64),
-            nn.LeakyReLU(),
-            nn.Linear(64, 4),
+            nn.Linear(256, 4),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -56,8 +48,11 @@ class DiscamModel(nn.Module):
         x: (B, 3, H, W) [0, 1]
         return: (B, 4) [-1, 1]
         """
-        x = self.conv(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        with torch.no_grad():
+            x = DINO.get_intermediate_layers(x, n=self.num_hidden_layers, reshape=True)
+            x = torch.cat(x, dim=1)
+            x = x.view(x.size(0), -1)
+
+        x = self.head(x)
         x = x / self.output_temp
         return x
