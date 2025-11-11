@@ -8,6 +8,7 @@ import torch.nn as nn
 from constants import *
 
 DINO = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg")
+DINO = DINO.to(DEVICE)
 DINO.eval()
 
 
@@ -36,9 +37,9 @@ class DiscamModel(nn.Module):
 
         num_input_neurons = self.num_hidden_layers * 384 * (res[0] // 14) * (res[1] // 14)
         self.head = nn.Sequential(
-            nn.Linear(num_input_neurons, 256),
+            nn.Linear(num_input_neurons, 16),
             nn.LeakyReLU(),
-            nn.Linear(256, 4),
+            nn.Linear(16, 4),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
