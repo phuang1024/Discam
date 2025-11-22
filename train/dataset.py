@@ -123,7 +123,7 @@ class SimulatedDataset(Dataset):
         # Augmentations
         self.image_augs = T.Compose([
             T.RandomRotation(degrees=10),
-            T.ElasticTransform(alpha=10),
+            T.ElasticTransform(alpha=5),
             T.RandomResizedCrop(MODEL_INPUT_RES[::-1], scale=(0.8, 1.0), ratio=(0.9, 1 / 0.9)),
             T.ColorJitter(brightness=0.4, contrast=0.3, saturation=0.4, hue=0.3),
         ])

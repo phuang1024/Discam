@@ -27,7 +27,7 @@ import torch
 
 ## Video parameters.
 VIDEO_RES = (1920, 1080)
-MODEL_INPUT_RES = (448, 252)
+MODEL_INPUT_RES = (896, 504)
 
 ## Agent parameters.
 # Pixels per step.

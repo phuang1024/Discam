@@ -35,11 +35,28 @@ class DiscamModel(nn.Module):
         self.output_temp = output_temp
         self.num_hidden_layers = num_hidden_layers
 
-        num_input_neurons = self.num_hidden_layers * 384 * (res[0] // 14) * (res[1] // 14)
-        self.head = nn.Sequential(
-            nn.Linear(num_input_neurons, 16),
+        # Input is (B, 384, H/14, W/14)
+        # Output is (B, 64, H/14/4, W/14/4)
+        self.conv = nn.Sequential(
+            nn.Conv2d(384 * self.num_hidden_layers, 128, 3, 1, 1),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(),
-            nn.Linear(16, 4),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(128, 64, 3, 1, 1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(2),
+        )
+        self.conv_bypass = nn.Conv2d(384 * self.num_hidden_layers, 64, 1, 4, 0)
+
+        num_input_neurons = 64 * (res[0] // 14 // 4) * (res[1] // 14 // 4)
+        self.head = nn.Sequential(
+            nn.Linear(num_input_neurons, 1024),
+            nn.LeakyReLU(),
+            nn.Linear(1024, 256),
+            nn.LeakyReLU(),
+            nn.Linear(256, 4),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -52,8 +69,9 @@ class DiscamModel(nn.Module):
         with torch.no_grad():
             x = DINO.get_intermediate_layers(x, n=self.num_hidden_layers, reshape=True)
             x = torch.cat(x, dim=1)
-            x = x.view(x.size(0), -1)
 
+        x = self.conv(x) + self.conv_bypass(x)
+        x = x.view(x.size(0), -1)
         x = self.head(x)
         x = x / self.output_temp
         return x
