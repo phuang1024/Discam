@@ -1,3 +1,7 @@
+"""
+Test YOLO tracking using the built-in track() function.
+"""
+
 from ultralytics import YOLO
 
 model = YOLO("yolo11n.pt")
