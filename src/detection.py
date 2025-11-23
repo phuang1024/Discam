@@ -1,6 +1,8 @@
 """
 YOLO detection and person tracking.
 Frame motion estimation via feature matching.
+
+Run this file to visualize bboxes and tracks.
 """
 
 import argparse
