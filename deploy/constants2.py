@@ -11,7 +11,7 @@ from dataclasses import dataclass
 @dataclass
 class ThreadState:
     """
-    Data class for synchronizing threads.
+    Data class for communication between threads.
     """
     # Queue of frames read from camera. Guaranteed to contain at least one element (except at init).
     frameq: deque
@@ -22,6 +22,9 @@ class ThreadState:
 
 # Path to camera.
 CAMERA_PATH = "/dev/video2"
+# Path to PTZ control serial port.
+PTZ_PATH = "/dev/ttyUSB0"
+
 # Recording FPS.
 FPS = 24
 WIDTH = 1920

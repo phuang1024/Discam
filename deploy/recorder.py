@@ -97,7 +97,7 @@ def camera_read_thread(state: ThreadState):
         if not ret:
             continue
 
-        print("new frame")
+        #print("new frame")
         state.frameq.append(frame)
 
 
