@@ -1,5 +1,5 @@
 """
-PTZ control and NN inference.
+Tracking algorithm.
 """
 
 import time
@@ -20,7 +20,11 @@ DOF_ARRAY = np.array([
 ])
 
 
-def ptz_control_thread(state: ThreadState):
+def tracking_thread(state: ThreadState):
+    """
+    Thread that handles tracking players,
+    and controlling PTZ camera to follow.
+    """
     while state.run:
         # TODO ptz algorithm
 

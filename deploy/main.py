@@ -16,8 +16,8 @@ from pathlib import Path
 from threading import Thread
 
 from constants2 import *
-from ptz import ptz_control_thread
 from recorder import camera_read_thread, video_write_thread
+from tracking import tracking_thread
 
 
 def main():
@@ -37,12 +37,12 @@ def main():
 
     camera_read_t = Thread(target=camera_read_thread, args=(state,))
     video_write_t = Thread(target=video_write_thread, args=(state, out_dir,))
-    ptz_control_t = Thread(target=ptz_control_thread, args=(state,))
+    tracking_t = Thread(target=tracking_thread, args=(state,))
 
     threads = (
         camera_read_t,
         video_write_t,
-        ptz_control_t,
+        tracking_t,
     )
     for t in threads:
         t.start()
