@@ -24,7 +24,7 @@ class YoloTracker:
         Track people in frame and update in self.tracks.
         Returns results from detection.
         """
-        result = self.model.track(frame, persist=True)[0]
+        result = self.model.track(frame, imgsz=(1920, 1080), persist=True)[0]
         boxes = result.boxes.xyxy.cpu()
         class_ids = result.boxes.cls.int().cpu().tolist()
         track_ids = result.boxes.id.int().cpu().tolist()
@@ -45,6 +45,7 @@ class YoloTracker:
             if len(self.tracks[id]) > self.max_track_len:
                 self.tracks[id].pop(0)
 
+        """
         # Remove stale tracks.
         remove = []
         for key in self.tracks:
@@ -52,14 +53,15 @@ class YoloTracker:
                 remove.append(key)
         for key in remove:
             self.tracks.pop(key)
+        """
 
         return result
 
-
-def frame_motion(frame1, frame2):
-    """
-    Use dense feature matching to estimate the transform between two frames.
-    """
+    def clear_tracks(self):
+        """
+        Clear all tracks.
+        """
+        self.tracks = {}
 
 
 def get_color(id):

@@ -8,8 +8,8 @@ import serial
 
 
 class PTZControl:
-    def __init__(self):
-        self.port = serial.Serial("/dev/ttyUSB0")
+    def __init__(self, port: str):
+        self.port = serial.Serial(port)
         self.addr = 1
 
     def set_pt(self, pan: int, tilt: int):
@@ -61,7 +61,7 @@ class PTZControl:
 
 
 if __name__ == "__main__":
-    ptz = PTZControl()
+    ptz = PTZControl("/dev/ttyUSB0")
     for i in range(10):
         ptz.set_pt(1, 0)
         time.sleep(1)
