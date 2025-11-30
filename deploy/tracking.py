@@ -1,5 +1,8 @@
 """
 Tracking algorithm.
+
+Uses YOLO tracking and other video processing
+to determine and periodically execute movements on the camera.
 """
 
 import time
@@ -9,17 +12,7 @@ import numpy as np
 
 from constants2 import *
 from control import PTZControl
-
-# DOFs: Pan+, Pan-, Tilt+, Tilt-, Zoom+, Zoom-
-# raw_command_i = dot(DOF_ARRAY[i], nn_output)
-DOF_ARRAY = np.array([
-    [0, 0.5, 0, -0.5],
-    [0, -0.5, 0, 0.5],
-    [0.5, 0, -0.5, 0],
-    [-0.5, 0, 0.5, 0],
-    [0.25, 0.25, 0.25, 0.25],
-    [-0.25, -0.25, -0.25, -0.25],
-])
+from detection import YoloTracker
 
 
 def control_ptz(ctrl: PTZControl, pan: float, tilt: float, zoom: float):
@@ -44,12 +37,27 @@ def control_ptz(ctrl: PTZControl, pan: float, tilt: float, zoom: float):
         ctrl.stop()
 
 
+def yolo_thread(state: ThreadState, yolo: YoloTracker):
+    """
+    Continuously run yolo tracker on latest frame.
+    Note: The frame interval thus depends on computer and camera speed.
+    """
+    while state.run:
+        if len(state.frameq) > 0:
+            yolo.step(state.frameq[-1])
+        time.sleep(0.01)
+
+
 def tracking_thread(state: ThreadState):
     """
     Thread that handles tracking players,
     and controlling PTZ camera to follow.
     """
-    ptz = PTZControl(PTZ_PATH)
+    #ptz = PTZControl(PTZ_PATH)
+    yolo = YoloTracker()
+
+    yolo_t = Thread(target=yolo_thread, args=(state, yolo))
+    yolo_t.start()
 
     while state.run:
         # TODO ptz algorithm

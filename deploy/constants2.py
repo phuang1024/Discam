@@ -21,7 +21,7 @@ class ThreadState:
 
 
 # Path to camera.
-CAMERA_PATH = "/dev/video2"
+CAMERA_PATH = "/dev/video0"
 # Path to PTZ control serial port.
 PTZ_PATH = "/dev/ttyUSB0"
 
