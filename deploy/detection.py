@@ -5,6 +5,7 @@ Run this file to visualize bboxes and tracks.
 """
 
 import argparse
+import math
 from hashlib import sha1
 
 import cv2
@@ -66,6 +67,25 @@ class YoloTracker:
         Clear all tracks.
         """
         self.tracks = {}
+
+
+def compute_track_speed(track, eps=2):
+    """
+    Compute average speed of track.
+
+    track: List of (x, y) positions.
+        E.g. from YoloTracker.tracks[]
+    eps: Value added to denominator which is length of track.
+        Prevents very short track from having large speed.
+        Should be on the order of expected track length.
+    """
+    dist = 0
+    for i in range(len(track) - 1):
+        dist += math.hypot(
+            track[i + 1][0] - track[i][0],
+            track[i + 1][1] - track[i][1],
+        )
+    return dist / (len(track) + eps)
 
 
 def get_color(id):

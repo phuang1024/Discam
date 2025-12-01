@@ -12,7 +12,7 @@ import numpy as np
 
 from constants2 import *
 from control import PTZControl
-from detection import YoloTracker
+from detection import YoloTracker, compute_track_speed
 
 
 def control_ptz(ctrl: PTZControl, pan: float, tilt: float, zoom: float):
@@ -60,8 +60,9 @@ def tracking_thread(state: ThreadState):
     yolo_t.start()
 
     while state.run:
-        # TODO ptz algorithm
+        yolo.clear_tracks()
+        time.sleep(10)
 
-        time.sleep(PTZ_INTERVAL)
-
-
+        for track in yolo.tracks.values():
+            spd = compute_track_speed(track)
+            print(spd)
