@@ -66,6 +66,27 @@ class PTZControl:
         self.port.flush()
 
 
+class FakePTZControl:
+    """
+    Dummy class for testing.
+    """
+
+    def __init__(self):
+        pass
+
+    def close(self):
+        pass
+
+    def set_pt(self, pan: int, tilt: int):
+        print(f"set_pt({pan}, {tilt})")
+
+    def set_zoom(self, zoom: int):
+        print(f"set_zoom({zoom})")
+
+    def stop(self):
+        print("stop()")
+
+
 if __name__ == "__main__":
     ptz = PTZControl("/dev/ttyUSB0")
     for i in range(10):

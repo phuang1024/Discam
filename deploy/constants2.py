@@ -20,8 +20,12 @@ class ThreadState:
     run: bool = True
 
 
+# If True, use FakePTZControl and fake_camera_read_thread for testing.
+FAKE_TESTING = True
+
 # Path to camera.
-CAMERA_PATH = "/dev/video0"
+#CAMERA_PATH = "/dev/video0"
+CAMERA_PATH = "../data/videos/BoomNov10_part.mp4"
 # Path to PTZ control serial port.
 PTZ_PATH = "/dev/ttyUSB0"
 

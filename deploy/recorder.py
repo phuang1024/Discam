@@ -101,6 +101,25 @@ def camera_read_thread(state: ThreadState):
         state.frameq.append(frame)
 
 
+def fake_camera_read_thread(state: ThreadState):
+    """
+    Read from video file instead of camera for testing.
+    """
+    print("Opening video file", CAMERA_PATH)
+    cap = cv2.VideoCapture(CAMERA_PATH)
+
+    while state.run:
+        ret, frame = cap.read()
+        if not ret:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
+
+        frame = cv2.resize(frame, (WIDTH, HEIGHT))
+        state.frameq.append(frame)
+
+        time.sleep(1 / FPS)
+
+
 def video_write_thread(state: ThreadState, out_dir):
     recorder = Recorder(out_dir)
 

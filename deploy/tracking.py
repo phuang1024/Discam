@@ -11,7 +11,7 @@ from threading import Thread
 import numpy as np
 
 from constants2 import *
-from control import PTZControl
+from control import PTZControl, FakePTZControl
 from detection import YoloTracker, compute_track_speed
 
 
@@ -53,7 +53,11 @@ def tracking_thread(state: ThreadState):
     Thread that handles tracking players,
     and controlling PTZ camera to follow.
     """
-    #ptz = PTZControl(PTZ_PATH)
+    if FAKE_TESTING:
+        ptz = FakePTZControl()
+    else:
+        ptz = PTZControl(PTZ_PATH)
+
     yolo = YoloTracker()
 
     yolo_t = Thread(target=yolo_thread, args=(state, yolo))
