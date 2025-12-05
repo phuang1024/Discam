@@ -35,3 +35,10 @@ WIDTH = 1920
 HEIGHT = 1080
 # Number of frames in each recording chunk.
 RECORD_CHUNK_SIZE = 5 * 60 * 24
+
+# Speed threshold (px / frame) for track to be considered moving player.
+TRACK_SPEED_THRES = 3
+# Number of speedy players that must be tracked in order to consider camera movement.
+TRACK_COUNT_THRES = 3
+# The computed position must be this number of pixels off center to move camera.
+TRACK_PIXELS_THRES = 400
