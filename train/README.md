@@ -26,7 +26,10 @@ The model's output and the ground truth edge weights are compared.
 
 Scripts to run:
 
-- `make_data.py`: Generate training data.
-- `vis_data.py`: Visualize training data from `make_data.py`.
+- `make_data.py`: Generate and visualize training data.
 - `train.py`: Train the model.
 - `test.py`: Visualize model inference.
+
+## Standards
+
+- Bounding boxes are `(x1, y1, x2, y2)`.
