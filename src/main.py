@@ -20,6 +20,7 @@ import cv2
 
 from constants import *
 from recorder import video_write_thread
+from tracking import nn_thread
 
 
 def camera_control(state: ThreadState):
@@ -45,6 +46,14 @@ def camera_control(state: ThreadState):
         #print("new frame")
         state.frameq.append(frame)
 
+        # Check for NN result
+        if len(state.nn_output) > 0:
+            p, t, z = state.nn_output.popleft()
+            print("Setting PTZ:", p, t, z)
+            cap.set(cv2.CAP_PROP_PAN, p)
+            cap.set(cv2.CAP_PROP_TILT, t)
+            cap.set(cv2.CAP_PROP_ZOOM, z)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -62,9 +71,11 @@ def main():
     )
 
     video_write_t = Thread(target=video_write_thread, args=(state, out_dir,))
+    nn_t = Thread(target=nn_thread, args=(state,))
 
     threads = (
         video_write_t,
+        nn_t,
     )
     for t in threads:
         t.start()

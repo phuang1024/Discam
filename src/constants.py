@@ -22,4 +22,7 @@ FPS = 24
 WIDTH = 1920
 HEIGHT = 1080
 # Number of frames in each recording chunk.
-RECORD_CHUNK_SIZE = 120#5 * 60 * 24
+RECORD_CHUNK_SIZE = 5 * 60 * 24
+
+# Interval in seconds to run NN.
+NN_INTERVAL = 1
