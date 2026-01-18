@@ -48,3 +48,25 @@ class VideoReader:
             bbox = json.load(f)
 
         return frame, bbox
+
+
+class DiscamDataset(Dataset):
+    """
+    Torch dataset subclass for loading consecutive frames and bboxes.
+    """
+
+    def __init__(self, video_dir: Path):
+        """
+        video_dir: Directory with video subdirectories.
+        """
+        self.video_dir = video_dir
+        self.video_readers = []
+        for video_subdir in video_dir.iterdir():
+            if video_subdir.is_dir():
+                self.video_readers.append(VideoReader(video_subdir))
+
+        self.cumulative_lengths = []
+        cum_length = 0
+        for reader in self.video_readers:
+            cum_length += reader.length
+            self.cumulative_lengths.append(cum_length)
