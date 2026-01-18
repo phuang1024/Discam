@@ -2,11 +2,12 @@
 Deployment script main entry point.
 
 Threading:
-- Main thread spawns other threads and manages shared state.
-- Recorder thread reads from camera and saves to disk.
-- Read camera thread reads camera frames into a queue, maintaining time accuracy.
-- PTZ control thread continuously outputs PTZ commands to camera.
-  Periodically spawns a transient inference thread.
+- Main thread handles camera.
+  Reads frames and adds them to queue.
+  Uses results from PTZ thread to control camera.
+- Writer thread pops from frame queue and writes to video file.
+- PTZ thread periodically uses latest frame to compute PTZ movements.
+  Returns result to main thread.
 """
 
 import argparse
@@ -15,9 +16,34 @@ from datetime import datetime
 from pathlib import Path
 from threading import Thread
 
-from constants2 import *
-from recorder import camera_read_thread, fake_camera_read_thread, video_write_thread
-from tracking import tracking_thread
+import cv2
+
+from constants import *
+from recorder import video_write_thread
+
+
+def camera_control(state: ThreadState):
+    """
+    Read camera frames to queue, and apply PTZ movements.
+    """
+    print("Opening camera:", CAMERA_PATH)
+    cap = cv2.VideoCapture(CAMERA_PATH)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
+    cap.set(cv2.CAP_PROP_FPS, FPS)
+
+    # Warm up
+    for _ in range(10):
+        ret, frame = cap.read()
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            continue
+
+        #print("new frame")
+        state.frameq.append(frame)
 
 
 def main():
@@ -35,25 +61,16 @@ def main():
         nn_output=deque(maxlen=5),
     )
 
-    if FAKE_TESTING:
-        cam_func = fake_camera_read_thread
-    else:
-        cam_func = camera_read_thread
-    camera_read_t = Thread(target=cam_func, args=(state,))
     video_write_t = Thread(target=video_write_thread, args=(state, out_dir,))
-    tracking_t = Thread(target=tracking_thread, args=(state,))
 
     threads = (
-        camera_read_t,
         video_write_t,
-        tracking_t,
     )
     for t in threads:
         t.start()
 
     try:
-        while True:
-            time.sleep(1)
+        camera_control(state)
     except KeyboardInterrupt:
         print("Stopping threads...")
 
