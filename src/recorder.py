@@ -96,7 +96,7 @@ def reader_thread(state: ThreadState):
     for _ in range(10):
         state.camera.read()
 
-    while True:
+    while state.run:
         ret, frame = state.camera.read()
         if not ret:
             continue

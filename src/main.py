@@ -7,8 +7,8 @@ from threading import Thread
 import cv2
 
 from constants import *
+from control import control_thread
 from recorder import reader_thread, writer_thread
-from tracking import nn_thread
 
 
 def main():
@@ -37,12 +37,12 @@ def main():
 
     reader_t = Thread(target=reader_thread, args=(state,))
     writer_t = Thread(target=writer_thread, args=(state, out_dir,))
-    nn_t = Thread(target=nn_thread, args=(state,))
+    ctrl_t = Thread(target=control_thread, args=(state,))
 
     threads = (
         reader_t,
         writer_t,
-        nn_t,
+        ctrl_t,
     )
     for t in threads:
         t.start()
