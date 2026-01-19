@@ -1,5 +1,5 @@
 """
-Write frames to video files.
+Reader and writer threads.
 """
 
 import shutil
@@ -70,7 +70,10 @@ class Recorder:
         print(f"Recorder closed: Recorded {self.global_frame} frames in {self.chunk_index + 1} chunks.")
 
 
-def video_write_thread(state: ThreadState, out_dir):
+def writer_thread(state: ThreadState, out_dir):
+    """
+    Write frames from queue to video files.
+    """
     recorder = Recorder(out_dir)
 
     while state.run:
@@ -83,3 +86,18 @@ def video_write_thread(state: ThreadState, out_dir):
         recorder.write_frame(frame)
 
     recorder.close()
+
+
+def reader_thread(state: ThreadState):
+    """
+    Read camera frames to queue.
+    """
+    # Warm up
+    for _ in range(10):
+        state.camera.read()
+
+    while True:
+        ret, frame = state.camera.read()
+        if not ret:
+            continue
+        state.frameq.append(frame)

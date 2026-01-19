@@ -1,12 +1,16 @@
 from collections import deque
 from dataclasses import dataclass
 
+import cv2
+
 
 @dataclass
 class ThreadState:
     """
     Data class for communication between threads.
     """
+    # Input camera.
+    camera: cv2.VideoCapture
     # Queue of frames read from camera. Guaranteed to contain at least one element (except at init).
     frameq: deque
     # Queue of neural network outputs. Set a max length.
