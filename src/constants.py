@@ -28,7 +28,4 @@ HEIGHT = 1080
 # Number of frames in each recording chunk.
 RECORD_CHUNK_SIZE = 5 * 60 * 24
 
-# Max pan/tilt speed in deg/sec
-GUI_PT_SPEED = 30
-# Zoom speed in units/sec
-GUI_Z_SPEED = 20
+CTRL_FPS = 3
