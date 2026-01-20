@@ -25,6 +25,7 @@ class GUIController:
         """
         Draw frame on display, and return new pos.
         """
+        pygame.event.get()
         self.draw_frame(state.frameq[-1])
         pygame.display.update()
 
@@ -39,17 +40,15 @@ class GUIController:
 
     def compute_control(self):
         mouse_press = pygame.mouse.get_pressed()
-        #if not mouse_press[0]:
-            #return (0, 0, 0)
+        if not mouse_press[0]:
+            return (0, 0, 0)
 
         width, height = self.window.get_size()
         mx, my = pygame.mouse.get_pos()
 
-        print(mouse_press, mx, my)
-
         max_speed = GUI_PT_SPEED * 3600
         pan = np.interp(mx, [0, width], [-max_speed, max_speed])
-        tilt = np.interp(my, [0, height], [-max_speed, max_speed])
+        tilt = -1 * np.interp(my, [0, height], [-max_speed, max_speed])
 
         return (pan, tilt, 0)
 
@@ -70,7 +69,6 @@ def control_thread(state: ThreadState):
         last_time = time.time()
 
         curr_pos = gui.update(state, curr_pos, dt)
-        print(curr_pos)
 
         state.camera.set(cv2.CAP_PROP_PAN, curr_pos[0])
         state.camera.set(cv2.CAP_PROP_TILT, curr_pos[1])
