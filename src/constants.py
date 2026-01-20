@@ -18,9 +18,6 @@ class ThreadState:
     run: bool = True
 
 
-# Path to camera.
-CAMERA_PATH = "/dev/video2"
-
 # Recording FPS.
 FPS = 24
 WIDTH = 1920
@@ -28,4 +25,11 @@ HEIGHT = 1080
 # Number of frames in each recording chunk.
 RECORD_CHUNK_SIZE = 5 * 60 * 24
 
+# Path to camera.
+#CAMERA_PATH = "/dev/video2"
+CAMERA_PATH = "../data/videos/BoomNov10_part.mkv"
+# If reading from a file, set this nonzero.
+CAM_READ_DELAY = 1 / FPS
+
+# FPS to run PTZ control algorithm.
 CTRL_FPS = 3

@@ -100,4 +100,7 @@ def reader_thread(state: ThreadState):
         ret, frame = state.camera.read()
         if not ret:
             continue
+
         state.frameq.append(frame)
+
+        time.sleep(CAM_READ_DELAY)
