@@ -33,3 +33,5 @@ CAM_READ_DELAY = 1 / FPS
 
 # FPS to run PTZ control algorithm.
 CTRL_FPS = 3
+# Detection confidence threshold.
+CONF_THRES = 0.3
