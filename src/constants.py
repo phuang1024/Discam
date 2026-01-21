@@ -32,7 +32,7 @@ CAMERA_PATH = "../data/videos/RiseNotre_part.mp4"
 CAM_READ_DELAY = 1 / FPS
 
 # FPS to run PTZ control algorithm.
-CTRL_FPS = 3
+CTRL_FPS = 2
 # For all tracking parameters (e.g. bbox size, pos), average over this many control frames.
 CTRL_AVG_WINDOW = 10
 # Detection confidence threshold.

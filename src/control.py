@@ -2,6 +2,7 @@
 PTZ control thread.
 """
 
+import json
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -34,39 +35,41 @@ class ResultsAverage:
 
     def get_avg(self):
         total_n = sum(self.n)
-        return (
+        avg = (
             sum(self.x_moment) / total_n,
             sum(self.y_moment) / total_n,
             sum(self.size_moment) / total_n,
         )
+        avg = list(map(float, avg))
+        return avg
 
-    def update_new_results(self, results):
+    def update(self, detects):
         """
-        results: Return from detect_persons().
+        detects: Return from detect_persons().
         """
         x_moment = 0
         y_moment = 0
         size_moment = 0
-        for box in results:
+        for box in detects:
             x1, y1, x2, y2 = box.xyxy[0]
             x_moment += (x1 + x2) / 2
             y_moment += (y1 + y2) / 2
             size_moment += y2 - y1
 
-        self.n.append(len(results))
+        self.n.append(len(detects))
         self.x_moment.append(x_moment)
         self.y_moment.append(y_moment)
         self.size_moment.append(size_moment)
 
 
 def detect_persons(frame):
-    results = yolo(frame)
-    results = results[0]
+    detects = yolo(frame)
+    detects = detects[0]
 
     # Filter by confidence and class.
     boxes = []
-    for i in range(len(results.boxes)):
-        box = results.boxes[i]
+    for i in range(len(detects.boxes)):
+        box = detects.boxes[i]
         cls_id = int(box.cls[0])
         conf = box.conf[0]
         if cls_id == 0 and conf >= CONF_THRES:
@@ -75,8 +78,8 @@ def detect_persons(frame):
     return boxes
 
 
-def annotate_frame(results, avg, frame):
-    for box in results:
+def annotate_frame(detects, avg, frame):
+    for box in detects:
         cls_id = int(box.cls[0])
         if cls_id != 0:
             continue
@@ -87,11 +90,13 @@ def annotate_frame(results, avg, frame):
     cv2.circle(frame, (int(avg[0]), int(avg[1])), 5, (255, 0, 0), -1)
 
 
-def control_thread(state: ThreadState):
+def control_thread(state: ThreadState, log_dir):
     # Current PTZ.
     curr_pos = np.array([0, 0, 0], dtype=int)
 
-    avg_results = ResultsAverage(CTRL_AVG_WINDOW)
+    averager = ResultsAverage(CTRL_AVG_WINDOW)
+
+    index = 0
 
     while state.run:
         time.sleep(1 / CTRL_FPS)
@@ -99,14 +104,31 @@ def control_thread(state: ThreadState):
             continue
         frame = state.frameq[-1].copy()
 
-        results = detect_persons(frame)
-        avg_results.update_new_results(results)
-        avg = avg_results.get_avg()
+        detects = detect_persons(frame)
+        averager.update(detects)
+        avg = averager.get_avg()
 
-        annotate_frame(results, avg, frame)
+        annotate_frame(detects, avg, frame)
         cv2.imshow("a", frame)
         cv2.waitKey(1)
 
         state.camera.set(cv2.CAP_PROP_PAN, curr_pos[0])
         state.camera.set(cv2.CAP_PROP_TILT, curr_pos[1])
         state.camera.set(cv2.CAP_PROP_ZOOM, curr_pos[2])
+
+        log_step(log_dir, index, frame, detects, avg)
+        index += 1
+
+
+def log_step(dir, index, frame, detects, avg):
+    """
+    Log control results to disk.
+    """
+    cv2.imwrite(str(dir / f"{index}.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+
+    bboxes = [box.xyxy.tolist() for box in detects]
+    with open(dir / f"{index}.detects.json", "w") as fp:
+        json.dump(bboxes, fp, indent=4)
+
+    with open(dir / "{index}.avg.json", "w") as fp:
+        json.dump(avg, fp, indent=4)

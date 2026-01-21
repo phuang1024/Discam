@@ -18,7 +18,9 @@ def main():
 
     # Make timestamped output directory
     out_dir = args.output / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True)
+    ctrl_log_dir = out_dir / "control_logs"
+    ctrl_log_dir.mkdir()
 
     # Open camera input.
     print("Opening camera:", CAMERA_PATH)
@@ -36,8 +38,8 @@ def main():
     )
 
     reader_t = Thread(target=reader_thread, args=(state,))
-    writer_t = Thread(target=writer_thread, args=(state, out_dir,))
-    ctrl_t = Thread(target=control_thread, args=(state,))
+    writer_t = Thread(target=writer_thread, args=(state, out_dir))
+    ctrl_t = Thread(target=control_thread, args=(state, ctrl_log_dir))
 
     threads = (
         reader_t,
