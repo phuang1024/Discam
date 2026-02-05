@@ -33,7 +33,9 @@ CAM_READ_DELAY = 1 / FPS
 
 # FPS to run PTZ control algorithm.
 CTRL_FPS = 2
-# For all tracking parameters (e.g. bbox size, pos), average over this many control frames.
-CTRL_AVG_WINDOW = 10
+# Moving average length for bbox detections.
+CTRL_AVG_WINDOW = 5
 # Detection confidence threshold.
 CONF_THRES = 0.1
+# Quantile of all detection positions to use for median box.
+BOX_QUANTILE = 0.1

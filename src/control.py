@@ -9,7 +9,6 @@ from dataclasses import dataclass
 
 import cv2
 import numpy as np
-import torch
 from ultralytics import YOLO
 
 from constants import *
@@ -64,10 +63,10 @@ class ResultsAverage:
 
         xs = np.concatenate(self.xs)
         ys = np.concatenate(self.ys)
-        x_min = np.quantile(xs, 0.25).item()
-        x_max = np.quantile(xs, 0.75).item()
-        y_min = np.quantile(ys, 0.25).item()
-        y_max = np.quantile(ys, 0.75).item()
+        x_min = np.quantile(xs, BOX_QUANTILE).item()
+        x_max = np.quantile(xs, 1 - BOX_QUANTILE).item()
+        y_min = np.quantile(ys, BOX_QUANTILE).item()
+        y_max = np.quantile(ys, 1 - BOX_QUANTILE).item()
         median_box = [x_min, y_min, x_max, y_max]
 
         return {
