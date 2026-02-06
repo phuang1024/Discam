@@ -1,7 +1,11 @@
 from collections import deque
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import cv2
+
+if TYPE_CHECKING:
+    from camera import BaseCamera
 
 
 @dataclass
@@ -10,7 +14,7 @@ class ThreadState:
     Data class for communication between threads.
     """
     # Input camera.
-    camera: cv2.VideoCapture
+    camera: BaseCamera
     # Queue of frames read from camera. Guaranteed to contain at least one element (except at init).
     frameq: deque
     # Queue of neural network outputs. Set a max length.
@@ -27,12 +31,19 @@ RECORD_CHUNK_SIZE = 5 * 60 * 24
 
 # Path to camera.
 #CAMERA_PATH = "/dev/video2"
-CAMERA_PATH = "../data/videos/RiseNotre_part.mp4"
-# If reading from a file, set this nonzero.
-CAM_READ_DELAY = 1 / FPS
+CAMERA_PATH = "../data/videos/BoomJan29_part.mp4"
 
 # FPS to run PTZ control algorithm.
 CTRL_FPS = 2
+# Delay after sending control.
+CTRL_DELAY = 3
+# Speeds and thresholds of axes.
+PT_SPEED = 30 * 3600
+PT_THRES = 0.1
+ZOOM_CENTER = 0.5
+ZOOM_THRES = 0.1
+ZOOM_SPEED = 30
+ZOOM_MAX = 30
 # Moving average length for bbox detections.
 CTRL_AVG_WINDOW = 5
 # Detection confidence threshold.

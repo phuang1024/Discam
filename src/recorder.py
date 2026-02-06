@@ -102,5 +102,3 @@ def reader_thread(state: ThreadState):
             continue
 
         state.frameq.append(frame)
-
-        time.sleep(CAM_READ_DELAY)

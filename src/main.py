@@ -6,6 +6,7 @@ from threading import Thread
 
 import cv2
 
+from camera import PTZCamera, VideoCamera
 from constants import *
 from control import control_thread
 from recorder import reader_thread, writer_thread
@@ -23,16 +24,12 @@ def main():
     ctrl_log_dir.mkdir()
 
     # Open camera input.
-    print("Opening camera:", CAMERA_PATH)
-    cap = cv2.VideoCapture(CAMERA_PATH)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
-    cap.set(cv2.CAP_PROP_FPS, FPS)
+    #camera = PTZCamera()
+    camera = VideoCamera()
 
     # Spawn threads.
     state = ThreadState(
-        camera=cap,
+        camera=camera,
         frameq=deque(),
         nn_output=deque(maxlen=5),
     )
