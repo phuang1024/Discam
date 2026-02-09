@@ -7,3 +7,5 @@ __pycache__
 
 *.sh
 !post/*.sh
+
+docs/_build
