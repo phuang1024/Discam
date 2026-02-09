@@ -1,8 +1,9 @@
 __pycache__
 
 /data
+/scripts
 
 *.pt
 
-make_data/*.sh
-train/*.sh
+*.sh
+!post/*.sh
