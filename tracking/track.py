@@ -1,7 +1,5 @@
 """
 YOLO detection and person tracking.
-
-Run this file to visualize bboxes and tracks.
 """
 
 from collections import deque
@@ -21,6 +19,9 @@ class YoloTracker:
     A detection (and implicit tracking) is performed on every call of step().
     Only some iterations append to self.tracks.
     Therefore, to implement DETECT_INTERVAL, you should call step() every Nth frame.
+
+    self.tracks has the results of tracking as discrete time series.
+    Values are pixel coordinates of bounding box centers.
     """
 
     def __init__(self):
@@ -73,3 +74,34 @@ class YoloTracker:
 
     def clear_tracks(self):
         self.tracks = {}
+
+
+def prepare_model_input(track, res):
+    """
+    Prepare track data for model by
+    normalizing coordinates,
+    computing velocity,
+    padding,
+    and converting to tensor.
+
+    track: Discrete time series of (x, y) positions.
+        E.g. from tracker.tracks[]
+    res: Frame resolution.
+    """
+    # Normalize position.
+    pos = torch.zeros([TRACK_LEN, 2], dtype=torch.float32)
+    for i in range(len(track)):
+        pos[i, 0] = track[i][0] / res[0]
+        pos[i, 1] = track[i][1] / res[1]
+
+    # Compute velocity as diff of consecutive.
+    vel = torch.zeros([TRACK_LEN, 2], dtype=torch.float32)
+    for i in range(len(track) - 1):
+        vel[i] = pos[i + 1] - pos[i]
+
+    # Make mask.
+    mask = torch.zeros([TRACK_LEN, 1], dtype=torch.float32)
+    mask[:len(track)] = 1
+
+    data = torch.cat([mask, pos, vel], dim=1)
+    return data

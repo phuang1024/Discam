@@ -33,7 +33,9 @@ def draw_tracking(frame, tracker, result):
     result: Detection results of frame.
     """
     frame = frame.copy()
+    res = (frame.shape[1], frame.shape[0])
 
+    # Draw boxes.
     boxes = result.boxes.xyxy.int().cpu()
     class_ids = result.boxes.cls.int().cpu().tolist()
     track_ids = result.boxes.id.int().cpu().tolist()
@@ -47,6 +49,7 @@ def draw_tracking(frame, tracker, result):
                 2,
             )
 
+    # Draw trajectories.
     for id, track in tracker.tracks.items():
         color = rand_color(id)
         for i in range(len(track) - 1):

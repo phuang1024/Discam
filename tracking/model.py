@@ -15,6 +15,7 @@ class TrackClassifier(nn.Module):
     Tracks input is (batch, time, (mask, x, y, vel_x, vel_y)).
         mask is 1 or 0. 0 if it's a padding index, 1 otherwise.
     Output is class probabilities.
+        Index 0 is "active". Index 1 is "inactive".
     """
 
     def __init__(self):
