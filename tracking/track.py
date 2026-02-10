@@ -11,7 +11,7 @@ from hashlib import sha1
 import cv2
 from ultralytics import YOLO
 
-from constants import *
+from .constants import *
 
 
 class YoloTracker:
@@ -27,7 +27,7 @@ class YoloTracker:
     """
 
     def __init__(self):
-        self.model = YOLO("yolo11n.pt")
+        self.model = YOLO("yolo26n.pt")
         self.tracks = {}
 
         self.iter = 0

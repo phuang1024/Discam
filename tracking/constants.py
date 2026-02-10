@@ -9,4 +9,4 @@ DETECT_INTERVAL = 1
 # Append to track every Nth detection. Regardless, tracking is still performed every detection.
 TRACK_INTERVAL = 3
 # Max number of points in a track. NN input length is this.
-TRACK_LEN = 20
+TRACK_LEN = 32
