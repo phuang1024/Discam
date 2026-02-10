@@ -54,8 +54,8 @@ class YoloTracker:
                     self.tracks[id] = deque()
 
                 # Append box center to track.
-                x = (box[0] + box[2]) / 2
-                y = (box[1] + box[3]) / 2
+                x = ((box[0] + box[2]) / 2).item()
+                y = ((box[1] + box[3]) / 2).item()
                 self.tracks[id].append((x, y, self.iter))
 
                 if len(self.tracks[id]) > TRACK_LEN:
@@ -88,6 +88,7 @@ def prepare_model_input(track, res):
     track: Discrete time series of (x, y) positions.
         E.g. from tracker.tracks[]
     res: Frame resolution.
+    return: Tensor shape (TRACK_LEN, 5) with columns [mask, x, y, vx, vy].
     """
     # Normalize position.
     pos = torch.zeros([TRACK_LEN, 2], dtype=torch.float32)

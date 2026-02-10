@@ -31,9 +31,9 @@ Tracking and labeled data file structure:
 
 ```
 data/
-|__ 0.track.pt   # Trajectory of any length.
-|__ 0.meta.json  # Metadata.
-|__ 0.label.txt  # Generated during labeling.
+|__ 0.track.json  # Trajectory, raw format.
+|__ 0.meta.json   # Metadata.
+|__ 0.label.txt   # Generated during labeling.
 |   ...
 ```
 
@@ -41,7 +41,7 @@ Distilled data file structure:
 
 ```
 data/
-|__ 0.track.pt   # Trajectory of max length NN input size.
+|__ 0.track.pt   # Trajectory, max length NN input size, NN input format.
 |__ 0.label.txt  # Label.
 |   ...
 ```

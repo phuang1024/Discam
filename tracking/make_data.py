@@ -28,6 +28,7 @@ import json
 from pathlib import Path
 
 import cv2
+import numpy as np
 import torch
 from tqdm import tqdm
 
@@ -41,8 +42,6 @@ def track(args):
     tracker = YoloTracker(1)
 
     length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # Track for all frames.
     pbar = tqdm(total=length, desc="Tracking")
@@ -57,19 +56,76 @@ def track(args):
 
     # Write tracks to file.
     print(f"{len(tracker.tracks)} tracks found.")
+    cumul_track_len = 0
     for i, (id, track) in enumerate(tracker.tracks.items()):
         with open(args.data / f"{i}.meta.json", "w") as f:
             json.dump({
                 "id": id,
                 "frame_start": track[0][2],
-            }, f)
+                "frame_end": track[-1][2],
+            }, f, indent=4)
 
-        data = prepare_model_input(track, (width, height))
-        torch.save(data, args.data / f"{i}.track.pt")
+        with open(args.data / f"{i}.track.json", "w") as f:
+            json.dump(list(track), f, indent=4)
+
+        cumul_track_len += len(track)
+
+    print(f"Average track length: {cumul_track_len / len(tracker.tracks):.2f} frames.")
 
 
 def label(args):
-    pass
+    # Find indices to label.
+    total = 0
+    to_label = []
+    for file in args.data.iterdir():
+        if ".track.json" in file.name:
+            total += 1
+            name = file.stem.split(".")[0]
+            if not (args.data / f"{name}.label.txt").exists():
+                to_label.append(name)
+
+    print(f"Found {total} tracks, {len(to_label)} to label.")
+
+    video = cv2.VideoCapture(args.video)
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    for name in to_label:
+        print(f"Labeling {name}.")
+        with open(args.data / f"{name}.meta.json") as f:
+            meta = json.load(f)
+
+        # Get frame at end.
+        video.set(cv2.CAP_PROP_POS_FRAMES, meta["frame_end"])
+        ret, frame = video.read()
+        if not ret:
+            frame = np.zeros((height, width, 3), dtype=np.uint8)
+
+        # Draw track on frame.
+        with open(args.data / f"{name}.track.json") as f:
+            track = json.load(f)
+        track = np.array(track).astype(int)
+        cv2.circle(frame, (track[-1][0], track[-1][1]), 10, (0, 0, 255), -1)
+        for i in range(len(track) - 1):
+            cv2.line(frame, (track[i][0], track[i][1]), (track[i + 1][0], track[i + 1][1]), (0, 255, 0), 3)
+
+        # Ask for label.
+        cv2.imshow("label", frame)
+        key = cv2.waitKey(0)
+        label = None
+        for i in range(4):
+            if key == ord(str(i)):
+                label = i
+                break
+        else:
+            print("Invalid key, skipping.")
+
+        # Write label to file.
+        if label is not None:
+            print("Label:", label)
+            with open(args.data / f"{name}.label.txt", "w") as f:
+                f.write(str(label))
+                f.write("\n")
 
 
 def distill(args):
