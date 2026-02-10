@@ -151,15 +151,18 @@ def control_thread(state: ThreadState, log_dir):
 
         if avg is not None and time.time() - last_ctrl > CTRL_DELAY:
             ctrl = compute_control(avg)
+
             if ctrl[0] != 0 or ctrl[1] != 0 or ctrl[2] != 0:
                 print("Applying control:", ctrl)
                 curr_pos += ctrl
-                curr_pos[2] = min(curr_pos[2], ZOOM_MAX)
+                # Constrain zoom.
+                curr_pos[2] = max(min(curr_pos[2], ZOOM_MAX), 1)
+
                 state.camera.set_ptz(*curr_pos)
                 last_ctrl = time.time()
 
         # Logging.
-        log_step(log_dir, index, frame, detects, avg)
+        log_step(log_dir, index, frame, detects, avg, curr_pos)
         index += 1
 
 
@@ -177,7 +180,7 @@ def annotate_frame(detects, avg, frame):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
 
-def log_step(dir, index, frame, detects, avg):
+def log_step(dir, index, frame, detects, avg, curr_pos):
     """
     Log control results to disk.
     """
@@ -189,3 +192,6 @@ def log_step(dir, index, frame, detects, avg):
 
     with open(dir / "{index}.avg.json", "w") as fp:
         json.dump(avg, fp, indent=4)
+
+    with open(dir / f"{index}.curr_pos.json", "w") as fp:
+        json.dump(curr_pos.tolist(), fp, indent=4)

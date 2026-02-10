@@ -38,7 +38,7 @@ CTRL_FPS = 2
 # Delay after sending control.
 CTRL_DELAY = 3
 # Speeds and thresholds of axes.
-PT_SPEED = 30 * 3600
+PT_SPEED = 50 * 3600
 PT_THRES = 0.1
 ZOOM_CENTER = 0.5
 ZOOM_THRES = 0.1

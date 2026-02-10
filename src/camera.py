@@ -75,13 +75,15 @@ class VideoCamera(BaseCamera):
 
     PTZ crop:
     Crop width/height factor is linear with zoom value.
-    Assume FOV = 70.
+    Assume FOV.
     Bound pan/tilt at image bounds.
     """
 
     def __init__(self):
         print("Opening video as camera:", CAMERA_PATH)
         self.cap = cv2.VideoCapture(CAMERA_PATH)
+
+        self.fov = 90
 
         self.pan = 0
         self.tilt = 0
@@ -103,10 +105,9 @@ class VideoCamera(BaseCamera):
         max_pan = (WIDTH - width) // 2
         max_tilt = (HEIGHT - height) // 2
 
-        # Assume video FOV is 70 deg.
         # Convert self.pan and tilt from arcseconds to pixels.
-        pan = self.pan / 3600 * WIDTH / 70
-        tilt = -self.tilt / 3600 * WIDTH / 70
+        pan = self.pan / 3600 * WIDTH / self.fov
+        tilt = -self.tilt / 3600 * WIDTH / self.fov
         # Constrain pan tilt.
         pan = max(min(pan, max_pan), -max_pan)
         tilt = max(min(tilt, max_tilt), -max_tilt)
