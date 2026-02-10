@@ -15,19 +15,20 @@ class YoloTracker:
     Keeps a queue of recent bbox centers for each unique person.
     Updates per frame.
 
-    This class respects TRACK_INTERVAL.
-    A detection (and implicit tracking) is performed on every call of step().
-    Only some iterations append to self.tracks.
-    Therefore, to implement DETECT_INTERVAL, you should call step() every Nth frame.
+    Detection and implicit tracking is performed on every call of step().
+    On every Nth call, the results are appended to the result queues.
+    Set this with track_interval.
 
     self.tracks has the results of tracking as discrete time series.
+    Each element is (x, y, frame).
     Values are pixel coordinates of bounding box centers.
     """
 
-    def __init__(self):
+    def __init__(self, track_interval):
+        self.track_interval = track_interval
+
         self.model = YOLO("yolo26n.pt")
         self.tracks = {}
-
         self.iter = 0
 
     def step(self, frame, remove_lost=False):
@@ -37,13 +38,13 @@ class YoloTracker:
 
         remove_lost: Whether to remove tracks that are no longer detected.
         """
-        result = self.model.track(frame, imgsz=FRAME_RES, persist=True)[0]
+        result = self.model.track(frame, imgsz=FRAME_RES, persist=True, verbose=False)[0]
         boxes = result.boxes.xyxy.cpu()
         class_ids = result.boxes.cls.int().cpu().tolist()
         track_ids = result.boxes.id.int().cpu().tolist()
 
         # Check tracking interval.
-        if self.iter % TRACK_INTERVAL == 0:
+        if self.iter % self.track_interval == 0:
             for box, cls, id in zip(boxes, class_ids, track_ids):
                 # Check if is person.
                 if cls != 0:
@@ -55,7 +56,7 @@ class YoloTracker:
                 # Append box center to track.
                 x = (box[0] + box[2]) / 2
                 y = (box[1] + box[3]) / 2
-                self.tracks[id].append((x, y))
+                self.tracks[id].append((x, y, self.iter))
 
                 if len(self.tracks[id]) > TRACK_LEN:
                     self.tracks[id].popleft()

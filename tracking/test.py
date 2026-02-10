@@ -73,7 +73,7 @@ def vis_tracking():
     parser.add_argument("--frame_skip", type=int, default=DETECT_INTERVAL)
     args = parser.parse_args()
 
-    tracker = YoloTracker()
+    tracker = YoloTracker(TRACK_INTERVAL)
 
     video = cv2.VideoCapture(args.input)
     while True:

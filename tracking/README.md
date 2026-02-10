@@ -25,13 +25,15 @@ The model training pipeline consists of:
 Data generation is a three step process: Tracking, labeling, distilling. See
 `make_data.py`.
 
+Tracks are saved as NN input format.
+
 Tracking and labeled data file structure:
 
 ```
 data/
-|__ 1.track.json  # Trajectory of any length.
-|__ 1.meta.json   # Metadata.
-|__ 1.label.txt   # Generated during labeling.
+|__ 0.track.pt   # Trajectory of any length.
+|__ 0.meta.json  # Metadata.
+|__ 0.label.txt  # Generated during labeling.
 |   ...
 ```
 
@@ -39,8 +41,8 @@ Distilled data file structure:
 
 ```
 data/
-|__ 1.track.json  # Trajectory of max length NN input size.
-|__ 1.label.txt   # Label.
+|__ 0.track.pt   # Trajectory of max length NN input size.
+|__ 0.label.txt  # Label.
 |   ...
 ```
 

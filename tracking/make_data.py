@@ -7,8 +7,9 @@ This is a three step process:
 3. Distill data for training.
 
 The manually labeled data is more complicated than necessary for training:
-Tracks can and will be longer than the NN input length, and
-there are more than 2 classes.
+- Tracks can and will be longer than the NN input length.
+- There are more than 2 classes.
+- Frame step is 1.
 This is to be able to reuse the same set of labeled data on different training
 configs, e.g. by lumping classes or truncating tracks.
 
@@ -19,12 +20,52 @@ Classes:
 3: Erroneous or unrelated track (e.g. person on different field).
 """
 
+import sys
+sys.path.append("..")
+
 import argparse
+import json
 from pathlib import Path
+
+import cv2
+import torch
+from tqdm import tqdm
+
+from tracking import YoloTracker, prepare_model_input
 
 
 def track(args):
-    pass
+    args.data.mkdir(exist_ok=True, parents=True)
+
+    video = cv2.VideoCapture(args.video)
+    tracker = YoloTracker(1)
+
+    length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # Track for all frames.
+    pbar = tqdm(total=length, desc="Tracking")
+    while True:
+        ret, frame = video.read()
+        if not ret:
+            break
+
+        tracker.step(frame, remove_lost=False)
+        pbar.update(1)
+    pbar.close()
+
+    # Write tracks to file.
+    print(f"{len(tracker.tracks)} tracks found.")
+    for i, (id, track) in enumerate(tracker.tracks.items()):
+        with open(args.data / f"{i}.meta.json", "w") as f:
+            json.dump({
+                "id": id,
+                "frame_start": track[0][2],
+            }, f)
+
+        data = prepare_model_input(track, (width, height))
+        torch.save(data, args.data / f"{i}.track.pt")
 
 
 def label(args):
@@ -44,7 +85,7 @@ if __name__ == "__main__":
     track_p.add_argument("--video", type=Path, required=True, help="Path to video file.")
 
     label_p = subp.add_parser("label", help="Manually label trajectories.")
-    track_p.add_argument("--video", type=Path, required=True, help="Path to video file.")
+    label_p.add_argument("--video", type=Path, required=True, help="Path to video file.")
 
     distill_p = subp.add_parser("distill", help="Distill data for training.")
     distill_p.add_argument("--output", type=Path, required=True, help="Path to output dir.")
