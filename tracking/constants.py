@@ -11,6 +11,8 @@ DETECT_INTERVAL = 1
 TRACK_INTERVAL = 3
 # Max number of points in a track. NN input length is this.
 TRACK_LEN = 32
+# Confidence thres for YOLO detection.
+DETECT_CONF = 0.1
 
 ## Training parameters.
 EPOCHS = 10

@@ -38,7 +38,13 @@ class YoloTracker:
 
         remove_lost: Whether to remove tracks that are no longer detected.
         """
-        result = self.model.track(frame, imgsz=FRAME_RES, persist=True, verbose=False)[0]
+        result = self.model.track(
+            frame,
+            imgsz=FRAME_RES,
+            #conf=0.1,
+            persist=True,
+            verbose=False,
+        )[0]
         boxes = result.boxes.xyxy.cpu()
         class_ids = result.boxes.cls.int().cpu().tolist()
         track_ids = result.boxes.id.int().cpu().tolist()
@@ -95,6 +101,8 @@ def prepare_model_input(track, res):
     for i in range(len(track)):
         pos[i, 0] = track[i][0] / res[0]
         pos[i, 1] = track[i][1] / res[1]
+
+    # TODO subtract mean pos
 
     # Compute velocity as diff of consecutive.
     vel = torch.zeros([TRACK_LEN, 2], dtype=torch.float32)

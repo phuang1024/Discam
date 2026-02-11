@@ -105,11 +105,12 @@ def label(args):
         with open(args.data / f"{name}.track.json") as f:
             track = json.load(f)
         track = np.array(track).astype(int)
-        cv2.circle(frame, (track[-1][0], track[-1][1]), 10, (0, 0, 255), -1)
+        cv2.circle(frame, (track[-1][0], track[-1][1]), 15, (0, 0, 255), -1)
         for i in range(len(track) - 1):
-            cv2.line(frame, (track[i][0], track[i][1]), (track[i + 1][0], track[i + 1][1]), (0, 255, 0), 3)
+            cv2.line(frame, (track[i][0], track[i][1]), (track[i + 1][0], track[i + 1][1]), (0, 255, 0), 5)
 
         # Ask for label.
+        frame = cv2.resize(frame, None, fx=0.5, fy=0.5)
         cv2.imshow("label", frame)
         key = cv2.waitKey(0)
         label = None
