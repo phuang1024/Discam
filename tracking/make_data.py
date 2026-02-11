@@ -34,6 +34,9 @@ from tqdm import tqdm
 
 from tracking import YoloTracker, prepare_model_input
 
+# Minimum number of points in track to add to dataset.
+MIN_TRACK_LEN = 10
+
 
 def track(args):
     args.data.mkdir(exist_ok=True, parents=True)
@@ -57,7 +60,11 @@ def track(args):
     # Write tracks to file.
     print(f"{len(tracker.tracks)} tracks found.")
     cumul_track_len = 0
-    for i, (id, track) in enumerate(tracker.tracks.items()):
+    i = 0
+    for id, track in tracker.tracks.items():
+        if len(track) < MIN_TRACK_LEN:
+            continue
+
         with open(args.data / f"{i}.meta.json", "w") as f:
             json.dump({
                 "id": id,
@@ -69,8 +76,9 @@ def track(args):
             json.dump(list(track), f, indent=4)
 
         cumul_track_len += len(track)
+        i += 1
 
-    print(f"Average track length: {cumul_track_len / len(tracker.tracks):.2f} frames.")
+    print(f"Average track length: {cumul_track_len / i:.2f} frames.")
 
 
 def label(args):

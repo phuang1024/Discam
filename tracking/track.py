@@ -27,7 +27,7 @@ class YoloTracker:
     def __init__(self, track_interval):
         self.track_interval = track_interval
 
-        self.model = YOLO("yolo26n.pt")
+        self.model = YOLO("yolo26m.pt")
         self.tracks = {}
         self.iter = 0
 
@@ -41,9 +41,9 @@ class YoloTracker:
         result = self.model.track(
             frame,
             imgsz=FRAME_RES,
-            #conf=0.1,
             persist=True,
             verbose=False,
+            tracker="botsort.yaml",
         )[0]
         boxes = result.boxes.xyxy.cpu()
         class_ids = result.boxes.cls.int().cpu().tolist()
