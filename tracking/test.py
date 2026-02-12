@@ -26,7 +26,27 @@ def rand_color(id):
     )
 
 
-def draw_tracking(frame, tracker, result):
+def get_color_nn(tracker, model, res):
+    data = []
+    ids = list(tracker.tracks.keys())
+    for id in ids:
+        data.append(prepare_model_input(tracker.tracks[id], res))
+
+    data = torch.stack(data, dim=0).to(DEVICE)
+    data = data.permute(0, 2, 1)
+    cls = model(data).argmax(dim=1).cpu().tolist()
+
+    colors = {}
+    for id, c in zip(ids, cls):
+        if c == 0:
+            colors[id] = (0, 255, 0)
+        else:
+            colors[id] = (255, 255, 255)
+
+    return colors
+
+
+def draw_tracking(frame, tracker, result, model):
     """
     frame: Image.
     tracker: Tracker instance. Will access tracker.tracks.
@@ -34,6 +54,12 @@ def draw_tracking(frame, tracker, result):
     """
     frame = frame.copy()
     res = (frame.shape[1], frame.shape[0])
+
+    # Get color for each ID. Based on model classification, or random if no model.
+    if model is None:
+        colors = {id: rand_color(id) for id in tracker.tracks.keys()}
+    else:
+        colors = get_color_nn(tracker, model, res)
 
     # Draw boxes.
     boxes = result.boxes.xyxy.int().cpu()
@@ -45,19 +71,18 @@ def draw_tracking(frame, tracker, result):
                 frame,
                 (int(box[0]), int(box[1])),
                 (int(box[2]), int(box[3])),
-                rand_color(id),
+                colors.get(id, (0, 0, 0)),
                 2,
             )
 
     # Draw trajectories.
     for id, track in tracker.tracks.items():
-        color = rand_color(id)
         for i in range(len(track) - 1):
             cv2.line(
                 frame,
                 (int(track[i][0]), int(track[i][1])),
                 (int(track[i + 1][0]), int(track[i + 1][1])),
-                color,
+                colors.get(id, (0, 0, 0)),
                 3,
             )
 
@@ -67,11 +92,18 @@ def draw_tracking(frame, tracker, result):
 def vis_tracking():
     """
     Visualize YOLO tracking.
+    Query NN and color track based on class.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input video path.")
     parser.add_argument("--frame_skip", type=int, default=DETECT_INTERVAL)
+    parser.add_argument("--model")
     args = parser.parse_args()
+
+    model = None
+    if args.model is not None:
+        model = TrackClassifier().to(DEVICE)
+        #model.load_state_dict(torch.load(args.model, map_location=DEVICE))
 
     tracker = YoloTracker(TRACK_INTERVAL, TRACK_LEN)
 
@@ -84,7 +116,7 @@ def vis_tracking():
 
         result = tracker.step(frame, remove_lost=False)
 
-        vis = draw_tracking(frame, tracker, result)
+        vis = draw_tracking(frame, tracker, result, model)
         cv2.imshow("track", vis)
         if cv2.waitKey(100) == ord("q"):
             break

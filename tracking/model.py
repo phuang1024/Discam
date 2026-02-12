@@ -10,7 +10,7 @@ from .constants import *
 
 class TrackClassifier(nn.Module):
     """
-    (B, N, 5) -> (B, 2)
+    (B, 5, N) -> (B, 2)
     Tracks and mask to classification.
     Tracks input is (batch, time, (mask, x, y, vel_x, vel_y)).
         mask is 1 or 0. 0 if it's a padding index, 1 otherwise.
@@ -21,7 +21,7 @@ class TrackClassifier(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.cnn = nn.Module(
+        self.cnn = nn.Sequential(
             nn.Conv1d(5, 8, 5, padding=2),
             nn.BatchNorm1d(8),
             nn.LeakyReLU(),
@@ -40,7 +40,7 @@ class TrackClassifier(nn.Module):
         )
 
         in_features = TRACK_LEN // 4 * 16
-        self.head = nn.Module(
+        self.head = nn.Sequential(
             nn.Linear(in_features, 64),
             nn.LeakyReLU(),
             nn.Linear(64, 2),
