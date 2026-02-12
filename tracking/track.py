@@ -32,7 +32,7 @@ class YoloTracker:
         self.track_interval = track_interval
         self.max_len = max_len
 
-        self.model = YOLO("yolo26l.pt")
+        self.model = YOLO("yolo26m.pt")
         self.tracks = {}
         self.iter = 0
 
@@ -44,13 +44,7 @@ class YoloTracker:
         remove_lost: Whether to remove tracks that are no longer detected.
             TODO: YOLO can sometimes recover when lost actually.
         """
-        result = self.model.track(
-            frame,
-            imgsz=FRAME_RES,
-            persist=True,
-            verbose=False,
-            tracker="botsort.yaml",
-        )[0]
+        result = self.model.track(frame, imgsz=FRAME_RES, persist=True, verbose=False)[0]
         boxes = result.boxes.xyxy.cpu()
         class_ids = result.boxes.cls.int().cpu().tolist()
         track_ids = result.boxes.id.int().cpu().tolist()
