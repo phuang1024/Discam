@@ -9,10 +9,9 @@ FRAME_RES = (960, 544)
 DETECT_INTERVAL = 1
 # Append to track every Nth detection. Regardless, tracking is still implicitly performed every detection.
 TRACK_INTERVAL = 3
-# Max number of points in a track. NN input length is this.
+
+# Max length of track for NN input.
 TRACK_LEN = 32
-# Confidence thres for YOLO detection.
-DETECT_CONF = 0.1
 
 ## Training parameters.
 EPOCHS = 10

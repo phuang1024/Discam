@@ -21,10 +21,12 @@ Classes:
 """
 
 import sys
+
 sys.path.append("..")
 
 import argparse
 import json
+import random
 from pathlib import Path
 
 import cv2
@@ -32,7 +34,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from tracking import YoloTracker, prepare_model_input
+from tracking import *
 
 # Minimum number of points in track to add to dataset.
 MIN_TRACK_LEN = 10
@@ -138,20 +140,56 @@ def label(args):
 
 
 def distill(args):
-    pass
+    video = cv2.VideoCapture(args.video)
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    video.release()
+
+    ids = []
+    for file in args.data.iterdir():
+        if ".label.txt" in file.name:
+            name = file.stem.split(".")[0]
+            ids.append(name)
+    print(f"Found {len(ids)} labeled tracks.")
+
+    write_idx = 0
+    for id in tqdm(ids):
+        with open(args.data / f"{id}.label.txt") as f:
+            label = int(f.read().strip())
+
+        with open(args.data / f"{id}.track.json") as f:
+            track = json.load(f)
+        track = torch.tensor(track)[:, :2]
+
+        # Split track into length <=TRACK_LEN segments, step TRACK_INTERVAL.
+        # Also randomize length to be between (TRACK_LEN/2, TRACK_LEN).
+        start_i = 0
+        for start_i in range(0, track.shape[0] - TRACK_LEN * TRACK_INTERVAL // 2, TRACK_LEN // 2):
+            for step_i in range(TRACK_INTERVAL):
+                curr_len = random.randint(TRACK_LEN // 2, TRACK_LEN)
+                curr_track = track[start_i + step_i : start_i + step_i + curr_len * TRACK_INTERVAL : TRACK_INTERVAL]
+                assert curr_track.shape[0] <= TRACK_LEN
+                curr_track = prepare_model_input(curr_track, (width, height))
+
+                # Write to file.
+                torch.save(curr_track, args.output / f"{write_idx}.pt")
+                with open(args.output / f"{write_idx}.label.txt", "w") as f:
+                    f.write(str(label))
+                    f.write("\n")
+
+                write_idx += 1
+
+    print(f"Wrote {write_idx} training samples.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True, help="Path to data directory.")
+    parser.add_argument("--video", type=Path, required=True, help="Path to video file.")
     subp = parser.add_subparsers(dest="command")
 
     track_p = subp.add_parser("track", help="Run tracking on video footage.")
-    track_p.add_argument("--video", type=Path, required=True, help="Path to video file.")
-
     label_p = subp.add_parser("label", help="Manually label trajectories.")
-    label_p.add_argument("--video", type=Path, required=True, help="Path to video file.")
-
     distill_p = subp.add_parser("distill", help="Distill data for training.")
     distill_p.add_argument("--output", type=Path, required=True, help="Path to output dir.")
 
@@ -162,4 +200,5 @@ if __name__ == "__main__":
     elif args.command == "label":
         label(args)
     elif args.command == "distill":
+        args.output.mkdir(exist_ok=True, parents=True)
         distill(args)

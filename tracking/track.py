@@ -102,7 +102,8 @@ def prepare_model_input(track, res):
         pos[i, 0] = track[i][0] / res[0]
         pos[i, 1] = track[i][1] / res[1]
 
-    # TODO subtract mean pos
+    mean = pos[:len(track)].mean(dim=0)
+    pos -= mean
 
     # Compute velocity as diff of consecutive.
     vel = torch.zeros([TRACK_LEN, 2], dtype=torch.float32)
