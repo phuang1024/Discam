@@ -27,7 +27,7 @@ class YoloTracker:
     def __init__(self, track_interval):
         self.track_interval = track_interval
 
-        self.model = YOLO("yolo26m.pt")
+        self.model = YOLO("yolo26l.pt")
         self.tracks = {}
         self.iter = 0
 

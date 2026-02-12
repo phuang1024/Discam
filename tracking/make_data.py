@@ -58,7 +58,6 @@ def track(args):
     pbar.close()
 
     # Write tracks to file.
-    print(f"{len(tracker.tracks)} tracks found.")
     cumul_track_len = 0
     i = 0
     for id, track in tracker.tracks.items():
@@ -78,6 +77,7 @@ def track(args):
         cumul_track_len += len(track)
         i += 1
 
+    print(f"{i} tracks found.")
     print(f"Average track length: {cumul_track_len / i:.2f} frames.")
 
 
