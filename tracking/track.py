@@ -24,8 +24,13 @@ class YoloTracker:
     Values are pixel coordinates of bounding box centers.
     """
 
-    def __init__(self, track_interval):
+    def __init__(self, track_interval, max_len):
+        """
+        track_interval: Append to track every N frames.
+        max_len: Max length of any track. Old points are popped when exceeded.
+        """
         self.track_interval = track_interval
+        self.max_len = max_len
 
         self.model = YOLO("yolo26l.pt")
         self.tracks = {}
@@ -37,6 +42,7 @@ class YoloTracker:
         Returns results from detection.
 
         remove_lost: Whether to remove tracks that are no longer detected.
+            TODO: YOLO can sometimes recover when lost actually.
         """
         result = self.model.track(
             frame,
@@ -64,7 +70,7 @@ class YoloTracker:
                 y = ((box[1] + box[3]) / 2).item()
                 self.tracks[id].append((x, y, self.iter))
 
-                if len(self.tracks[id]) > TRACK_LEN:
+                if len(self.tracks[id]) > self.max_len:
                     self.tracks[id].popleft()
 
         # Remove lost tracks.

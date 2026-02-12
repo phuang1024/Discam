@@ -42,7 +42,7 @@ def track(args):
     args.data.mkdir(exist_ok=True, parents=True)
 
     video = cv2.VideoCapture(args.video)
-    tracker = YoloTracker(1)
+    tracker = YoloTracker(1, float("inf"))
 
     length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 

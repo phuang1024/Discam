@@ -73,7 +73,7 @@ def vis_tracking():
     parser.add_argument("--frame_skip", type=int, default=DETECT_INTERVAL)
     args = parser.parse_args()
 
-    tracker = YoloTracker(TRACK_INTERVAL)
+    tracker = YoloTracker(TRACK_INTERVAL, TRACK_LEN)
 
     video = cv2.VideoCapture(args.input)
     while True:
@@ -82,7 +82,7 @@ def vis_tracking():
         if not ret:
             break
 
-        result = tracker.step(frame, remove_lost=True)
+        result = tracker.step(frame, remove_lost=False)
 
         vis = draw_tracking(frame, tracker, result)
         cv2.imshow("track", vis)
