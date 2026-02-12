@@ -6,8 +6,10 @@ import sys
 sys.path.append("..")
 
 import argparse
+import random
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 import torch
@@ -30,12 +32,37 @@ class TrackDataset(Dataset):
         paths: Paths to dirs of distilled data.
             Will sample from all dirs.
         """
+        self.paths = paths
+
+        # Dataset length of each path.
+        self.lengths = []
+        for path in paths:
+            length = 0
+            for file in path.iterdir():
+                if ".label.txt" in file.name:
+                    length += 1
+            self.lengths.append(length)
+
+        self.cumul_lengths = [0]
+        for length in self.lengths:
+            self.cumul_lengths.append(self.cumul_lengths[-1] + length)
 
     def __len__(self):
-        pass
+        return self.cumul_lengths[-1]
 
     def __getitem__(self, idx):
-        pass
+        # Find corresponding path and file.
+        path_idx = 0
+        while idx >= self.cumul_lengths[path_idx + 1]:
+            path_idx += 1
+        file_idx = idx - self.cumul_lengths[path_idx]
+
+        path = self.paths[path_idx]
+        track = torch.load(path / f"{file_idx}.pt")
+        with open(path / f"{file_idx}.label.txt") as f:
+            label = int(f.read().strip())
+
+        return track, label
 
 
 def forward_loader(model, loader, criterion, desc=""):
@@ -98,5 +125,32 @@ def main():
     args = parser.parse_args()
 
 
+def vis_data():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("datas", nargs="+", type=Path)
+    args = parser.parse_args()
+
+    dataset = TrackDataset(args.datas)
+
+    plt.figure(figsize=(10, 10))
+    for i in range(9):
+        plt.subplot(3, 3, i + 1)
+        track, label = dataset[random.randint(0, len(dataset) - 1)]
+
+        # Remove padding.
+        last_ind = 0
+        for i in range(len(track)):
+            if track[i, 0] == 0:
+                last_ind = i
+                break
+
+        plt.plot(track[:last_ind, 1], track[:last_ind, 2])
+        plt.title(f"Label: {label}")
+
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
-    main()
+    #main()
+    vis_data()
