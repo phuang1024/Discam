@@ -69,21 +69,6 @@ class TrackDataset(Dataset):
         return track, label
 
 
-def forward_loader(model, loader, criterion, desc=""):
-    """
-    Yields loss for each batch.
-    """
-    pbar = tqdm(loader)
-    for x, y in pbar:
-        x = x.to(DEVICE)
-        y = y.to(DEVICE)
-        pred = model(x)
-        loss = criterion(pred, y)
-
-        pbar.set_description(f"{desc}: loss={loss.item():.4f}")
-        yield loss
-
-
 def train(args):
     model = TrackClassifier().to(DEVICE)
     print(model)
@@ -108,7 +93,12 @@ def train(args):
 
     global_step = 0
     for epoch in range(EPOCHS):
-        for loss in forward_loader(model, train_loader, criterion, desc=f"Train epoch {epoch}"):
+        for x, y in tqdm(train_loader, desc=f"Train epoch {epoch}"):
+            x = x.to(DEVICE)
+            y = y.to(DEVICE)
+            pred = model(x)
+
+            loss = criterion(pred, y)
             loss.backward()
             optim.step()
             optim.zero_grad()
@@ -118,10 +108,27 @@ def train(args):
 
         with torch.no_grad():
             total_loss = 0
-            for loss in forward_loader(model, val_loader, criterion, desc=f"Val epoch {epoch}"):
+            correct = 0
+            total_samples = 0
+            for x, y in tqdm(val_loader, desc=f"Val epoch {epoch}"):
+                x = x.to(DEVICE)
+                y = y.to(DEVICE)
+                pred = model(x)
+
+                loss = criterion(pred, y)
                 total_loss += loss.item()
+
+                pred_labels = pred.argmax(dim=1)
+                correct += (pred_labels == y).sum().item()
+                total_samples += y.size(0)
+
             avg_loss = total_loss / len(val_loader)
             writer.add_scalar("val/loss", avg_loss, epoch)
+
+            acc = correct / total_samples
+            writer.add_scalar("val/acc", acc, epoch)
+
+        torch.save(model.state_dict(), args.logdir / "latest.pt")
 
 
 def main():
@@ -169,5 +176,5 @@ def vis_data():
 
 
 if __name__ == "__main__":
-    #main()
-    vis_data()
+    main()
+    #vis_data()

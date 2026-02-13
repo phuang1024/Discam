@@ -14,6 +14,6 @@ TRACK_INTERVAL = 3
 TRACK_LEN = 64
 
 ## Training parameters.
-EPOCHS = 100
+EPOCHS = 150
 BATCH_SIZE = 32
 LR = 1e-3
