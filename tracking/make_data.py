@@ -38,6 +38,11 @@ from tracking import *
 
 # Minimum number of points in track to add to dataset.
 MIN_TRACK_LEN = 10
+# When distilling, number of samples per track per TRACK_LEN by class.
+NUM_SAMPLES = {
+    0: 1,
+    1: 8,
+}
 
 
 def track(args):
@@ -161,11 +166,17 @@ def distill(args):
             track = json.load(f)
         track = torch.tensor(track)[:, :2]
 
-        # Split track into length <=TRACK_LEN segments, step TRACK_INTERVAL.
-        # Also randomize length to be between (TRACK_LEN/2, TRACK_LEN).
-        start_i = 0
-        for start_i in range(0, track.shape[0] - TRACK_LEN * TRACK_INTERVAL // 2, TRACK_LEN // 2):
-            for step_i in range(TRACK_INTERVAL):
+        # Sample multiple datas per track, based on class imbalance and track length.
+        num_samples = NUM_SAMPLES.get(label, 1)
+        indices = range(
+            0,
+            max(track.shape[0] - TRACK_LEN * TRACK_INTERVAL, 0),
+            TRACK_INTERVAL,
+        )
+        # Uniformly spaced start index.
+        for start_i in indices:
+            # Supersampling index, step 1.
+            for step_i in range(num_samples):
                 curr_len = random.randint(TRACK_LEN // 2, TRACK_LEN)
                 curr_track = track[start_i + step_i : start_i + step_i + curr_len * TRACK_INTERVAL : TRACK_INTERVAL]
                 assert curr_track.shape[0] <= TRACK_LEN

@@ -23,7 +23,7 @@ class TrackDataset(Dataset):
     """
     Dataset for track classifier.
 
-    X: (T, 5) tensor of trajectory over time.
+    X: (5, T) tensor of trajectory over time.
     Y: Scalar integer class.
     """
 
@@ -58,9 +58,13 @@ class TrackDataset(Dataset):
         file_idx = idx - self.cumul_lengths[path_idx]
 
         path = self.paths[path_idx]
+
         track = torch.load(path / f"{file_idx}.pt")
+        track = track.permute(1, 0)
+
         with open(path / f"{file_idx}.label.txt") as f:
             label = int(f.read().strip())
+        label = torch.tensor(label, dtype=torch.long)
 
         return track, label
 
@@ -82,9 +86,11 @@ def forward_loader(model, loader, criterion, desc=""):
 
 def train(args):
     model = TrackClassifier().to(DEVICE)
+    print(model)
+    num_params = sum(p.numel() for p in model.parameters())
+    print(f"Model has {num_params} parameters.")
 
     optim = torch.optim.Adam(model.parameters(), lr=LR)
-    # TODO
     criterion = torch.nn.CrossEntropyLoss()
 
     dataset = TrackDataset(args.datas)
@@ -124,6 +130,8 @@ def main():
     parser.add_argument("--logdir", type=Path, required=True)
     args = parser.parse_args()
 
+    train(args)
+
 
 def vis_data():
     parser = argparse.ArgumentParser()
@@ -131,6 +139,14 @@ def vis_data():
     args = parser.parse_args()
 
     dataset = TrackDataset(args.datas)
+    print(f"Dataset has {len(dataset)} samples.")
+    class_counts = {}
+    for _, label in dataset:
+        label = label.item()
+        if label not in class_counts:
+            class_counts[label] = 0
+        class_counts[label] += 1
+    print("Class counts:", class_counts)
 
     plt.figure(figsize=(10, 10))
     for i in range(9):
@@ -139,12 +155,13 @@ def vis_data():
 
         # Remove padding.
         last_ind = 0
-        for i in range(len(track)):
-            if track[i, 0] == 0:
+        for i in range(track.shape[1]):
+            # Floating point comparison.
+            if track[0, i] == 0:
                 last_ind = i
                 break
 
-        plt.plot(track[:last_ind, 1], track[:last_ind, 2])
+        plt.plot(track[1, :last_ind], track[2, :last_ind])
         plt.title(f"Label: {label}")
 
     plt.tight_layout()

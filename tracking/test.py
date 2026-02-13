@@ -103,7 +103,7 @@ def vis_tracking():
     model = None
     if args.model is not None:
         model = TrackClassifier().to(DEVICE)
-        #model.load_state_dict(torch.load(args.model, map_location=DEVICE))
+        model.load_state_dict(torch.load(args.model, map_location=DEVICE))
 
     tracker = YoloTracker(TRACK_INTERVAL, TRACK_LEN)
 

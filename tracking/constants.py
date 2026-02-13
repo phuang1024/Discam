@@ -11,9 +11,9 @@ DETECT_INTERVAL = 1
 TRACK_INTERVAL = 3
 
 # Max length of track for NN input.
-TRACK_LEN = 32
+TRACK_LEN = 64
 
 ## Training parameters.
-EPOCHS = 10
+EPOCHS = 100
 BATCH_SIZE = 32
 LR = 1e-3
