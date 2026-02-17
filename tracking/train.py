@@ -124,7 +124,6 @@ def train(args):
 
             avg_loss = total_loss / len(val_loader)
             writer.add_scalar("val/loss", avg_loss, epoch)
-
             acc = correct / total_samples
             writer.add_scalar("val/acc", acc, epoch)
 
@@ -147,11 +146,15 @@ def vis_data():
 
     dataset = TrackDataset(args.datas)
     print(f"Dataset has {len(dataset)} samples.")
-    class_counts = {0: 0, 1: 0}
-    for _, label in dataset:
-        label = label.item()
-        class_counts[label] += 1
-    print("Class counts:", class_counts)
+
+    # Stats of average position and velocity magnitude.
+    pos_moment = 0
+    vel_moment = 0
+    for track, _ in dataset:
+        pos_moment += torch.max(torch.abs(track[1:3, :]))
+        vel_moment += torch.mean(torch.abs(track[3:5, :]))
+    print("avg(max(abs(position))):", pos_moment / len(dataset))
+    print("avg(mean(abs(velocity))):", vel_moment / len(dataset))
 
     plt.figure(figsize=(10, 10))
     for i in range(9):
@@ -174,5 +177,5 @@ def vis_data():
 
 
 if __name__ == "__main__":
-    #main()
-    vis_data()
+    main()
+    #vis_data()

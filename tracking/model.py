@@ -17,6 +17,9 @@ class TrackClassifier(nn.Module):
     Output is class probabilities.
         Index 0 is "active". Index 1 is "inactive".
     """
+    # Amount to scale track values by.
+    pos_scale = 2
+    vel_scale = 2000
 
     def __init__(self):
         super().__init__()
@@ -47,6 +50,9 @@ class TrackClassifier(nn.Module):
         )
 
     def forward(self, x):
+        with torch.no_grad():
+            x[:, 1:3, :] *= self.pos_scale
+            x[:, 3:5, :] *= self.vel_scale
         x = self.cnn(x)
         x = x.view(x.shape[0], -1)
         x = self.head(x)
