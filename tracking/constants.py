@@ -8,7 +8,7 @@ FRAME_RES = (960, 544)
 # Run detection every Nth video frame.
 DETECT_INTERVAL = 1
 # Append to track every Nth detection. Regardless, tracking is still implicitly performed every detection.
-TRACK_INTERVAL = 3
+TRACK_INTERVAL = 1
 # Min speed in image widths per frame to be considered moving.
 MIN_SPEED = 1e-3
 

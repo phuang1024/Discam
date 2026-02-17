@@ -40,8 +40,8 @@ from tracking import *
 MIN_TRACK_LEN = 10
 # When distilling, number of samples per track per TRACK_LEN by class.
 NUM_SAMPLES = {
-    0: 2,
-    1: 1,
+    0: 20,
+    1: 10,
 }
 
 
@@ -174,7 +174,7 @@ def distill(args):
         indices = range(
             0,
             max(track.shape[0] - TRACK_LEN * TRACK_INTERVAL, 0),
-            TRACK_INTERVAL,
+            TRACK_LEN,
         )
         # Uniformly spaced start index.
         for start_i in indices:
@@ -194,8 +194,11 @@ def distill(args):
                 write_idx += 1
                 class_counts[label] += 1
 
-    print(f"Wrote {write_idx} training samples.")
-    print("Class counts:", class_counts)
+    with open(args.output / "stats.txt", "w") as f:
+        print(f"Wrote {write_idx} training samples.", file=f)
+        print("Class counts:", class_counts, file=f)
+    with open(args.output / "stats.txt", "r") as f:
+        print(f.read())
 
 
 if __name__ == "__main__":
