@@ -147,11 +147,9 @@ def vis_data():
 
     dataset = TrackDataset(args.datas)
     print(f"Dataset has {len(dataset)} samples.")
-    class_counts = {}
+    class_counts = {0: 0, 1: 0}
     for _, label in dataset:
         label = label.item()
-        if label not in class_counts:
-            class_counts[label] = 0
         class_counts[label] += 1
     print("Class counts:", class_counts)
 
@@ -176,5 +174,5 @@ def vis_data():
 
 
 if __name__ == "__main__":
-    main()
-    #vis_data()
+    #main()
+    vis_data()
