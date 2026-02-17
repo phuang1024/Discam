@@ -2,6 +2,7 @@
 YOLO detection and person tracking.
 """
 
+import math
 from collections import deque
 
 from ultralytics import YOLO
@@ -116,3 +117,24 @@ def prepare_model_input(track, res):
 
     data = torch.cat([mask, pos, vel], dim=1)
     return data
+
+
+def compute_speed(track):
+    """
+    Compute average speed of a track.
+    Units are input units per time step.
+
+    track: List of (x, y) positions.
+    """
+    if len(track) < 2:
+        return 0
+
+    moment = 0
+    for i in range(len(track) - 1):
+        moment += math.hypot(
+            track[i + 1][0] - track[i][0],
+            track[i + 1][1] - track[i][1],
+        )
+
+    speed = moment / (len(track) - 1)
+    return speed

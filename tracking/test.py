@@ -46,6 +46,22 @@ def get_color_nn(tracker, model, res):
     return colors
 
 
+def get_color_speed(tracker, res):
+    """
+    Get color based on movement speed.
+    """
+    colors = {}
+    for id, track in tracker.tracks.items():
+        speed = compute_speed(track)
+        speed = speed / res[0]
+        if speed < MIN_SPEED:
+            colors[id] = (255, 255, 255)
+        else:
+            colors[id] = (0, 255, 0)
+
+    return colors
+
+
 def draw_tracking(frame, tracker, result, model):
     """
     frame: Image.
@@ -56,10 +72,13 @@ def draw_tracking(frame, tracker, result, model):
     res = (frame.shape[1], frame.shape[0])
 
     # Get color for each ID. Based on model classification, or random if no model.
+    """
     if model is None:
         colors = {id: rand_color(id) for id in tracker.tracks.keys()}
     else:
         colors = get_color_nn(tracker, model, res)
+    """
+    colors = get_color_speed(tracker, res)
 
     # Draw boxes.
     boxes = result.boxes.xyxy.int().cpu()
