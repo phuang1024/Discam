@@ -7,4 +7,9 @@ FRAME_STEP = 10
 # Length of data sample in frames.
 VIDEO_LEN = 16
 # Resolution of data sample.
-VIDEO_RES = (960, 540)
+VIDEO_RES = (480, 270)
+
+# Training parameters.
+EPOCHS = 10
+BATCH_SIZE = 8
+LR = 1e-4

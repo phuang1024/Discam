@@ -72,7 +72,7 @@ def create_video_writer(dir, index, fps):
 def write_label(dir, index, label):
     path = dir / f"{index}.label.txt"
     with open(path, "w") as fp:
-        fp.write(str(label))
+        fp.write(str(label) + "\n")
 
 
 def main():
