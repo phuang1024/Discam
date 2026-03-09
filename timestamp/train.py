@@ -6,9 +6,11 @@ import argparse
 from pathlib import Path
 
 import cv2
+from tqdm import tqdm
 
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.tensorboard import SummaryWriter
 
 from constants import *
 from model import create_model
@@ -69,9 +71,13 @@ def train(args):
     criterion = torch.nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam(model.blocks[-1].proj.parameters(), lr=LR)
 
+    writer = SummaryWriter(args.output / "logs")
+    global_step = 0
+
     for epoch in range(EPOCHS):
         model.train()
-        for x, y in train_loader:
+        pbar = tqdm(train_loader)
+        for x, y in pbar:
             x = x.to(DEVICE)
             y = y.float().to(DEVICE)
 
@@ -81,16 +87,26 @@ def train(args):
             loss.backward()
             optim.step()
 
+            pbar.set_description(f"Train epoch {epoch}: loss={loss.item():.4f}")
+            writer.add_scalar("train/loss", loss.item(), global_step)
+            global_step += 1
+
         model.eval()
         with torch.no_grad():
             total_loss = 0
-            for x, y in val_loader:
+            pbar = tqdm(val_loader)
+            for x, y in pbar:
                 x = x.to(DEVICE)
                 y = y.float().to(DEVICE)
 
                 pred = model(x).squeeze()
                 loss = criterion(pred, y)
+
+                pbar.set_description(f"Val epoch {epoch}: loss={loss.item():.4f}")
                 total_loss += loss.item() * x.size(0)
+
+            avg_loss = total_loss / len(val_data)
+            writer.add_scalar("val/loss", avg_loss, epoch)
 
 
 def main():
