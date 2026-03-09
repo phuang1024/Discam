@@ -43,6 +43,10 @@ class VideoDataset(Dataset):
             frames.append(frame)
         video.release()
 
+        # Pad to 16 frames if necessary.
+        while len(frames) < 16:
+            frames.append(frames[-1])
+
         # (C, T, H, W)
         x = torch.stack(frames, dim=0).permute(3, 0, 1, 2)
 
@@ -107,6 +111,8 @@ def train(args):
 
             avg_loss = total_loss / len(val_data)
             writer.add_scalar("val/loss", avg_loss, epoch)
+
+        torch.save(model.state_dict(), args.output / f"latest.pt")
 
 
 def main():

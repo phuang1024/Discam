@@ -10,6 +10,6 @@ VIDEO_LEN = 16
 VIDEO_RES = (480, 270)
 
 # Training parameters.
-EPOCHS = 10
+EPOCHS = 100
 BATCH_SIZE = 8
 LR = 1e-4
