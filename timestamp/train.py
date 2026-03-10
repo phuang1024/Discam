@@ -11,6 +11,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
+from torchvision.transforms import v2 as T
 
 from constants import *
 from model import create_model
@@ -25,6 +26,15 @@ class VideoDataset(Dataset):
         for file in dir.iterdir():
             if file.suffix == ".mp4":
                 self.length = max(self.length, int(file.stem) + 1)
+
+        # Augmentation.
+        aspect = VIDEO_RES[0] / VIDEO_RES[1]
+        self.aug = T.Compose([
+            T.RandomResizedCrop(VIDEO_RES[::-1], (0.5, 1), (aspect, aspect)),
+            T.RandomHorizontalFlip(),
+            T.ColorJitter(0.3, 0.3, 0.3, 0.1),
+            #T.GaussianNoise(sigma=0.02),
+        ])
 
     def __len__(self):
         return self.length
@@ -47,8 +57,13 @@ class VideoDataset(Dataset):
         while len(frames) < 16:
             frames.append(frames[-1])
 
+        # (T, H, W, C)
+        x = torch.stack(frames, dim=0)
+        # (T, C, H, W)
+        x = x.permute(0, 3, 1, 2)
+        x = self.aug(x)
         # (C, T, H, W)
-        x = torch.stack(frames, dim=0).permute(3, 0, 1, 2)
+        x = x.permute(1, 0, 2, 3)
 
         # Read label.
         label_path = self.dir / f"{index}.label.txt"
@@ -133,5 +148,22 @@ def main():
     train(args)
 
 
+def vis_data():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data", type=Path)
+    args = parser.parse_args()
+
+    dataset = VideoDataset(args.data)
+
+    for i in range(len(dataset)):
+        x, y = dataset[i]
+        print(f"Label: {y}")
+        for t in range(x.size(1)):
+            frame = (x[:, t] * 255).byte().permute(1, 2, 0).numpy()
+            cv2.imshow("frame", frame)
+            cv2.waitKey(200)
+
+
 if __name__ == "__main__":
-    main()
+    #main()
+    vis_data()
