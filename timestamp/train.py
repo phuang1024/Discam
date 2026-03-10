@@ -60,6 +60,9 @@ class VideoDataset(Dataset):
 
 def train(args):
     model = create_model().to(DEVICE)
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(model)
+    print(f"Trainable parameters: {num_params}")
 
     dataset = VideoDataset(args.data)
     train_len = int(0.8 * len(dataset))
@@ -98,6 +101,7 @@ def train(args):
         model.eval()
         with torch.no_grad():
             total_loss = 0
+            correct = 0
             pbar = tqdm(val_loader)
             for x, y in pbar:
                 x = x.to(DEVICE)
@@ -108,9 +112,12 @@ def train(args):
 
                 pbar.set_description(f"Val epoch {epoch}: loss={loss.item():.4f}")
                 total_loss += loss.item() * x.size(0)
+                correct += ((pred > 0) == (y > 0.5)).sum().item()
 
             avg_loss = total_loss / len(val_data)
+            accuracy = correct / len(val_data)
             writer.add_scalar("val/loss", avg_loss, epoch)
+            writer.add_scalar("val/accuracy", accuracy, epoch)
 
         torch.save(model.state_dict(), args.output / f"latest.pt")
 

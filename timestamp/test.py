@@ -15,7 +15,7 @@ def run_nn(model, nn_input):
     nn_input = [torch.from_numpy(frame).float() / 255.0 for frame in nn_input]
     x = torch.stack(nn_input, dim=0).permute(3, 0, 1, 2).unsqueeze(0).to(DEVICE)
     pred = model(x).item()
-    cls = int(pred > 0.5)
+    cls = int(pred > 0)
     return cls
 
 
