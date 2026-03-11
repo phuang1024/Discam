@@ -18,6 +18,11 @@ from model import create_model
 
 
 class VideoDataset(Dataset):
+    """
+    x: Video clip as (C, T, H, W) tensor.
+    y: Label as int.
+    """
+
     def __init__(self, dir):
         self.dir = dir
 
@@ -165,5 +170,5 @@ def vis_data():
 
 
 if __name__ == "__main__":
-    #main()
-    vis_data()
+    main()
+    #vis_data()

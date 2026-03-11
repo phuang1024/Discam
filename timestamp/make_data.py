@@ -1,10 +1,12 @@
 """
-Input: Video film, and timestamps of active play.
-Output: Clips, labeled by whether active.
+Generate NN training data from video and timestamps of active play.
+See readme for details.
 
-Timestamp format:
-Each line is an interval of active play.
-Each line is start time, stop time. Format of each is h:m:s.
+Clips are fixed length and fixed frame step.
+
+Generated data is:
+- Clips as video file.
+- Label text file.
 """
 
 import argparse
@@ -17,6 +19,9 @@ from constants import *
 
 
 def parse_time(string):
+    """
+    Convert time string to seconds.
+    """
     parts = string.split(":")
     s = 0
     m = 0
@@ -33,7 +38,10 @@ def parse_time(string):
     return s + 60*m + 3600*h
 
 
-def read_ts(path):
+def read_ts(path) -> list[tuple[float, float]]:
+    """
+    Read timestamps from file.
+    """
     ret = []
     with open(path, "r") as fp:
         for line in fp:
@@ -50,6 +58,8 @@ def read_ts(path):
 def compute_label(timestamps, frame, fps):
     """
     Compute label at frame.
+    If frame is between any of the timestamps, return 1.
+    Else, return 0.
     """
     time = frame / fps
     for start, end in timestamps:
@@ -59,6 +69,9 @@ def compute_label(timestamps, frame, fps):
 
 
 def create_video_writer(dir, index, fps):
+    """
+    Create video writer in output dir.
+    """
     path = dir / f"{index}.mp4"
     video = cv2.VideoWriter(
         str(path),
@@ -70,6 +83,9 @@ def create_video_writer(dir, index, fps):
 
 
 def write_label(dir, index, label):
+    """
+    Write label to file in output dir.
+    """
     path = dir / f"{index}.label.txt"
     with open(path, "w") as fp:
         fp.write(str(label) + "\n")
@@ -89,6 +105,7 @@ def main():
     video_read = cv2.VideoCapture(args.video)
     fps = video_read.get(cv2.CAP_PROP_FPS)
 
+    # Output clip writer.
     video_write = create_video_writer(args.output, 0, fps)
     write_label(args.output, 0, compute_label(timestamps, 0, fps))
 
@@ -110,6 +127,7 @@ def main():
         sample_len += 1
 
         if sample_len == VIDEO_LEN:
+            # Start new clip.
             sample_len = 0
             data_index += 1
             video_write.release()
