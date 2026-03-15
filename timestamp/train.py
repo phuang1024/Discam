@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import v2 as T
 
 from constants import *
-from model import create_model
+from model import TsModel
 
 
 class VideoDataset(Dataset):
@@ -79,10 +79,14 @@ class VideoDataset(Dataset):
 
 
 def train(args):
-    model = create_model().to(DEVICE)
+    model = TsModel().to(DEVICE)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(model)
     print(f"Trainable parameters: {num_params}")
+
+    if args.resume is not None:
+        print(f"Resuming from {args.resume}")
+        model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
     dataset = VideoDataset(args.data)
     train_len = int(0.8 * len(dataset))
@@ -96,7 +100,7 @@ def train(args):
     val_loader = DataLoader(val_data, **loader_args)
 
     criterion = torch.nn.BCEWithLogitsLoss()
-    optim = torch.optim.Adam(model.blocks[-1].proj.parameters(), lr=LR)
+    optim = torch.optim.Adam((p for p in model.parameters() if p.requires_grad), lr=LR)
 
     writer = SummaryWriter(args.output / "logs")
     global_step = 0
@@ -146,6 +150,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("data", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--resume")
     args = parser.parse_args()
 
     args.output.mkdir(exist_ok=True, parents=True)

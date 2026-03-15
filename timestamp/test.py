@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from constants import *
 from make_data import read_ts
-from model import create_model
+from model import TsModel
 
 
 def run_nn(model, nn_input):
@@ -36,7 +36,7 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Run without displaying video.")
     args = parser.parse_args()
 
-    model = create_model().to(DEVICE)
+    model = TsModel().to(DEVICE)
     model.load_state_dict(torch.load(args.model, map_location=DEVICE))
 
     video = cv2.VideoCapture(args.video)
@@ -109,5 +109,5 @@ def vis_timestamps():
 
 
 if __name__ == "__main__":
-    main()
-    #vis_timestamps()
+    #main()
+    vis_timestamps()
