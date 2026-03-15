@@ -27,14 +27,14 @@ def parse_time(string):
     m = 0
     h = 0
     if len(parts) == 1:
-        s = int(parts[0])
+        s = float(parts[0])
     elif len(parts) == 2:
-        s = int(parts[1])
-        m = int(parts[0])
+        s = float(parts[1])
+        m = float(parts[0])
     elif len(parts) == 3:
-        s = int(parts[2])
-        m = int(parts[1])
-        h = int(parts[0])
+        s = float(parts[2])
+        m = float(parts[1])
+        h = float(parts[0])
     return s + 60*m + 3600*h
 
 

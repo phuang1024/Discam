@@ -5,9 +5,12 @@ Play video and continuously run NN.
 import argparse
 
 import cv2
+import numpy as np
 import torch
+from tqdm import tqdm
 
 from constants import *
+from make_data import read_ts
 from model import create_model
 
 
@@ -76,5 +79,35 @@ def main():
             f.write(f"{start} {end}\n")
 
 
+def vis_timestamps():
+    """
+    Alternative entry point:
+    Draw multiple timestamps simultaneously, coloring in where each active section is.
+    Makes it easy to compare ground truth vs pred.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("timestamps", nargs="+", help="Paths to timestamp files.")
+    args = parser.parse_args()
+
+    img = np.zeros((50 * len(args.timestamps), 1000, 3), dtype=np.uint8)
+    img[:] = 255
+
+    all_ts = []
+    max_frame = 0
+    for path in args.timestamps:
+        ts = read_ts(path)
+        all_ts.append(ts)
+        max_frame = max(max_frame, max(x[1] for x in ts))
+
+    for i, ts in enumerate(all_ts):
+        for start, end in ts:
+            start_px = int(start / max_frame * img.shape[1])
+            end_px = int(end / max_frame * img.shape[1])
+            cv2.rectangle(img, (start_px, i * 50), (end_px, (i + 1) * 50), (0, 255, 0), -1)
+
+    cv2.imwrite("timestamps_vis.png", img)
+
+
 if __name__ == "__main__":
     main()
+    #vis_timestamps()
