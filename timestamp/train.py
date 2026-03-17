@@ -23,14 +23,17 @@ class VideoDataset(Dataset):
     y: Label as int.
     """
 
-    def __init__(self, dir):
-        self.dir = dir
+    def __init__(self, dirs):
+        self.dirs = list(dirs)
 
-        # Find dataset length.
-        self.length = 0
-        for file in dir.iterdir():
-            if file.suffix == ".mp4":
-                self.length = max(self.length, int(file.stem) + 1)
+        # Find dataset lengths.
+        self.lengths = []
+        for dir in self.dirs:
+            length = 0
+            for file in dir.iterdir():
+                if file.suffix == ".mp4":
+                    length = max(length, int(file.stem) + 1)
+            self.lengths.append(length)
 
         # Augmentation.
         aspect = VIDEO_RES[0] / VIDEO_RES[1]
@@ -42,11 +45,17 @@ class VideoDataset(Dataset):
         ])
 
     def __len__(self):
-        return self.length
+        return sum(self.lengths)
 
     def __getitem__(self, index):
+        # Find dir index.
+        dir_index = 0
+        while index >= self.lengths[dir_index]:
+            index -= self.lengths[dir_index]
+            dir_index += 1
+
         # Read video as 3D array.
-        path = self.dir / f"{index}.mp4"
+        path = self.dirs[dir_index] / f"{index}.mp4"
 
         video = cv2.VideoCapture(str(path))
         frames = []
@@ -71,7 +80,7 @@ class VideoDataset(Dataset):
         x = x.permute(1, 0, 2, 3)
 
         # Read label.
-        label_path = self.dir / f"{index}.label.txt"
+        label_path = self.dirs[dir_index] / f"{index}.label.txt"
         with open(label_path, "r") as fp:
             label = int(fp.read().strip())
 
@@ -88,7 +97,7 @@ def train(args):
         print(f"Resuming from {args.resume}")
         model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
-    dataset = VideoDataset(args.data)
+    dataset = VideoDataset(args.data.iterdir())
     train_len = int(0.8 * len(dataset))
     train_data, val_data = random_split(dataset, [train_len, len(dataset) - train_len])
     loader_args = {

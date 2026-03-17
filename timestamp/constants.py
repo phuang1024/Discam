@@ -13,6 +13,6 @@ VIDEO_RES = (480, 270)
 MODEL_ATTN = 0.5
 
 # Training parameters.
-EPOCHS = 100
-BATCH_SIZE = 2
+EPOCHS = 40
+BATCH_SIZE = 8
 LR = 1e-4
