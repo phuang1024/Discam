@@ -14,5 +14,5 @@ MODEL_ATTN = 0.5
 
 # Training parameters.
 EPOCHS = 40
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 LR = 1e-4

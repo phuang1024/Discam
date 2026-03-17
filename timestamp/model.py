@@ -34,17 +34,17 @@ class TsModel(nn.Module):
         # Set fc.
         self.model.blocks[-1].proj = torch.nn.Linear(2048, 1)
 
+        """
         # Freeze layers.
         for param in self.model.parameters():
             param.requires_grad = False
-        """
         for param in self.model.blocks[0].conv.parameters():
             param.requires_grad = True
-        """
         for param in self.model.blocks[-1].parameters():
             param.requires_grad = True
+        """
 
-        self.resize = T.Resize(VIDEO_RES[::-1])
+        #self.resize = T.Resize(VIDEO_RES[::-1])
 
     def forward(self, x):
         """
