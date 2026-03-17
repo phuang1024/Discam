@@ -74,12 +74,13 @@ class TCNModel(nn.Module):
         )
 
     def forward(self, x):
-        embeds = []
-        for t in range(x.shape[1]):
-            frame = x[:, t]  # (B, C, H, W)
-            em = self.resnet(frame)  # (B, 2048)
-            embeds.append(em)
-        embeds = torch.stack(embeds, dim=1)  # (B, T, 2048)
+        with torch.no_grad():
+            embeds = []
+            for t in range(x.shape[1]):
+                frame = x[:, t]  # (B, C, H, W)
+                em = self.resnet(frame)  # (B, 2048)
+                embeds.append(em)
+            embeds = torch.stack(embeds, dim=1)  # (B, T, 2048)
 
         embeds = embeds.permute(0, 2, 1)  # (B, 2048, T)
         out = self.tcn(embeds)  # (B, 1, T)

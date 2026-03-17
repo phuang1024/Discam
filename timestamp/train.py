@@ -5,7 +5,6 @@
 import argparse
 from pathlib import Path
 
-import cv2
 from tqdm import tqdm
 
 import torch
@@ -33,13 +32,13 @@ def train(args):
     loader_args = {
         "batch_size": BATCH_SIZE,
         "shuffle": True,
-        "num_workers": 4,
+        "num_workers": 2,
     }
     train_loader = DataLoader(train_data, **loader_args)
     val_loader = DataLoader(val_data, **loader_args)
 
-    criterion = torch.nn.BCEWithLogitsLoss()
-    optim = torch.optim.Adam(model.parameters(), lr=LR)
+    criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(POS_WEIGHT).to(DEVICE))
+    optim = torch.optim.Adam((p for p in model.parameters() if p.requires_grad), lr=LR)
 
     writer = SummaryWriter(args.output / "logs")
     global_step = 0
@@ -97,22 +96,5 @@ def main():
     train(args)
 
 
-def vis_data():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("data", type=Path)
-    args = parser.parse_args()
-
-    dataset = VideoDataset(args.data)
-
-    for i in range(len(dataset)):
-        x, y = dataset[i]
-        print(f"Label: {y}")
-        for t in range(x.size(1)):
-            frame = (x[:, t] * 255).byte().permute(1, 2, 0).numpy()
-            cv2.imshow("frame", frame)
-            cv2.waitKey(200)
-
-
 if __name__ == "__main__":
     main()
-    #vis_data()

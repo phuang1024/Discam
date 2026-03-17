@@ -2,6 +2,9 @@
 Dataset for training.
 """
 
+import argparse
+from pathlib import Path
+
 import cv2
 
 import torch
@@ -27,7 +30,7 @@ class VideoDataset(Dataset):
         """
         dir: Directory with video and label files.
         """
-        self.dir = dir
+        self.dir = Path(dir)
 
         # List of (video_path, label_data, length).
         self.videos = []
@@ -138,3 +141,32 @@ def parse_time(string):
         m = float(parts[1])
         h = float(parts[0])
     return s + 60*m + 3600*h
+
+
+def vis_data():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data")
+    args = parser.parse_args()
+
+    dataset = VideoDataset(args.data)
+
+    total = 0
+    ones = 0
+    for x, y in dataset:
+        total += y.size(0)
+        ones += y.sum().item()
+    print(f"total={total}, positive={ones}, ratio={ones/total:.4f}")
+
+    exit()
+
+    for i in range(len(dataset)):
+        x, y = dataset[i]
+        print(f"Label: {y}")
+        for t in range(x.size(1)):
+            frame = (x[:, t] * 255).byte().permute(1, 2, 0).numpy()
+            cv2.imshow("frame", frame)
+            cv2.waitKey(200)
+
+
+if __name__ == "__main__":
+    vis_data()
