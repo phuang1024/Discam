@@ -1,59 +1,87 @@
 """
-Modified 3D resnet model.
 """
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
 from torchvision.transforms import v2 as T
 
 from constants import *
 
 
-class TsModel(nn.Module):
+class ResTCNBlock(nn.Module):
     """
-    Model (B, C, T, H, W) -> (B,)
+    1D dilated CNN and residual connection.
+    """
 
-    Implements an attention mechanism:
-    The input image is center cropped with a fixed percentage.
-    This new image is stacked with the original, and passed together through the model.
+    def __init__(self, in_channels, out_channels, dilation):
+        super().__init__()
 
-    Uses pretrained 3D resnet. Modifications:
-    Input:
-        Input takes 6 channels (2 stacked images).
-    Unfrozen layers:
-        Only first layer (conv) and last layer (fc) unfrozen.
+        self.conv1 = nn.Conv1d(
+            in_channels,
+            out_channels,
+            3,
+            padding=dilation,
+            dilation=dilation,
+        )
+        self.conv2 = nn.Conv1d(
+            in_channels,
+            out_channels,
+            3,
+            padding=dilation,
+            dilation=dilation,
+        )
+
+    def forward(self, x):
+        res = x
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = x + res
+        return x
+
+
+class TCNModel(nn.Module):
+    """
+    Model (B, T, C, H, W) -> (B, T)
+
+    ResNet independently encodes each frame (T dimension).
+    Embeddings passed through 1D CNN.
     """
 
     def __init__(self):
         super().__init__()
 
-        self.model = torch.hub.load("facebookresearch/pytorchvideo", "slow_r50", pretrained=True)
-
-        # Set first layer.
-        #self.model.blocks[0].conv = torch.nn.Conv3d(6, 64, kernel_size=(1, 7, 7), stride=(1, 2, 2), padding=(0, 3, 3), bias=False)
-        # Set fc.
-        self.model.blocks[-1].proj = torch.nn.Linear(2048, 1)
-
-        """
-        # Freeze layers.
-        for param in self.model.parameters():
+        self.resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        # Remove head.
+        self.resnet.fc = nn.Identity()
+        # Freeze.
+        for param in self.resnet.parameters():
             param.requires_grad = False
-        for param in self.model.blocks[0].conv.parameters():
-            param.requires_grad = True
-        for param in self.model.blocks[-1].parameters():
-            param.requires_grad = True
-        """
 
-        #self.resize = T.Resize(VIDEO_RES[::-1])
+        self.tcn = nn.Sequential(
+            # Projection.
+            nn.Conv1d(2048, 256, 1),
+
+            ResTCNBlock(256, 256, dilation=1),
+            ResTCNBlock(256, 256, dilation=2),
+            ResTCNBlock(256, 256, dilation=4),
+
+            # Classifier.
+            nn.Conv1d(256, 1, 1),
+        )
 
     def forward(self, x):
-        """
-        crop_w = int(x.shape[3] * MODEL_ATTN)
-        crop_h = int(x.shape[2] * MODEL_ATTN)
-        x_crop = x[:, :, :, crop_h:-crop_h, crop_w:-crop_w]
-        x_crop = self.resize(x_crop)
+        embeds = []
+        for t in range(x.shape[1]):
+            frame = x[:, t]  # (B, C, H, W)
+            em = self.resnet(frame)  # (B, 2048)
+            embeds.append(em)
+        embeds = torch.stack(embeds, dim=1)  # (B, T, 2048)
 
-        x = torch.cat((x, x_crop), dim=1)
-        """
-
-        return self.model(x)
+        embeds = embeds.permute(0, 2, 1)  # (B, 2048, T)
+        out = self.tcn(embeds)  # (B, 1, T)
+        out = out.squeeze(1)  # (B, T)
+        return out

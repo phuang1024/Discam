@@ -19,6 +19,11 @@ Requires videos and list of timestamps.
 
 Video should be unedited film of a game.
 
+Videos should be:
+
+- 480x270.
+- 3fps.
+
 Each video has an associated timestamps file, which is manually labeled data
 of the start ane end of each point.
 

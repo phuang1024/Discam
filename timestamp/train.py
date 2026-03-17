@@ -13,11 +13,12 @@ from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 
 from constants import *
-from model import TsModel
+from dataset import VideoDataset
+from model import TCNModel
 
 
 def train(args):
-    model = TsModel().to(DEVICE)
+    model = TCNModel().to(DEVICE)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(model)
     print(f"Trainable parameters: {num_params}")
@@ -26,7 +27,7 @@ def train(args):
         print(f"Resuming from {args.resume}")
         model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
 
-    dataset = VideoDataset(args.data.iterdir())
+    dataset = VideoDataset(args.data)
     train_len = int(0.8 * len(dataset))
     train_data, val_data = random_split(dataset, [train_len, len(dataset) - train_len])
     loader_args = {
@@ -38,7 +39,7 @@ def train(args):
     val_loader = DataLoader(val_data, **loader_args)
 
     criterion = torch.nn.BCEWithLogitsLoss()
-    optim = torch.optim.Adam((p for p in model.parameters() if p.requires_grad), lr=LR)
+    optim = torch.optim.Adam(model.parameters(), lr=LR)
 
     writer = SummaryWriter(args.output / "logs")
     global_step = 0
