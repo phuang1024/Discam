@@ -32,7 +32,7 @@ def train(args):
     loader_args = {
         "batch_size": BATCH_SIZE,
         "shuffle": True,
-        "num_workers": 2,
+        "num_workers": 1,
     }
     train_loader = DataLoader(train_data, **loader_args)
     val_loader = DataLoader(val_data, **loader_args)

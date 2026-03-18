@@ -3,7 +3,7 @@ import torch
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data parameters.
-VIDEO_LEN = 256
+VIDEO_LEN = 128
 # Around the "point start" event, this many frames labeled as 1.
 POS_LABEL_RADIUS = 30
 
