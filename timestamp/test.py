@@ -15,31 +15,24 @@ from model import TsModel
 
 
 def run_nn(model, nn_input):
-    nn_input = [torch.from_numpy(frame).float() / 255.0 for frame in nn_input]
-    x = torch.stack(nn_input, dim=0).permute(3, 0, 1, 2).unsqueeze(0).to(DEVICE)
+    """
+    Run NN on a video clip (list of frames) and returns binary label.
+
+    nn_input: List of (H, W, C) uint8 numpy frames.
+    """
+    x = [torch.from_numpy(frame).float() / 255.0 for frame in nn_input]
+    x = torch.stack(x, dim=0).permute(3, 0, 1, 2).unsqueeze(0).to(DEVICE)
     pred = model(x).item()
     cls = int(pred > 0)
     return cls
 
 
-def draw_frame(frame, cls):
-    if cls is not None:
-        color = (0, 255, 0) if cls == 1 else (0, 0, 255)
-        cv2.rectangle(frame, (0, 0), (frame.shape[1], frame.shape[0]), color, 10)
-
-
-@torch.no_grad()
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("video", type=str, help="Path to video file.")
-    parser.add_argument("model", type=str, help="Path to model file.")
-    parser.add_argument("--headless", action="store_true", help="Run without displaying video.")
-    args = parser.parse_args()
-
-    model = TsModel().to(DEVICE)
-    model.load_state_dict(torch.load(args.model, map_location=DEVICE))
-
-    video = cv2.VideoCapture(args.video)
+def infer_video(model, video_path):
+    """
+    Run NN on entire video (split into clips).
+    Returns list of intervals where NN predicts active.
+    """
+    video = cv2.VideoCapture(video_path)
     fps = video.get(cv2.CAP_PROP_FPS)
 
     frame_index = 0
@@ -65,41 +58,21 @@ def main():
                 active_sections.append((frame_start / fps, frame_index / fps))
             nn_input = []
 
-        if not args.headless:
-            draw_frame(frame, cls)
-            cv2.imshow("frame", frame)
-            cv2.waitKey(int(1000 / fps))
-
         frame_index += 1
 
     pbar.close()
 
-    with open("active_sections.txt", "w") as f:
-        for start, end in active_sections:
-            f.write(f"{start} {end}\n")
+    return active_sections
 
 
-def vis_timestamps():
-    """
-    Alternative entry point:
-    Draw multiple timestamps simultaneously, coloring in where each active section is.
-    Makes it easy to compare ground truth vs pred.
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("timestamps", nargs="+", help="Paths to timestamp files.")
-    args = parser.parse_args()
-
-    img = np.zeros((50 * len(args.timestamps), 1000, 3), dtype=np.uint8)
+def draw_timelines(timestamps):
+    # Draw vis image.
+    img = np.zeros((50 * len(timestamps), 1000, 3), dtype=np.uint8)
     img[:] = 255
 
-    all_ts = []
-    max_frame = 0
-    for path in args.timestamps:
-        ts = read_ts(path)
-        all_ts.append(ts)
-        max_frame = max(max_frame, max(x[1] for x in ts))
+    max_frame = max(max(x[1] for x in ts) for ts in timestamps)
 
-    for i, ts in enumerate(all_ts):
+    for i, ts in enumerate(timestamps):
         for start, end in ts:
             start_px = int(start / max_frame * img.shape[1])
             end_px = int(end / max_frame * img.shape[1])
@@ -108,6 +81,29 @@ def vis_timestamps():
     cv2.imwrite("timestamps_vis.png", img)
 
 
+@torch.no_grad()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("video", type=str, help="Path to video file.")
+    parser.add_argument("model", type=str, help="Path to model file.")
+    parser.add_argument("--gt", help="Path to GT timestamps file, if applicable.")
+    args = parser.parse_args()
+
+    # Load model.
+    model = TsModel().to(DEVICE)
+    model.load_state_dict(torch.load(args.model, map_location=DEVICE))
+
+    # Run inference.
+    pred_ts = infer_video(model, args.video)
+
+    # Draw results.
+    all_ts = [pred_ts]
+    if args.gt is not None:
+        gt_ts = read_ts(args.gt)
+        all_ts.append(gt_ts)
+
+    draw_timelines(all_ts)
+
+
 if __name__ == "__main__":
-    #main()
-    vis_timestamps()
+    main()
