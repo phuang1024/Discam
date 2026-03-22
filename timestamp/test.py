@@ -1,5 +1,5 @@
 """
-Play video and continuously run NN.
+Run NN on video and visualize results as timeline.
 """
 
 import argparse
