@@ -14,11 +14,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 from constants import *
 from dataset import VideoDataset
-from model import TsModel
+from model import TimestampModel
 
 
 def train(args):
-    model = TsModel().to(DEVICE)
+    model = TimestampModel().to(DEVICE)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(model)
     print(f"Trainable parameters: {num_params}")
