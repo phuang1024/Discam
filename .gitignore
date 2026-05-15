@@ -4,8 +4,3 @@ __pycache__
 /scripts
 
 *.pt
-
-*.sh
-!post/*.sh
-
-docs/_build
