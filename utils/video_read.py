@@ -11,7 +11,7 @@ from constants import *
 
 
 class ScaledReader:
-    def __init__(self, path, fps, res):
+    def __init__(self, path, fps=FPS, res=RES):
         """
         fps, res: Target FPS and res.
         """
@@ -52,7 +52,7 @@ class ScaledReader:
 
 
 if __name__ == "__main__":
-    reader = ScaledReader("../data/videos/Irwin.mkv", FPS, RES)
+    reader = ScaledReader("../data/videos/Irwin.mkv")
     while True:
         ret, frame = reader.read()
         if not ret:
