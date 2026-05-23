@@ -1,9 +1,10 @@
 import argparse
+import time
 
 import cv2
 
 from constants import *
-from pipeline import Pipeline
+from pipeline import Pipeline, vis_pipeline
 
 
 def main():
@@ -22,7 +23,9 @@ def main():
         frame = cv2.resize(frame, RES)
 
         pipe.update(frame)
-        stop
+        vis_pipeline(pipe)
+
+        time.sleep(1)
 
 
 if __name__ == "__main__":

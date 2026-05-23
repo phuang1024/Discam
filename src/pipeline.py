@@ -1,6 +1,8 @@
 """
+Pipeline class and related utilities.
 """
 
+import cv2
 import torch
 
 from constants import *
@@ -31,6 +33,9 @@ class Pipeline:
     """
 
     def __init__(self):
+        # dino: Tensor, [N, C, H', W']
+        # of: Tensor, [2, H, W], (dx, dy)
+        # bgr: torch format image
         self.output = {
             "dino": None,
             "of": None,
@@ -71,3 +76,20 @@ def run_dino(frame, num_hidden=3):
     features = features.permute(0, 2, 1).reshape(features.shape[0], features.shape[2], new_h, new_w)
     print(features.shape)
     return features
+
+
+def vis_pipeline(pipeline: Pipeline):
+    """
+    Show the latest outputs.
+    """
+    out = pipeline.output
+
+    if out["dino"] is not None:
+        print("DINO output shape:", out["dino"].shape)
+        pca_img = pca_3axis(out["dino"][0])
+        pca_img = torch_to_cv2(pca_img)
+        # Scale up 14x
+        pca_img = cv2.resize(pca_img, None, fx=14, fy=14, interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("DINO PCA", pca_img)
+
+    cv2.waitKey(1)

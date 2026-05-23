@@ -43,3 +43,26 @@ def resize_mul14(img):
     new_h = (img.shape[1] // 14) * 14
     img = torch.nn.functional.interpolate(img.unsqueeze(0), size=(new_h, new_w), mode="bilinear").squeeze(0)
     return img
+
+
+def pca_3axis(img):
+    """
+    3 axis PCA.
+    img: torch format, [C, H, W]
+    return: torch format, [3, H, W]
+    """
+    c, h, w = img.shape
+
+    img_flat = img.view(c, -1).T
+    img_flat = img_flat - img_flat.mean(dim=0)
+    # Sample 1000 pixels for performance.
+    indices = torch.linspace(0, img_flat.shape[0] - 1, 1000, dtype=torch.long)
+    sample = img_flat[indices]
+
+    cov = sample.T @ sample
+    eigvals, eigvecs = torch.linalg.eig(cov)
+    idx = torch.argsort(eigvals.real, descending=True)[:3]
+    eigvecs = eigvecs[:, idx].real
+
+    pca_img = (img_flat @ eigvecs).T.view(3, h, w)
+    return pca_img
