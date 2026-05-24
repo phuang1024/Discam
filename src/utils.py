@@ -71,6 +71,24 @@ def vis_pca3(img):
     return pca_img
 
 
+def vis_similarity(img, target):
+    """
+    Visualize similarity of each pixel to target vector.
+    img: torch format, [C, H, W]
+    target: Tensor of shape [C]
+    return: cv2 format, heatmap image.
+    """
+    img_flat = img.view(img.shape[0], -1)
+    target = target / target.norm()
+    img_flat = img_flat / img_flat.norm(dim=0, keepdim=True)
+    sim = (img_flat.T @ target).view(img.shape[1], img.shape[2])
+
+    sim = (sim - sim.min()) / (sim.max() - sim.min())
+    sim = torch_to_cv2(sim.unsqueeze(0))
+    heatmap = cv2.applyColorMap(sim, cv2.COLORMAP_JET)
+    return heatmap
+
+
 def vis_optical_flow(img):
     """
     Visualize optical flow.

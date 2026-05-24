@@ -13,8 +13,10 @@ from utils import cv2_to_torch
 DINO = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14_reg").to(DEVICE)
 DINO.eval()
 
+PERSON = torch.load("person.pt").to(DEVICE)
 
-class Pipeline:
+
+class CVPipeline:
     """
     The Pipeline handles all the computer vision inference.
     Takes in a source (e.g. video or camera feed).
@@ -29,8 +31,9 @@ class Pipeline:
     OF and BG removal are run every frame.
     DINO is run every N frames.
 
-    Maintains the latest output from each component.
+    Output: Maintains the latest output from each component.
 
+    Features:
     Does tiled inference on all components.
     Does warp correction on OF and BGR.
     """
@@ -141,10 +144,12 @@ class Pipeline:
 
         self.output["original"] = frame
 
+        """
         if self.frame_i % DINO_INTERVAL == 0:
             #ret = self.tiled_inference(run_dino, frame_torch).to(DEVICE)
             ret = run_dino(frame_torch).to(DEVICE)
             self.output["dino"] = ret
+        """
 
         #ret = self.tiled_inference(self.of_module.compute_flow, frame_warped)
         ret = self.of_module.compute_flow(frame_warped)
@@ -157,6 +162,10 @@ class Pipeline:
         self.output["bgr"] = ret
 
         self.frame_i += 1
+
+        #cv2.imwrite("original.jpg", frame)
+        #torch.save(self.output["dino"], "dino.pt")
+        #stop
 
 
 def run_dino(frame, num_hidden=1):
@@ -244,11 +253,11 @@ def vis_pipeline(pipeline: Pipeline):
 
     if out["dino"] is not None:
         print("DINO output shape:", out["dino"].shape)
-        pca_img = vis_pca3(out["dino"][0])
-        pca_img = torch_to_cv2(pca_img)
+        #dino_img = torch_to_cv2(vis_pca3(out["dino"][0]))
+        dino_img = vis_similarity(out["dino"][0], PERSON)
         # Scale up 14x
-        pca_img = cv2.resize(pca_img, None, fx=14, fy=14, interpolation=cv2.INTER_NEAREST)
-        cv2.imshow("DINO PCA", pca_img)
+        dino_img = cv2.resize(dino_img, None, fx=14, fy=14, interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("DINO PCA", dino_img)
 
     if out["of"] is not None:
         print("Optical Flow shape:", out["of"].shape)

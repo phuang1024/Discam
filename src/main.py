@@ -4,7 +4,8 @@ import time
 import cv2
 
 from constants import *
-from pipeline import Pipeline, vis_pipeline
+from pipeline import CVPipeline, vis_pipeline
+from video_read import ScaledReader
 
 
 def main():
@@ -12,8 +13,8 @@ def main():
     parser.add_argument("video")
     args = parser.parse_args()
 
-    pipe = Pipeline()
-    video = cv2.VideoCapture(args.video)
+    pipe = CVPipeline()
+    video = ScaledReader(args.video)
 
     while True:
         ret, frame = video.read()
