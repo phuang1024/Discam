@@ -16,7 +16,8 @@ def cv2_to_torch(img):
     """
     Convert image format cv2 -> torch
     """
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if img.shape[2] == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = torch.from_numpy(img)
     img = img.float() / 255.0
     img = img.permute(2, 0, 1)
@@ -30,7 +31,8 @@ def torch_to_cv2(img):
     img = img.permute(1, 2, 0)
     img = (img * 255).clamp(0, 255).byte()
     img = img.cpu().numpy()
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    if img.shape[2] == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return img
 
 

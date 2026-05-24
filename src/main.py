@@ -25,8 +25,6 @@ def main():
         pipe.update(frame)
         vis_pipeline(pipe)
 
-        time.sleep(1)
-
 
 if __name__ == "__main__":
     main()
