@@ -3,6 +3,7 @@ Pipeline class and related utilities.
 """
 
 import cv2
+import numpy as np
 import torch
 
 from constants import *
@@ -19,7 +20,7 @@ class Pipeline:
     Takes in a source (e.g. video or camera feed).
     Outputs embeddings from the various components.
 
-    Input: Sequence of frames. Call update() on each frame.
+    Input: Sequence of frames. User should call update() on each frame.
     This class will *not* resize or check fps on the given frame;
         i.e. do it before calling update().
 
@@ -30,7 +31,8 @@ class Pipeline:
 
     Maintains the latest output from each component.
 
-    Supports tiled inference on all components.
+    Does tiled inference on all components.
+    Does warp correction on OF and BGR.
     """
 
     def __init__(self):
@@ -46,7 +48,47 @@ class Pipeline:
         }
 
         self.frame_i = 0
-        self.bg_remover = BgRemover()
+        self.of_module = OpticalFlow()
+        self.bgr_module = BgRemover()
+
+        self.init_warp()
+
+    def init_warp(self):
+        """
+        Make perspective correction.
+        Shrink lower edge by factor, forming a trapezoid shape.
+        """
+        length = int(RES[0] * WARP_CORRECTION)
+        rect1 = np.array([
+            [0, 0],
+            [RES[0], 0],
+            [RES[0], RES[1]],
+            [0, RES[1]],
+        ], dtype=np.float32)
+        rect2 = np.array([
+            [0, 0],
+            [RES[0], 0],
+            [RES[0] / 2 + length / 2, RES[1]],
+            [RES[0] / 2 - length / 2, RES[1]],
+        ], dtype=np.float32)
+
+        self.warp_mat = cv2.getPerspectiveTransform(rect1, rect2)
+        self.inv_warp_mat = cv2.getPerspectiveTransform(rect2, rect1)
+
+    def apply_warp(self, img):
+        """
+        img: cv2 format, resolution RES.
+        return: cv2 format, resolution RES.
+        """
+        warped = cv2.warpPerspective(img, self.warp_mat, RES)
+        return warped
+
+    def apply_inv_warp(self, img):
+        inv_warped = cv2.warpPerspective(img, self.inv_warp_mat, RES)
+        # Unsqueeze last dim if single channel.
+        if len(inv_warped.shape) == 2:
+            inv_warped = inv_warped[..., None]
+        return inv_warped
 
     def update(self, frame) -> None:
         """
@@ -56,20 +98,29 @@ class Pipeline:
         """
         print("Pipeline update frame", self.frame_i)
 
-        frame_cv2 = frame
-        frame_torch = cv2_to_torch(frame_cv2).to(DEVICE)
+        # Original image in torch format.
+        frame_torch = cv2_to_torch(frame).to(DEVICE)
+        # Warped image in torch format.
+        frame_warped = self.apply_warp(frame)
+        frame_warped = cv2_to_torch(frame_warped).to(DEVICE)
 
-        self.output["original"] = frame_cv2
+        self.output["original"] = frame
 
         if self.frame_i % DINO_INTERVAL == 0:
-            self.output["dino"] = run_dino(frame_torch)
+            self.output["dino"] = run_dino(frame_torch).to(DEVICE)
 
-        self.output["bgr"] = self.bg_remover.remove_bg(frame_cv2).to(DEVICE)
+        ret = self.of_module.compute_flow(frame_warped)
+        ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
+        self.output["of"] = ret
+
+        ret = self.bgr_module.remove_bg(frame_warped)
+        ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
+        self.output["bgr"] = ret
 
         self.frame_i += 1
 
 
-def run_dino(frame, num_hidden=3):
+def run_dino(frame, num_hidden=1):
     """
     frame: torch format.
     return: torch format, [N, C, H', W']
@@ -85,6 +136,42 @@ def run_dino(frame, num_hidden=3):
     return features
 
 
+class OpticalFlow:
+    """
+    Wrapper around cv2 Farneback.
+    """
+
+    def __init__(self):
+        self.prev_frame = None
+
+    def compute_flow(self, frame):
+        """
+        frame: torch format.
+        return: torch format, [2, H, W], (dx, dy)
+        """
+        frame = torch_to_cv2(frame)
+
+        if self.prev_frame is None:
+            self.prev_frame = frame
+            return torch.zeros(2, frame.shape[0], frame.shape[1])
+
+        flow = cv2.calcOpticalFlowFarneback(
+            cv2.cvtColor(self.prev_frame, cv2.COLOR_BGR2GRAY),
+            cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY),
+            None,
+            0.5,
+            3,
+            15,
+            3,
+            5,
+            1.2,
+            0,
+        )
+        self.prev_frame = frame
+        flow = torch.from_numpy(flow).permute(2, 0, 1)
+        return flow
+
+
 class BgRemover:
     """
     Wrapper around cv2 BG remover.
@@ -96,13 +183,13 @@ class BgRemover:
 
     def remove_bg(self, frame):
         """
-        frame: cv2 format.
-        return: torch format, binary mask.
+        frame: torch format.
+        return: torch format, [1, H, W] float mask.
         """
+        frame = torch_to_cv2(frame)
+
         fg_mask = self.bg_subtractor.apply(frame)
         fg_mask = cv2.medianBlur(fg_mask, 5)
-        # TODO tune threshold
-        fg_mask = cv2.threshold(fg_mask, 127, 255, cv2.THRESH_BINARY)[1]
         fg_mask = fg_mask[..., None]
         fg_mask = cv2_to_torch(fg_mask)
         return fg_mask
@@ -118,11 +205,16 @@ def vis_pipeline(pipeline: Pipeline):
 
     if out["dino"] is not None:
         print("DINO output shape:", out["dino"].shape)
-        pca_img = pca_3axis(out["dino"][0])
+        pca_img = vis_pca3(out["dino"][0])
         pca_img = torch_to_cv2(pca_img)
         # Scale up 14x
         pca_img = cv2.resize(pca_img, None, fx=14, fy=14, interpolation=cv2.INTER_NEAREST)
         cv2.imshow("DINO PCA", pca_img)
+
+    if out["of"] is not None:
+        print("Optical Flow shape:", out["of"].shape)
+        of_img = vis_optical_flow(out["of"])
+        cv2.imshow("Optical Flow", of_img)
 
     if out["bgr"] is not None:
         print("BG mask shape:", out["bgr"].shape)

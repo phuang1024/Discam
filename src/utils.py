@@ -9,6 +9,7 @@ torch format:
 """
 
 import cv2
+import numpy as np
 import torch
 
 
@@ -47,7 +48,7 @@ def resize_mul14(img):
     return img
 
 
-def pca_3axis(img):
+def vis_pca3(img):
     """
     3 axis PCA.
     img: torch format, [C, H, W]
@@ -68,3 +69,22 @@ def pca_3axis(img):
 
     pca_img = (img_flat @ eigvecs).T.view(3, h, w)
     return pca_img
+
+
+def vis_optical_flow(img):
+    """
+    Visualize optical flow.
+    Hue is direction, value is magnitude.
+    img: torch format, [2, H, W]
+    return: cv2 format
+    """
+    flow = img.cpu().numpy()
+    mag, ang = cv2.cartToPolar(flow[0], flow[1])
+    mag = np.sqrt(mag)
+
+    hsv = np.zeros((flow.shape[1], flow.shape[2], 3), dtype=np.uint8)
+    hsv[..., 0] = ang * 180 / np.pi / 2
+    hsv[..., 1] = 255
+    hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return rgb
