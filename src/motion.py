@@ -21,8 +21,8 @@ class Motion:
             detectShadows=False,
         )
 
-        self.of_ema = BlurFilter()
-        self.bgr_ema = BlurFilter()
+        self.of_ema = BlurEMAFilter()
+        self.bgr_ema = BlurEMAFilter()
 
     def update(self, frame):
         """
@@ -47,8 +47,8 @@ class Motion:
 
         # Take magnitude.
         of = np.sqrt(self.prev_flow[:, :, 0] ** 2 + self.prev_flow[:, :, 1] ** 2)
-        # Convert to binary mask.
-        of = of > 0
+        print(of.shape)
+        print(np.min(of), np.max(of))
         of = self.of_ema.update(of)
 
         # BG remove.
@@ -57,17 +57,18 @@ class Motion:
         fg_mask = self.bgr_ema.update(fg_mask)
 
         return {
-            "of": self.prev_flow,
+            "of": of,
             "bgr": fg_mask,
         }
 
 
-class BlurFilter:
+class BlurEMAFilter:
     """
+    Temporal filter with blurring, EMA, and thresholding.
     """
 
     def __init__(self):
-        # EMA of input.
+        # EMA of input. float.
         self.output = None
 
     def update(self, x):
@@ -94,15 +95,14 @@ def vis_motion(frame, motion_out):
     """
     frame = frame.copy()
 
-    overlay = np.zeros_like(frame)
     # BG remover.
-    overlay[motion_out["bgr"]] = (255, 255, 255)
+    red = np.zeros([frame.shape[0], frame.shape[1]], dtype=np.uint8)
+    red[motion_out["bgr"]] = 255
     # Optical flow.
-    dy = motion_out["of"][:, :, 0]
-    dx = motion_out["of"][:, :, 1]
-    mag = np.sqrt(dx ** 2 + dy ** 2)
-    #overlay[mag > 0, 1] = (255, 255, 255)
+    blue = np.zeros([frame.shape[0], frame.shape[1]], dtype=np.uint8)
+    blue[motion_out["of"]] = 255
 
+    overlay = np.stack([blue, np.zeros_like(red), red], axis=-1)
     frame = cv2.addWeighted(frame, 0.7, overlay, 0.3, 0)
     cv2.imshow("Motion", frame)
     cv2.waitKey(1)
