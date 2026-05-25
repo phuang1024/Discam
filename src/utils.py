@@ -20,6 +20,8 @@ FPS = 8
 
 # VidStab window.
 STAB_WINDOW = 30
+# Bottom edge is this factor of original size. 1 means no warp.
+WARP_CORRECTION = 0.5
 
 # Detector params.
 # Run DINO every N frames in Pipeline.
@@ -30,10 +32,10 @@ EMBED_EMA = 0.2
 DINO_THRES = 0.5
 
 # Motion params.
-# Bottom edge is this factor of original size. 1 means no warp.
-WARP_CORRECTION = 0.5
-OF_THRES = 0.3
-BGR_THRES = 0
+MOTION_EMA = 0.2
+MOTION_BLUR_SIZE = 5
+MOTION_BLUR_PASSES = 3
+MOTION_THRES = 0.2
 
 
 def cv2_to_torch(img):
