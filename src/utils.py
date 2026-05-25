@@ -17,6 +17,8 @@ def cv2_to_torch(img):
     """
     Convert image format cv2 -> torch
     """
+    if len(img.shape) == 2:
+        img = img[..., None]
     if img.shape[2] == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = torch.from_numpy(img)
@@ -29,6 +31,8 @@ def torch_to_cv2(img):
     """
     Convert image format torch -> cv2
     """
+    if len(img.shape) == 2:
+        img = img.unsqueeze(0)
     img = img.permute(1, 2, 0)
     img = (img * 255).clamp(0, 255).byte()
     img = img.cpu().numpy()
@@ -46,6 +50,31 @@ def resize_mul14(img):
     new_h = (img.shape[1] // 14) * 14
     img = torch.nn.functional.interpolate(img.unsqueeze(0), size=(new_h, new_w), mode="bilinear").squeeze(0)
     return img
+
+
+def lerp(value, from_min, from_max, to_min, to_max, clamp=False):
+    """
+    Linear interpolation.
+    """
+    res = (value - from_min) * (to_max - to_min) / (from_max - from_min) + to_min
+    if clamp:
+        res = torch.clamp(res, to_min, to_max)
+    return res
+
+
+def cos_similarity(image, target):
+    """
+    Cosine similarity of each pixel to target vector.
+    image: torch format, [C, H, W]
+    target: Tensor of shape [C]
+    return: torch format, [H, W]
+    """
+    target = target / target.norm()
+    image_flat = image.view(image.shape[0], -1)
+    max_norm = image_flat.norm(dim=0).max()
+    image_flat = image_flat / max_norm
+    sim = (image_flat.T @ target).view(image.shape[1], image.shape[2])
+    return sim
 
 
 def vis_pca3(img):
@@ -78,12 +107,7 @@ def vis_similarity(img, target):
     target: Tensor of shape [C]
     return: cv2 format, heatmap image.
     """
-    img_flat = img.view(img.shape[0], -1)
-    target = target / target.norm()
-    img_flat = img_flat / img_flat.norm(dim=0, keepdim=True)
-    sim = (img_flat.T @ target).view(img.shape[1], img.shape[2])
-
-    sim = (sim - sim.min()) / (sim.max() - sim.min())
+    sim = cos_similarity(img, target)
     sim = torch_to_cv2(sim.unsqueeze(0))
     heatmap = cv2.applyColorMap(sim, cv2.COLORMAP_JET)
     return heatmap

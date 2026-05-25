@@ -144,22 +144,20 @@ class CVPipeline:
 
         self.output["original"] = frame
 
-        """
         if self.frame_i % DINO_INTERVAL == 0:
             #ret = self.tiled_inference(run_dino, frame_torch).to(DEVICE)
             ret = run_dino(frame_torch).to(DEVICE)
             self.output["dino"] = ret
-        """
-
-        #ret = self.tiled_inference(self.of_module.compute_flow, frame_warped)
-        ret = self.of_module.compute_flow(frame_warped)
-        ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
-        self.output["of"] = ret
 
         #ret = self.tiled_inference(self.bgr_module.remove_bg, frame_warped)
         ret = self.bgr_module.remove_bg(frame_warped)
         ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
         self.output["bgr"] = ret
+
+        #ret = self.tiled_inference(self.of_module.compute_flow, frame_warped)
+        ret = self.of_module.compute_flow(frame_warped)
+        ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
+        self.output["of"] = ret
 
         self.frame_i += 1
 
@@ -191,6 +189,7 @@ class OpticalFlow:
 
     def __init__(self):
         self.prev_frame = None
+        self.prev_flow = None
 
     def compute_flow(self, frame):
         """
@@ -206,7 +205,7 @@ class OpticalFlow:
         flow = cv2.calcOpticalFlowFarneback(
             cv2.cvtColor(self.prev_frame, cv2.COLOR_BGR2GRAY),
             cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY),
-            None,
+            self.prev_flow,
             0.5,
             3,
             15,
@@ -216,6 +215,8 @@ class OpticalFlow:
             0,
         )
         self.prev_frame = frame
+        self.prev_flow = flow
+
         flow = torch.from_numpy(flow).permute(2, 0, 1)
         return flow
 
@@ -226,8 +227,11 @@ class BgRemover:
     """
 
     def __init__(self):
-        self.bg_subtractor = cv2.createBackgroundSubtractorMOG2()
-        # TODO params.
+        self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(
+            history=500,
+            varThreshold=8,
+            detectShadows=False,
+        )
 
     def remove_bg(self, frame):
         """
