@@ -4,10 +4,10 @@ import torch
 RES = (960, 540)
 FPS = 8
 
+# VidStab window.
+STAB_WINDOW = 30
 # Run DINO every N frames in Pipeline.
 DINO_INTERVAL = 5
-# Number of tiles for each of H and W.
-TILE_COUNT = 3
 # Bottom edge is this factor of original size. 1 means no warp.
 WARP_CORRECTION = 0.5
 

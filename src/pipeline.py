@@ -5,6 +5,7 @@ Pipeline class and related utilities.
 import cv2
 import numpy as np
 import torch
+from vidstab.VidStab import VidStab
 
 from constants import *
 from utils import *
@@ -49,8 +50,10 @@ class CVPipeline:
             "of": None,
             "bgr": None,
         }
-
         self.frame_i = 0
+
+        self.stab = VidStab()
+
         self.of_module = OpticalFlow()
         self.bgr_module = BgRemover()
 
@@ -93,41 +96,6 @@ class CVPipeline:
             inv_warped = inv_warped[..., None]
         return inv_warped
 
-    def tiled_inference(self, func, img, tiles=TILE_COUNT):
-        """
-        Split img into tiles * tiles.
-        Run func on each tile independently.
-        Stitch results together.
-        func: Callable, takes in torch format image, returns torch format image.
-        img: torch format
-        """
-        width = img.shape[2]
-        height = img.shape[1]
-        tile_w = width // tiles
-        tile_h = height // tiles
-
-        # Row major 2D list of results from each tile.
-        results = []
-
-        for tile_y in range(tiles):
-            results.append([])
-            for tile_x in range(tiles):
-                tile_img = img[
-                    :,
-                    tile_y * tile_h : (tile_y + 1) * tile_h,
-                    tile_x * tile_w : (tile_x + 1) * tile_w,
-                ]
-                res = func(tile_img)
-                results[-1].append(res)
-
-        # Stitch results together.
-        rows = []
-        for tile_y in range(tiles):
-            row = torch.cat(results[tile_y], dim=2)
-            rows.append(row)
-        full = torch.cat(rows, dim=1)
-        return full
-
     def update(self, frame) -> None:
         """
         Run each CV component. Stores results internally.
@@ -135,6 +103,11 @@ class CVPipeline:
         frame: cv2 format.
         """
         print("Pipeline update frame", self.frame_i)
+
+        # Stabilization
+        stab_frame = self.stab.stabilize_frame(input_frame=frame, smoothing_window=STAB_WINDOW)
+        if self.frame_i >= STAB_WINDOW:
+            frame = stab_frame
 
         # Original image in torch format.
         frame_torch = cv2_to_torch(frame).to(DEVICE)
@@ -145,25 +118,18 @@ class CVPipeline:
         self.output["original"] = frame
 
         if self.frame_i % DINO_INTERVAL == 0:
-            #ret = self.tiled_inference(run_dino, frame_torch).to(DEVICE)
             ret = run_dino(frame_torch).to(DEVICE)
             self.output["dino"] = ret
 
-        #ret = self.tiled_inference(self.bgr_module.remove_bg, frame_warped)
         ret = self.bgr_module.remove_bg(frame_warped)
         ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
         self.output["bgr"] = ret
 
-        #ret = self.tiled_inference(self.of_module.compute_flow, frame_warped)
         ret = self.of_module.compute_flow(frame_warped)
         ret = cv2_to_torch(self.apply_inv_warp(torch_to_cv2(ret))).to(DEVICE)
         self.output["of"] = ret
 
         self.frame_i += 1
-
-        #cv2.imwrite("original.jpg", frame)
-        #torch.save(self.output["dino"], "dino.pt")
-        #stop
 
 
 def run_dino(frame, num_hidden=1):
@@ -206,13 +172,7 @@ class OpticalFlow:
             cv2.cvtColor(self.prev_frame, cv2.COLOR_BGR2GRAY),
             cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY),
             self.prev_flow,
-            0.5,
-            3,
-            15,
-            3,
-            5,
-            1.2,
-            0,
+            0.5, 3, 15, 3, 5, 1.2, 0,
         )
         self.prev_frame = frame
         self.prev_flow = flow
