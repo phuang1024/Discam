@@ -18,17 +18,18 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 RES = (960, 540)
 FPS = 8
 
+# VidStab window.
+STAB_WINDOW = 30
+
 # Detector params.
 # Run DINO every N frames in Pipeline.
 DETECT_INTERVAL = 5
 # EMA factor for person embedding update.
-EMBED_EMA = 0.1
+EMBED_EMA = 0.2
 # DINO similarity threshold.
 DINO_THRES = 0.5
 
 # Motion params.
-# VidStab window.
-STAB_WINDOW = 30
 # Bottom edge is this factor of original size. 1 means no warp.
 WARP_CORRECTION = 0.5
 OF_THRES = 0.3
