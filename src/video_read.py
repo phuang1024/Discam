@@ -4,7 +4,7 @@ Video reader that matches FPS and RES.
 
 import cv2
 
-from constants import *
+from utils import RES, FPS
 
 
 class ScaledReader:

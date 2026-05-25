@@ -1,5 +1,5 @@
 """
-Misc utils.
+Utilities and parameters.
 
 Image formats:
 cv2 format:
@@ -11,6 +11,28 @@ torch format:
 import cv2
 import numpy as np
 import torch
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Input video res/fps.
+RES = (960, 540)
+FPS = 8
+
+# Detector params.
+# Run DINO every N frames in Pipeline.
+DETECT_INTERVAL = 5
+# EMA factor for person embedding update.
+EMBED_EMA = 0.1
+# DINO similarity threshold.
+DINO_THRES = 0.5
+
+# Motion params.
+# VidStab window.
+STAB_WINDOW = 30
+# Bottom edge is this factor of original size. 1 means no warp.
+WARP_CORRECTION = 0.5
+OF_THRES = 0.3
+BGR_THRES = 0
 
 
 def cv2_to_torch(img):
@@ -52,65 +74,21 @@ def resize_mul14(img):
     return img
 
 
-def lerp(value, from_min, from_max, to_min, to_max, clamp=False):
-    """
-    Linear interpolation.
-    """
-    res = (value - from_min) * (to_max - to_min) / (from_max - from_min) + to_min
-    if clamp:
-        res = torch.clamp(res, to_min, to_max)
-    return res
-
-
 def cos_similarity(image, target):
     """
     Cosine similarity of each pixel to target vector.
     image: torch format, [C, H, W]
-    target: Tensor of shape [C]
-    return: torch format, [H, W]
+    target: Tensor [C]
+    return: Tensor [H, W]
     """
+    # Normalize.
     target = target / target.norm()
     image_flat = image.view(image.shape[0], -1)
     max_norm = image_flat.norm(dim=0).max()
     image_flat = image_flat / max_norm
+
     sim = (image_flat.T @ target).view(image.shape[1], image.shape[2])
     return sim
-
-
-def vis_pca3(img):
-    """
-    3 axis PCA.
-    img: torch format, [C, H, W]
-    return: torch format, [3, H, W]
-    """
-    c, h, w = img.shape
-
-    img_flat = img.view(c, -1).T
-    img_flat = img_flat - img_flat.mean(dim=0)
-    # Sample 1000 pixels for performance.
-    indices = torch.linspace(0, img_flat.shape[0] - 1, 1000, dtype=torch.long)
-    sample = img_flat[indices]
-
-    cov = sample.T @ sample
-    eigvals, eigvecs = torch.linalg.eig(cov)
-    idx = torch.argsort(eigvals.real, descending=True)[:3]
-    eigvecs = eigvecs[:, idx].real
-
-    pca_img = (img_flat @ eigvecs).T.view(3, h, w)
-    return pca_img
-
-
-def vis_similarity(img, target):
-    """
-    Visualize similarity of each pixel to target vector.
-    img: torch format, [C, H, W]
-    target: Tensor of shape [C]
-    return: cv2 format, heatmap image.
-    """
-    sim = cos_similarity(img, target)
-    sim = torch_to_cv2(sim.unsqueeze(0))
-    heatmap = cv2.applyColorMap(sim, cv2.COLORMAP_JET)
-    return heatmap
 
 
 def vis_optical_flow(img):
