@@ -76,7 +76,7 @@ class Detector:
         frame: cv2 format.
         return: 2D ndarray of xyxy bounding boxes. Shape (N, 4).
         """
-        results = YOLO(frame)[0]
+        results = YOLO(frame, verbose=False)[0]
         bboxes = []
         for box in results.boxes:
             if box.cls == 0:

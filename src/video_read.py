@@ -56,6 +56,10 @@ class ScaledReader:
         frame = cv2.resize(self.last_frame, self.new_res)
         return True, frame
 
+    def get_len(self):
+        orig_len = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        return int(orig_len * self.new_fps / self.orig_fps)
+
 
 if __name__ == "__main__":
     reader = ScaledReader("../data/videos/Irwin.mkv")

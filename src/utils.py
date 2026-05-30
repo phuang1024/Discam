@@ -16,7 +16,7 @@ import torch.nn.functional as F
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Input video res/fps.
-RES = (960, 540)
+RES = (640, 360)
 FPS = 8
 
 # VidStab window.

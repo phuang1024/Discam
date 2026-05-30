@@ -53,7 +53,7 @@ class StaticBBox:
         if self.field_mask is not None:
             sim_mask = sim_mask * self.field_mask
 
-        # For now, find min and max coords of mask.
+        # TODO For now, find min and max coords of mask.
         ys, xs = torch.where(sim_mask > 0)
         if len(xs) == 0 or len(ys) == 0:
             x1 = x2 = y1 = y2 = 0

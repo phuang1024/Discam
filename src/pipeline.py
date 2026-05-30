@@ -1,11 +1,12 @@
 """
-Complete pipeline that integrates all components:
-Detector, motion analysis, vidstab, warp.
+Pipeline that integrates all computer vision components.
+Input: Video stream that's already scaled.
+Output: Bounding boxes at select frames.
 """
 
 from vidstab.VidStab import VidStab
 
-from bounding_box import StaticBBox, vis_static_bbox
+from static_bbox import StaticBBox, vis_static_bbox
 from detect import Detector, vis_detector
 from motion import Motion, vis_motion
 from utils import *
@@ -27,9 +28,11 @@ class Pipeline:
     def update(self, frame):
         """
         frame: cv2 format.
+        return {
+            frame_i: int,
+            static_bbox: xyxy bbox, tuple of ints.
+        }
         """
-        print("Pipeline update frame", self.frame_i)
-
         # Stabilization.
         stab_frame = self.stab.stabilize_frame(input_frame=frame, smoothing_window=STAB_WINDOW)
         if self.frame_i >= STAB_WINDOW:
@@ -38,7 +41,7 @@ class Pipeline:
         # Run detector.
         if self.detect_out is None or self.frame_i % DETECT_INTERVAL == 0:
             self.detect_out = self.detector.update(frame)
-            #vis_detector(frame, self.detect_out)
+            vis_detector(frame, self.detect_out)
 
         # Run motion analysis.
         motion_out = self.motion.update(frame)
@@ -46,9 +49,14 @@ class Pipeline:
 
         # Run static bbox.
         static_bbox_out = self.static_bbox.update(self.detect_out, motion_out)
-        vis_static_bbox(frame, static_bbox_out)
+        #vis_static_bbox(frame, static_bbox_out)
 
         self.frame_i += 1
+
+        return {
+            "frame_i": self.frame_i - 1,
+            "static_bbox": static_bbox_out["bbox"],
+        }
 
     def init_warp(self):
         """
