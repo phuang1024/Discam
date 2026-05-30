@@ -128,7 +128,6 @@ def vis_detector(frame, detector_out):
     """
     frame: cv2 format original frame.
     detector_out: Dict output of Detector.update
-    return: cv2 format visualized frame.
     """
     frame = frame.copy()
     res = (frame.shape[1], frame.shape[0])

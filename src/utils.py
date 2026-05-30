@@ -31,11 +31,17 @@ EMBED_EMA = 0.2
 # DINO similarity threshold.
 DINO_THRES = 0.5
 
-# Motion params.
-MOTION_EMA = 0.2
-MOTION_BLUR_SIZE = 5
-MOTION_BLUR_PASSES = 3
-MOTION_THRES = 0.2
+# Optical flow params.
+# TODO for scale, at 8fps, max OF is around 5 to 10 magnitude
+# Size of salience patch; i.e. downscale factor.
+OF_PATCH_SIZE = 14
+# Threshold to be considered fast.
+OF_FAST_THRES = 2
+OF_FAST_SCALE = 0.5
+# Passive exponential decay on every iter.
+OF_DECAY_FAC = 0.05
+# Speed scaling when applying OF.
+OF_APPLY_SPEED = 1
 
 
 def cv2_to_torch(img):

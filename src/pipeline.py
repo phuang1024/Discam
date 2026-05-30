@@ -5,6 +5,7 @@ Detector, motion analysis, vidstab, warp.
 
 from vidstab.VidStab import VidStab
 
+from bounding_box import StaticBBox, vis_static_bbox
 from detector import Detector, vis_detector
 from motion import Motion, vis_motion
 from utils import *
@@ -17,6 +18,9 @@ class Pipeline:
         self.stab = VidStab()
         self.detector = Detector()
         self.motion = Motion()
+        self.static_bbox = StaticBBox()
+
+        self.detect_out = None
 
         self.frame_i = 0
 
@@ -32,13 +36,17 @@ class Pipeline:
             frame = stab_frame
 
         # Run detector.
-        if self.frame_i % DETECT_INTERVAL == 0:
-            detect_out = self.detector.update(frame)
-            #vis_detector(frame, detect_out)
+        if self.detect_out is None or self.frame_i % DETECT_INTERVAL == 0:
+            self.detect_out = self.detector.update(frame)
+            #vis_detector(frame, self.detect_out)
 
         # Run motion analysis.
         motion_out = self.motion.update(frame)
-        vis_motion(frame, motion_out)
+        #vis_motion(frame, motion_out)
+
+        # Run static bbox.
+        static_bbox_out = self.static_bbox.update(self.detect_out, motion_out)
+        vis_static_bbox(frame, static_bbox_out)
 
         self.frame_i += 1
 

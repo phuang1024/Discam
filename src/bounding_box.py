@@ -1,11 +1,9 @@
 """
-Calculate the bounding box, given the CV pipeline outputs.
+Calculate the bounding box, given the CV outputs.
 """
 
 import torch
 
-from pipeline import CVPipeline
-from constants import *
 from utils import *
 
 
@@ -27,83 +25,46 @@ class StaticBBox:
     """
 
     def __init__(self):
-        # In addition to returning a value, the most recent results are kept here.
-        # For visualization purposes.
-        # bbox: Bounding box coordinates. (x1, y1, x2, y2)
-        # dino: Thresholded DINO. torch format
-        # motion: OF and BGR multiplied. torch format
-        self.output = {
-            "bbox": None,
-            "dino": None,
-            "motion": None,
-        }
-
-        self.person_embed = torch.load("person.pt")
-        self.person_embed /= self.person_embed.norm()
+        pass
 
     def dynamic_thres(self, img, thres):
         img = (img - img.min()) / (img.max() - img.min() + 1e-5)
         return (img > thres).float()
 
-    def update(self, pipe: CVPipeline):
+    def update(self, detector_out, motion_out):
         """
         Call once per frame, as this will track historical data.
-        return: x1, y1, x2, y2
+        return {
+            bbox: tuple of floats: x1, y1, x2, y2
+        }
         """
-        dino = pipe.output["dino"][0]
-        if dino is not None:
-            sim = cos_similarity(dino, self.person_embed)
-            # Blur
-            sim = sim.unsqueeze(0).unsqueeze(0)
-            sim = torch.nn.functional.avg_pool2d(sim, kernel_size=3, stride=1, padding=1)
-            sim = sim.squeeze(0).squeeze(0)
+        sim_mask = detector_out["mask"]
 
-            sim = (sim > DINO_THRES).float()
-            self.output["dino"] = sim
+        # For now, find min and max coords of mask.
+        ys, xs = torch.where(sim_mask > 0)
+        if len(xs) == 0 or len(ys) == 0:
+            x1 = x2 = y1 = y2 = 0
+        else:
+            x1 = xs.min().item() * 14
+            x2 = xs.max().item() * 14
+            y1 = ys.min().item() * 14
+            y2 = ys.max().item() * 14
 
-        of = pipe.output["of"]
-        bgr = pipe.output["bgr"]
-        if of is not None and bgr is not None:
-            of = torch.norm(of, dim=0)
-            of = self.dynamic_thres(of, OF_THRES)
-            bgr = bgr[0]
-            bgr = self.dynamic_thres(bgr, BGR_THRES)
-
-            #motion = of * bgr
-            motion = of
-            self.output["motion"] = motion
+        return {
+            "bbox": (x1, y1, x2, y2),
+        }
 
 
-def vis_static_bbox(bbox: StaticBBox, frame):
+def vis_static_bbox(frame, bbox_out):
     """
-    Draw and show a single frame on the latest results.
     frame: cv2 format
+    bbox_out: Dict output of StaticBBox.update.
     """
     frame = frame.copy()
 
-    # Make an overlay image based on CV output. HSV.
-    overlay = np.zeros_like(frame)
-
-    sim = bbox.output["dino"]
-    if sim is not None:
-        sim = torch_to_cv2(sim)
-        sim = cv2.resize(sim, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_NEAREST)
-        overlay[sim > 0, 2] = 64
-
-    motion = bbox.output["motion"]
-    if motion is not None:
-        motion = torch_to_cv2(motion)[..., 0]
-        overlay[motion > 0, 1] = 255
-
-    # Composite.
-    overlay = cv2.cvtColor(overlay, cv2.COLOR_HSV2BGR).astype(float)
-    frame = np.clip(frame.astype(float) + overlay, 0, 255).astype(np.uint8)
-
-    # Draw bbox.
-    bbox_coords = bbox.output["bbox"]
-    if bbox_coords is not None:
-        x1, y1, x2, y2 = bbox_coords
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    # Draw box.
+    box = bbox_out["bbox"]
+    cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
 
     cv2.imshow("StaticBBox", frame)
     cv2.waitKey(1)
