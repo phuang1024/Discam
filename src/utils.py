@@ -11,6 +11,7 @@ torch format:
 import cv2
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -79,7 +80,7 @@ def resize_mul14(img):
     """
     new_w = (img.shape[2] // 14) * 14
     new_h = (img.shape[1] // 14) * 14
-    img = torch.nn.functional.interpolate(img.unsqueeze(0), size=(new_h, new_w), mode="bilinear").squeeze(0)
+    img = F.interpolate(img.unsqueeze(0), size=(new_h, new_w), mode="bilinear").squeeze(0)
     return img
 
 

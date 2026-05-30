@@ -3,7 +3,9 @@ Calculate the bounding box, given the CV outputs.
 """
 
 import torch
+import torch.nn.functional as F
 
+from field_mask import read_mask, create_mask
 from utils import *
 
 
@@ -24,8 +26,10 @@ class StaticBBox:
         When not many strong tracks, much of the space will be highlighted.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, field_mask_path):
+        self.field_mask_path = field_mask_path
+        # Tensor [H', W'] float 0-1
+        self.field_mask = None
 
     def dynamic_thres(self, img, thres):
         img = (img - img.min()) / (img.max() - img.min() + 1e-5)
@@ -39,6 +43,15 @@ class StaticBBox:
         }
         """
         sim_mask = detector_out["mask"]
+
+        if self.field_mask_path is not None and self.field_mask is None:
+            # Load and resize mask on first iter.
+            self.field_mask = create_mask(read_mask(self.field_mask_path))
+            self.field_mask = torch.from_numpy(self.field_mask).float()
+            self.field_mask = F.interpolate(self.field_mask[None, None, ...], sim_mask.shape)[0, 0]
+
+        if self.field_mask is not None:
+            sim_mask = sim_mask * self.field_mask
 
         # For now, find min and max coords of mask.
         ys, xs = torch.where(sim_mask > 0)
@@ -68,3 +81,13 @@ def vis_static_bbox(frame, bbox_out):
 
     cv2.imshow("StaticBBox", frame)
     cv2.waitKey(1)
+
+
+def vis_field_mask(mask):
+    """
+    mask: Tensor [H', W'] float 0-1
+    """
+    vis = mask.cpu().numpy() * 255
+    vis = cv2.resize(vis, None, fx=14, fy=14)
+    cv2.imshow("Field Mask", vis)
+    cv2.waitKey(0)

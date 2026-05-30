@@ -1,6 +1,5 @@
 import argparse
 
-import cv2
 import torch
 
 from pipeline import Pipeline
@@ -12,10 +11,11 @@ torch.set_grad_enabled(False)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("video")
+    parser.add_argument("--field_mask")
     args = parser.parse_args()
 
     video = ScaledReader(args.video)
-    pipe = Pipeline()
+    pipe = Pipeline(args.field_mask)
 
     while True:
         ret, frame = video.read()

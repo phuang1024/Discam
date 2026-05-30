@@ -6,7 +6,7 @@ Detector, motion analysis, vidstab, warp.
 from vidstab.VidStab import VidStab
 
 from bounding_box import StaticBBox, vis_static_bbox
-from detector import Detector, vis_detector
+from detect import Detector, vis_detector
 from motion import Motion, vis_motion
 from utils import *
 
@@ -14,11 +14,11 @@ from utils import *
 
 
 class Pipeline:
-    def __init__(self):
+    def __init__(self, field_mask_path):
         self.stab = VidStab()
         self.detector = Detector()
         self.motion = Motion()
-        self.static_bbox = StaticBBox()
+        self.static_bbox = StaticBBox(field_mask_path)
 
         self.detect_out = None
 
