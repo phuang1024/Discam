@@ -60,6 +60,9 @@ class ScaledReader:
         orig_len = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
         return int(orig_len * self.new_fps / self.orig_fps)
 
+    def release(self):
+        self.cap.release()
+
 
 if __name__ == "__main__":
     reader = ScaledReader("../data/videos/Irwin.mkv")

@@ -31,6 +31,7 @@ class Pipeline:
         return {
             frame_i: int,
             static_bbox: xyxy bbox, tuple of ints.
+                Pixel values are with respect to RES.
         }
         """
         # Stabilization.

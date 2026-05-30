@@ -44,6 +44,12 @@ OF_DECAY_FAC = 0.05
 # Speed scaling when applying OF.
 OF_APPLY_SPEED = 1
 
+# Output params.
+OUT_RES = (1280, 720)
+OUT_ASPECT = 16 / 9
+# This is in coordinates of RES.
+BBOX_MIN_SIZE = 50
+
 
 def cv2_to_torch(img):
     """
