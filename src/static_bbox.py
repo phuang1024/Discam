@@ -2,6 +2,8 @@
 Calculate the bounding box, given the CV outputs.
 """
 
+import cv2
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -18,18 +20,12 @@ class StaticBBox:
 
     This *does not* consider bounding box smoothness over time.
     This *does* consider results from past frames.
-
-    DINO: Static thresholding.
-    OF, BGR: Dynamic threshold:
-        Images are normalized to 0-1 every frame, and compared to a fixed thres.
-        Therefore, when there are a small amount of clear tracks, those will be highlighted.
-        When not many strong tracks, much of the space will be highlighted.
     """
 
     def __init__(self, field_mask_path):
         self.field_mask_path = field_mask_path
-        # Tensor [H', W'] float 0-1
-        self.field_mask = None
+        # ndarray [H, W] bool
+        self.field_mask = create_mask(read_mask(self.field_mask_path))
 
     def dynamic_thres(self, img, thres):
         img = (img - img.min()) / (img.max() - img.min() + 1e-5)
@@ -42,26 +38,28 @@ class StaticBBox:
             bbox: tuple of floats: x1, y1, x2, y2
         }
         """
-        sim_mask = detector_out["mask"]
+        # For each bbox in Detector's output, check if their feet in field mask.
+        xs = []
+        ys = []
+        for box in detector_out["bboxes"]:
+            bottom_x = int((box[0] + box[2]) / 2)
+            bottom_y = int(box[3])
+            bottom_x = np.clip(bottom_x, 0, self.field_mask.shape[1] - 1)
+            bottom_y = np.clip(bottom_y, 0, self.field_mask.shape[0] - 1)
+            if self.field_mask is None or self.field_mask[bottom_y, bottom_x] > 0:
+                xs.append(box[0])
+                xs.append(box[2])
+                ys.append(box[1])
+                ys.append(box[3])
 
-        if self.field_mask_path is not None and self.field_mask is None:
-            # Load and resize mask on first iter.
-            self.field_mask = create_mask(read_mask(self.field_mask_path))
-            self.field_mask = torch.from_numpy(self.field_mask).float()
-            self.field_mask = F.interpolate(self.field_mask[None, None, ...], sim_mask.shape)[0, 0]
-
-        if self.field_mask is not None:
-            sim_mask = sim_mask * self.field_mask
-
-        # TODO For now, find min and max coords of mask.
-        ys, xs = torch.where(sim_mask > 0)
+        # Find min and max coords.
         if len(xs) == 0 or len(ys) == 0:
             x1 = x2 = y1 = y2 = 0
         else:
-            x1 = xs.min().item() * 14
-            x2 = xs.max().item() * 14
-            y1 = ys.min().item() * 14
-            y2 = ys.max().item() * 14
+            x1 = min(xs)
+            x2 = max(xs)
+            y1 = min(ys)
+            y2 = max(ys)
 
         return {
             "bbox": (x1, y1, x2, y2),
@@ -77,6 +75,7 @@ def vis_static_bbox(frame, bbox_out):
 
     # Draw box.
     box = bbox_out["bbox"]
+    box = [int(x) for x in box]
     cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
 
     cv2.imshow("StaticBBox", frame)
@@ -85,9 +84,8 @@ def vis_static_bbox(frame, bbox_out):
 
 def vis_field_mask(mask):
     """
-    mask: Tensor [H', W'] float 0-1
+    mask: ndarray [H, W] bool
     """
-    vis = mask.cpu().numpy() * 255
-    vis = cv2.resize(vis, None, fx=14, fy=14)
+    vis = mask.astype(float) * 255
     cv2.imshow("Field Mask", vis)
     cv2.waitKey(0)

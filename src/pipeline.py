@@ -42,7 +42,7 @@ class Pipeline:
         # Run detector.
         if self.detect_out is None or self.frame_i % DETECT_INTERVAL == 0:
             self.detect_out = self.detector.update(frame)
-            vis_detector(frame, self.detect_out)
+            #vis_detector(frame, self.detect_out)
 
         # Run motion analysis.
         motion_out = self.motion.update(frame)
@@ -50,7 +50,7 @@ class Pipeline:
 
         # Run static bbox.
         static_bbox_out = self.static_bbox.update(self.detect_out, motion_out)
-        #vis_static_bbox(frame, static_bbox_out)
+        vis_static_bbox(frame, static_bbox_out)
 
         self.frame_i += 1
 

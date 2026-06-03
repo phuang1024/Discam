@@ -81,12 +81,12 @@ def main():
     parser.add_argument("--field_mask")
     args = parser.parse_args()
 
-    #pipe_outputs = run_cv_pipeline(args)
-    """
+    pipe_outputs = run_cv_pipeline(args)
+    #"""
     with open("pipe_out.pkl", "wb") as f:
         pickle.dump(pipe_outputs, f)
     stop
-    """
+    #"""
     with open("pipe_out.pkl", "rb") as f:
         pipe_outputs = pickle.load(f)
 

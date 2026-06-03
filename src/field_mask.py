@@ -32,13 +32,14 @@ def read_mask(path):
 def create_mask(points, res=RES):
     """
     Create mask from points.
+    res: (W, H) resolution.
     return: ndarray [H, W] bool.
     """
-    points[:, 0] *= res[1]
-    points[:, 1] *= res[0]
+    points[:, 0] *= res[0]
+    points[:, 1] *= res[1]
     points = points.astype(int)
 
-    mask = np.zeros(res, dtype=np.uint8)
+    mask = np.zeros(res[::-1], dtype=np.uint8)
     cv2.fillPoly(mask, [points], 255)
     mask = mask.astype(bool)
     return mask
