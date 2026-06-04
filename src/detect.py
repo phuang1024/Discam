@@ -55,7 +55,10 @@ class Detector:
         # Update occupancy map.
         bboxes_mask = np.zeros(RES[::-1], dtype=np.float32)
         for box in bboxes:
-            bboxes_mask[box[1] : box[3], box[0] : box[2]] = 1
+            x1, y1, x2, y2 = box
+            x1, y1 = clip_coords(x1 - 15, y1 - 15)
+            x2, y2 = clip_coords(x2 + 15, y2 + 15)
+            bboxes_mask[y1:y2, x1:x2] = 1
 
         # EMA increase with bboxes.
         self.occupancy_map = self.occupancy_map * (1 - OCCU_INC_FAC) + bboxes_mask * OCCU_INC_FAC
@@ -73,8 +76,7 @@ class Detector:
             for box in bboxes:
                 bottom_x = (box[0] + box[2]) // 2
                 bottom_y = box[3]
-                bottom_x = np.clip(bottom_x, 0, RES[0] - 1)
-                bottom_y = np.clip(bottom_y, 0, RES[1] - 1)
+                bottom_x, bottom_y = clip_coords(bottom_x, bottom_y)
 
                 in_field = self.field_mask[bottom_y, bottom_x] > 0.5
                 is_spectator = spectator_map[bottom_y - 2, bottom_x] > SPECTATOR_THRES
@@ -97,7 +99,7 @@ class Detector:
         """
         mask = mask.astype(np.uint8) * 255
         mask = cv2.resize(mask, None, fx=1/FIELD_MASK_BLUR, fy=1/FIELD_MASK_BLUR)
-        mask = cv2.blur(mask, (7, 7))
+        mask = cv2.blur(mask, (11, 11))
         mask = cv2.resize(mask, None, fx=FIELD_MASK_BLUR, fy=FIELD_MASK_BLUR, interpolation=cv2.INTER_LINEAR)
         mask = mask.astype(float) / 255
         return mask

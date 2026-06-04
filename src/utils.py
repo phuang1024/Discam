@@ -28,12 +28,12 @@ WARP_CORRECTION = 0.5
 # Run every N frames.
 DETECT_INTERVAL = 5
 # Field mask edges blur scale.
-FIELD_MASK_BLUR = 5
+FIELD_MASK_BLUR = 2
 # Spectator occupancy map increase / decrease factors.
-OCCU_INC_FAC = 0.2
-OCCU_DEC_FAC = 0.1
+OCCU_INC_FAC = 0.05
+OCCU_DEC_FAC = 0.02
 # Threshold to be considered spectator.
-SPECTATOR_THRES = 0.3
+SPECTATOR_THRES = 0.2
 
 # Optical flow params.
 # TODO for scale, at 8fps, max OF is around 5 to 10 magnitude
@@ -52,6 +52,15 @@ OUT_RES = (1280, 720)
 OUT_ASPECT = 16 / 9
 # This is in coordinates of RES.
 BBOX_MIN_SIZE = 50
+
+
+def clip_coords(x, y, res=RES):
+    """
+    Clip coordinates to be within res.
+    """
+    x = np.clip(x, 0, res[0] - 1)
+    y = np.clip(y, 0, res[1] - 1)
+    return x, y
 
 
 def cv2_to_torch(img):
@@ -80,50 +89,3 @@ def torch_to_cv2(img):
     if img.shape[2] == 3:
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return img
-
-
-def resize_mul14(img):
-    """
-    Resize image so that H and W are multiples of 14 (for DINO).
-    img: torch format.
-    """
-    new_w = (img.shape[2] // 14) * 14
-    new_h = (img.shape[1] // 14) * 14
-    img = F.interpolate(img.unsqueeze(0), size=(new_h, new_w), mode="bilinear").squeeze(0)
-    return img
-
-
-def cos_similarity(image, target):
-    """
-    Cosine similarity of each pixel to target vector.
-    image: torch format, [C, H, W]
-    target: Tensor [C]
-    return: Tensor [H, W]
-    """
-    # Normalize.
-    target = target / target.norm()
-    image_flat = image.view(image.shape[0], -1)
-    max_norm = image_flat.norm(dim=0).max()
-    image_flat = image_flat / max_norm
-
-    sim = (image_flat.T @ target).view(image.shape[1], image.shape[2])
-    return sim
-
-
-def vis_optical_flow(img):
-    """
-    Visualize optical flow.
-    Hue is direction, value is magnitude.
-    img: torch format, [2, H, W]
-    return: cv2 format
-    """
-    flow = img.cpu().numpy()
-    mag, ang = cv2.cartToPolar(flow[0], flow[1])
-    mag = np.sqrt(mag)
-
-    hsv = np.zeros((flow.shape[1], flow.shape[2], 3), dtype=np.uint8)
-    hsv[..., 0] = ang * 180 / np.pi / 2
-    hsv[..., 1] = 255
-    hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
-    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    return rgb
