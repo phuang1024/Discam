@@ -25,12 +25,15 @@ STAB_WINDOW = 30
 WARP_CORRECTION = 0.5
 
 # Detector params.
-# Run DINO every N frames in Pipeline.
+# Run every N frames.
 DETECT_INTERVAL = 5
-# EMA factor for person embedding update.
-EMBED_EMA = 0.2
-# DINO similarity threshold.
-DINO_THRES = 0.5
+# Field mask edges blur scale.
+FIELD_MASK_BLUR = 5
+# Spectator occupancy map increase / decrease factors.
+OCCU_INC_FAC = 0.2
+OCCU_DEC_FAC = 0.1
+# Threshold to be considered spectator.
+SPECTATOR_THRES = 0.3
 
 # Optical flow params.
 # TODO for scale, at 8fps, max OF is around 5 to 10 magnitude

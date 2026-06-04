@@ -39,6 +39,7 @@ class Detector:
         self.field_mask = None
         if field_mask_path is not None:
             self.field_mask = create_mask(read_mask(field_mask_path))
+            self.blurred_mask = self.blur_field_mask(self.field_mask)
 
     def update(self, frame):
         """
@@ -49,28 +50,57 @@ class Detector:
             filtered_bboxes: Remaining valid bboxes after field mask and occupancy filter.
         }
         """
-        bboxes = run_detr(frame)
+        bboxes = run_detr(frame).astype(int)
 
-        # Check if their feet is in field mask.
+        # Update occupancy map.
+        bboxes_mask = np.zeros(RES[::-1], dtype=np.float32)
+        for box in bboxes:
+            bboxes_mask[box[1] : box[3], box[0] : box[2]] = 1
+
+        # EMA increase with bboxes.
+        self.occupancy_map = self.occupancy_map * (1 - OCCU_INC_FAC) + bboxes_mask * OCCU_INC_FAC
+        # Exponential decrease.
+        self.occupancy_map = self.occupancy_map * (1 - OCCU_DEC_FAC)
+
+        # Check: If box bottom edge is in mask,
+        # and if occupancy * (1 - blurred_mask) is less than thres.
+        filtered_bboxes = bboxes
+        spectator_map = None
         if self.field_mask is not None:
+            spectator_map = self.occupancy_map * (1 - self.blurred_mask)
+
             filtered_bboxes = []
             for box in bboxes:
-                bottom_x = int((box[0] + box[2]) / 2)
-                bottom_y = int(box[3])
-                bottom_x = np.clip(bottom_x, 0, self.field_mask.shape[1] - 1)
-                bottom_y = np.clip(bottom_y, 0, self.field_mask.shape[0] - 1)
-                if self.field_mask[bottom_y, bottom_x] > 0:
-                    filtered_bboxes.append(box)
-            filtered_bboxes = np.array(filtered_bboxes, dtype=float)
+                bottom_x = (box[0] + box[2]) // 2
+                bottom_y = box[3]
+                bottom_x = np.clip(bottom_x, 0, RES[0] - 1)
+                bottom_y = np.clip(bottom_y, 0, RES[1] - 1)
 
-        else:
-            filtered_bboxes = bboxes
+                in_field = self.field_mask[bottom_y, bottom_x] > 0.5
+                is_spectator = spectator_map[bottom_y - 2, bottom_x] > SPECTATOR_THRES
+                if in_field and not is_spectator:
+                    filtered_bboxes.append(box)
+
+            filtered_bboxes = np.array(filtered_bboxes, dtype=float)
 
         return {
             "occupancy": self.occupancy_map,
+            "spectator": spectator_map,
             "bboxes": bboxes,
             "filtered_bboxes": filtered_bboxes,
         }
+
+    def blur_field_mask(self, mask):
+        """
+        mask: ndarray [H, W] float in [0, 1]
+        return: blurred mask.
+        """
+        mask = mask.astype(np.uint8) * 255
+        mask = cv2.resize(mask, None, fx=1/FIELD_MASK_BLUR, fy=1/FIELD_MASK_BLUR)
+        mask = cv2.blur(mask, (7, 7))
+        mask = cv2.resize(mask, None, fx=FIELD_MASK_BLUR, fy=FIELD_MASK_BLUR, interpolation=cv2.INTER_LINEAR)
+        mask = mask.astype(float) / 255
+        return mask
 
 
 def run_detr(frame):
@@ -107,6 +137,14 @@ def vis_detector(frame, detector_out):
     """
     frame = frame.copy()
 
+    # Show occupancy map.
+    occupancy = (detector_out["occupancy"] * 255).astype(np.uint8)
+    cv2.imshow("Occupancy", occupancy)
+
+    # Show spectator map.
+    spectator = (detector_out["spectator"] * 255).astype(np.uint8)
+    cv2.imshow("spectator", spectator)
+
     # Draw bboxes.
     for box in detector_out["bboxes"]:
         x1, y1, x2, y2 = box.astype(int)
@@ -117,3 +155,12 @@ def vis_detector(frame, detector_out):
 
     cv2.imshow("Detector", frame)
     cv2.waitKey(1)
+
+
+def vis_field_mask(mask):
+    """
+    mask: ndarray [H, W] bool
+    """
+    vis = (mask * 255).astype(np.uint8)
+    cv2.imshow("Field Mask", vis)
+    cv2.waitKey(0)

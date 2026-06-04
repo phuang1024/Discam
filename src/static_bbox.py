@@ -68,12 +68,3 @@ def vis_static_bbox(frame, bbox_out):
 
     cv2.imshow("StaticBBox", frame)
     cv2.waitKey(1)
-
-
-def vis_field_mask(mask):
-    """
-    mask: ndarray [H, W] bool
-    """
-    vis = mask.astype(float) * 255
-    cv2.imshow("Field Mask", vis)
-    cv2.waitKey(0)
