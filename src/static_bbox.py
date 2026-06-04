@@ -4,10 +4,7 @@ Calculate the bounding box, given the CV outputs.
 
 import cv2
 import numpy as np
-import torch
-import torch.nn.functional as F
 
-from field_mask import read_mask, create_mask
 from utils import *
 
 
@@ -22,37 +19,28 @@ class StaticBBox:
     This *does* consider results from past frames.
     """
 
-    def __init__(self, field_mask_path):
-        self.field_mask_path = field_mask_path
-        # ndarray [H, W] bool
-        self.field_mask = create_mask(read_mask(self.field_mask_path))
+    def __init__(self):
+        pass
 
     def dynamic_thres(self, img, thres):
         img = (img - img.min()) / (img.max() - img.min() + 1e-5)
         return (img > thres).float()
 
-    def update(self, detector_out, motion_out):
+    def update(self, detector_out):
         """
         Call once per frame, as this will track historical data.
         return {
             bbox: tuple of floats: x1, y1, x2, y2
         }
         """
-        # For each bbox in Detector's output, check if their feet in field mask.
+        # Find min and max coords.
         xs = []
         ys = []
-        for box in detector_out["bboxes"]:
-            bottom_x = int((box[0] + box[2]) / 2)
-            bottom_y = int(box[3])
-            bottom_x = np.clip(bottom_x, 0, self.field_mask.shape[1] - 1)
-            bottom_y = np.clip(bottom_y, 0, self.field_mask.shape[0] - 1)
-            if self.field_mask is None or self.field_mask[bottom_y, bottom_x] > 0:
-                xs.append(box[0])
-                xs.append(box[2])
-                ys.append(box[1])
-                ys.append(box[3])
-
-        # Find min and max coords.
+        for box in detector_out["filtered_bboxes"]:
+            xs.append(box[0])
+            xs.append(box[2])
+            ys.append(box[1])
+            ys.append(box[3])
         if len(xs) == 0 or len(ys) == 0:
             x1 = x2 = y1 = y2 = 0
         else:
