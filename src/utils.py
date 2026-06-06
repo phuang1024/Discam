@@ -22,7 +22,7 @@ FPS = 8
 # VidStab window.
 STAB_WINDOW = 30
 # Bottom edge is this factor of original size. 1 means no warp.
-WARP_CORRECTION = 0.5
+#WARP_CORRECTION = 0.5
 
 # Detector params.
 # Run every N frames.
@@ -36,22 +36,21 @@ OCCU_DEC_FAC = 0.02
 SPECTATOR_THRES = 0.2
 
 # Optical flow params.
-# TODO for scale, at 8fps, max OF is around 5 to 10 magnitude
-# Size of salience patch; i.e. downscale factor.
-OF_PATCH_SIZE = 14
-# Threshold to be considered fast.
-OF_FAST_THRES = 2
-OF_FAST_SCALE = 0.5
-# Passive exponential decay on every iter.
-OF_DECAY_FAC = 0.05
-# Speed scaling when applying OF.
-OF_APPLY_SPEED = 1
+OF_MEDIAN_SIZE = 5
+OF_PERSP_SCALE = 3
 
 # Output params.
 OUT_RES = (1280, 720)
 OUT_ASPECT = 16 / 9
 # This is in coordinates of RES.
 BBOX_MIN_SIZE = 50
+
+
+def interp(x, from_min, from_max, to_min, to_max, clamp=False):
+    y = (x - from_min) / (from_max - from_min) * (to_max - to_min) + to_min
+    if clamp:
+        y = np.clip(y, to_min, to_max)
+    return y
 
 
 def clip_coords(x, y, res=RES):
