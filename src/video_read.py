@@ -65,7 +65,12 @@ class ScaledReader:
 
 
 if __name__ == "__main__":
-    reader = ScaledReader("../data/videos/Irwin.mkv")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("video")
+    args = parser.parse_args()
+
+    reader = ScaledReader(args.video)
     while True:
         ret, frame = reader.read()
         if not ret:

@@ -35,9 +35,11 @@ class Pipeline:
         }
         """
         # Stabilization.
+        """
         stab_frame = self.stab.stabilize_frame(input_frame=frame, smoothing_window=STAB_WINDOW)
         if self.frame_i >= STAB_WINDOW:
             frame = stab_frame
+        """
 
         # Run motion analysis.
         motion_out = self.motion.update(frame)
@@ -49,7 +51,7 @@ class Pipeline:
             vis_detector(frame, self.detect_out, motion_out)
 
         # Run static bbox.
-        static_bbox_out = self.static_bbox.update(self.detect_out)#, motion_out)
+        static_bbox_out = self.static_bbox.update(self.detect_out, motion_out)
         #vis_static_bbox(frame, static_bbox_out)
 
         self.frame_i += 1

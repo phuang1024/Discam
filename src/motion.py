@@ -19,7 +19,8 @@ class Motion:
         self.prev_flow = np.zeros((RES[1], RES[0], 2), dtype=np.float32)
 
         self.of_median_filter = TemporalMedianFilter()
-        self.of_salience = VelocitySalience()
+        #self.of_salience = VelocitySalience()
+        self.of_ema = EMA(0.2)
         self.persp_scale_img = self.make_persp_scale(field_mask_path)
 
     def update(self, frame):
@@ -41,10 +42,12 @@ class Motion:
         of = self.of_median_filter.update(self.prev_flow)
         of = of * self.persp_scale_img
         #of_salience = self.of_salience.update(of)
+        of_ema = self.of_ema.update(of)
 
         return {
             "of": of,
             #"salience": of_salience,
+            "of_ema": of_ema,
         }
 
     def make_persp_scale(self, field_mask_path):

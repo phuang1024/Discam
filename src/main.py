@@ -69,7 +69,7 @@ def write_output(args, bboxes):
         cv2.rectangle(vis_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imshow("box", vis_frame)
         cv2.imshow("crop", frame_crop)
-        cv2.waitKey(50)
+        cv2.waitKey(1)
 
         frame_i += 1
 
@@ -81,19 +81,20 @@ def main():
     parser.add_argument("--field_mask")
     args = parser.parse_args()
 
-    pipe_outputs = run_cv_pipeline(args)
-    #"""
+    #pipe_outputs = run_cv_pipeline(args)
+    """
     with open("pipe_out.pkl", "wb") as f:
         pickle.dump(pipe_outputs, f)
     stop
-    #"""
+    """
     with open("pipe_out.pkl", "rb") as f:
         pipe_outputs = pickle.load(f)
 
     cap = cv2.VideoCapture(args.video)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    out_fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
-    bboxes = interp_bboxes(pipe_outputs, frame_count)
+    bboxes = interp_bboxes(pipe_outputs, frame_count, out_fps)
 
     write_output(args, bboxes)
 

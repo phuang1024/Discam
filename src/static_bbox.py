@@ -26,7 +26,7 @@ class StaticBBox:
         img = (img - img.min()) / (img.max() - img.min() + 1e-5)
         return (img > thres).float()
 
-    def update(self, detector_out):
+    def update(self, detector_out, motion_out):
         """
         Call once per frame, as this will track historical data.
         return {
@@ -37,17 +37,23 @@ class StaticBBox:
         xs = []
         ys = []
         for box in detector_out["filtered_boxes"]:
-            xs.append(box[0])
-            xs.append(box[2])
-            ys.append(box[1])
-            ys.append(box[3])
+            mid_x = int((box[0] + box[2]) / 2)
+            mid_y = int((box[1] + box[3]) / 2)
+            # Curr pos.
+            xs.append(mid_x)
+            ys.append(mid_y)
+            # Future pos, based on of.
+            #vel = motion_out["of_ema"][mid_y, mid_x]
+            #xs.append(mid_x + vel[0] * 3)
+            #ys.append(mid_y + vel[1] * 3)
+
         if len(xs) == 0 or len(ys) == 0:
             x1 = x2 = y1 = y2 = 0
         else:
-            x1 = min(xs)
-            x2 = max(xs)
-            y1 = min(ys)
-            y2 = max(ys)
+            x1 = min(xs) - BBOX_PADDING
+            x2 = max(xs) + BBOX_PADDING
+            y1 = min(ys) - BBOX_PADDING
+            y2 = max(ys) + BBOX_PADDING
 
         return {
             "bbox": (x1, y1, x2, y2),

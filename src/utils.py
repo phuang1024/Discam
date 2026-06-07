@@ -17,7 +17,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Input video res/fps.
 RES = (640, 360)
-FPS = 8
+FPS = 2
 
 # VidStab window.
 STAB_WINDOW = 30
@@ -26,15 +26,19 @@ STAB_WINDOW = 30
 
 # Detector params.
 # Run every N frames.
-DETECT_INTERVAL = 5
+DETECT_INTERVAL = 1
 # Field mask edges blur size.
 FIELD_MASK_BLUR = 50
 
 # Optical flow params.
+# Temporal median filter window size.
 OF_MEDIAN_SIZE = 5
+# Magnitude scaling to account for camera perspective.
 OF_PERSP_SCALE = 3
 
 # Output params.
+# In coordinates of RES. Padding between outermost person and bbox.
+BBOX_PADDING = 50
 OUT_RES = (1280, 720)
 OUT_ASPECT = 16 / 9
 # This is in coordinates of RES.

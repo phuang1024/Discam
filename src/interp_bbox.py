@@ -13,7 +13,7 @@ from utils import *
 
 def resize_bbox(bbox):
     """
-    Resize to satisfy aspect and min size.
+    Resize to satisfy aspect, min size, and in bounds.
     """
     cx = (bbox[0] + bbox[2]) / 2
     cy = (bbox[1] + bbox[3]) / 2
@@ -37,12 +37,31 @@ def resize_bbox(bbox):
         int(cx + width / 2),
         int(cy + height / 2),
     )
+
+    # In bounds.
+    x1, y1, x2, y2 = new_bbox
+    if x1 < 0:
+        x2 -= x1
+        x1 = 0
+    if y1 < 0:
+        y2 -= y1
+        y1 = 0
+    if x2 >= RES[0]:
+        x1 -= (x2 - RES[0] + 1)
+        x2 = RES[0] - 1
+    if y2 >= RES[1]:
+        y1 -= (y2 - RES[1] + 1)
+        y2 = RES[1] - 1
+    new_bbox = (x1, y1, x2, y2)
+
     return new_bbox
 
 
 def lerp_bboxes(in_boxes, frame_count):
     """
     Linear interpolation between successive given bboxes.
+    in_boxes: See below.
+    return: See below.
     """
     # Current frame is between B[i] and B[i+1].
     in_index = 0
@@ -63,8 +82,7 @@ def lerp_bboxes(in_boxes, frame_count):
         box2 = in_boxes[in_index + 1]
         fac = (frame - box1["frame_i"]) / (box2["frame_i"] - box1["frame_i"])
         box = (1 - fac) * box1["static_bbox"] + fac * box2["static_bbox"]
-        #ret.append(box)
-        ret.append(box1["static_bbox"])
+        ret.append(box)
 
         # Advance index.
         if frame > in_boxes[in_index + 1]["frame_i"]:
@@ -73,7 +91,7 @@ def lerp_bboxes(in_boxes, frame_count):
     return ret
 
 
-def interp_bboxes(in_boxes, frame_count):
+def interp_bboxes(in_boxes, frame_count, out_fps):
     """
     Main function to call.
     Handles resizing and interpolation.
@@ -86,13 +104,19 @@ def interp_bboxes(in_boxes, frame_count):
         First element is bbox for the first frame, etc..
     """
     for box in in_boxes:
+        # Apply resizing etc..
         box["static_bbox"] = np.array(resize_bbox(box["static_bbox"]))
+        # Change frame number to be in output video coords.
+        box["frame_i"] = box["frame_i"] * out_fps / FPS
 
-    #boxes_lerp = lerp_bboxes(in_boxes, frame_count)
+    boxes_lerp = lerp_bboxes(in_boxes, frame_count)
+    return boxes_lerp
 
+    """
     ret = []
     #for box in boxes_lerp:
     #    ret.append(tuple(box.astype(int)))
     for box in in_boxes:
         ret.append(tuple(box["static_bbox"].astype(int)))
     return ret
+    """
