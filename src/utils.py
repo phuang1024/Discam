@@ -38,11 +38,17 @@ OF_PERSP_SCALE = 3
 
 # Output params.
 # In coordinates of RES. Padding between outermost person and bbox.
-BBOX_PADDING = 50
+OUT_PADDING = 50
 OUT_RES = (1280, 720)
 OUT_ASPECT = 16 / 9
 # This is in coordinates of RES.
-BBOX_MIN_SIZE = 50
+OUT_MIN_SIZE = 50
+# EMA smoothing.
+OUT_EXPAND_EMA = 0.5
+OUT_SHRINK_EMA = 0.02
+OUT_SHRINK_MARGIN = 20
+# Moving average.
+OUT_MOVING_AVG = 200
 
 
 class EMA:
