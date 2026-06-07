@@ -19,7 +19,7 @@ class Motion:
         self.prev_flow = np.zeros((RES[1], RES[0], 2), dtype=np.float32)
 
         self.of_median_filter = TemporalMedianFilter()
-
+        self.of_salience = VelocitySalience()
         self.persp_scale_img = self.make_persp_scale(field_mask_path)
 
     def update(self, frame):
@@ -40,9 +40,11 @@ class Motion:
 
         of = self.of_median_filter.update(self.prev_flow)
         of = of * self.persp_scale_img
+        #of_salience = self.of_salience.update(of)
 
         return {
             "of": of,
+            #"salience": of_salience,
         }
 
     def make_persp_scale(self, field_mask_path):
@@ -51,6 +53,9 @@ class Motion:
         to correct for far people being smaller.
         return: ndarray float (H, W, 1)
         """
+        if field_mask_path is None:
+            return np.ones((RES[1], RES[0], 1), dtype=np.float32)
+
         mask = read_mask(field_mask_path)
         min_y = np.min(mask[:, 1]) * RES[1]
 
@@ -62,6 +67,10 @@ class Motion:
 
 
 class TemporalMedianFilter:
+    """
+    Applied on raw OF output, to smooth noise from camera jitters.
+    """
+
     def __init__(self, window_size=5):
         self.window_size = window_size
         self.frames = np.empty([window_size, RES[1], RES[0], 2], dtype=np.float32)
@@ -73,6 +82,32 @@ class TemporalMedianFilter:
 
         median_frame = np.median(self.frames, axis=0)
         return median_frame
+
+
+class VelocitySalience:
+    """
+    Keep a salience map (likelihood of being active)
+    based on velocity magnitude.
+    vel_mag = norm(of)
+    accel_mag = norm(of - EMA(of))
+    """
+
+    def __init__(self):
+        self.salience = np.zeros((RES[1], RES[0]), dtype=np.float32)
+        # EMA of OF output.
+        self.accel_ema = EMA(0.2)
+
+    def update(self, of):
+        vel_mag = np.linalg.norm(of, axis=-1)
+
+        self.accel_ema.update(of)
+        accel_ema = cv2.dilate(self.accel_ema.value, np.ones((3, 3), dtype=np.float32), iterations=3)
+        accel_mag = np.linalg.norm(of - accel_ema, axis=-1)
+
+        curr_salience = vel_mag + 2 * accel_mag
+        self.salience = np.maximum(self.salience, curr_salience)
+        self.salience *= 0.9
+        return self.salience
 
 
 def vis_motion(frame, motion_out):
@@ -88,9 +123,11 @@ def vis_motion(frame, motion_out):
     vis = flow_to_image(vis).permute(1, 2, 0).numpy()  # (H, W, 3)
     cv2.imshow("OF", vis)
 
-    mag = np.linalg.norm(of, axis=-1)
-    mag = np.clip(mag / 5 * 255, 0, 255).astype(np.uint8)
-    cv2.imshow("OF magnitude", mag)
+    """
+    vis = motion_out["salience"]
+    vis = np.clip(vis / 10, 0, 1)
+    cv2.imshow("salience", vis)
+    """
 
     cv2.waitKey(1)
 
