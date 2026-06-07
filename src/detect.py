@@ -37,7 +37,7 @@ class Detector:
             self.field_mask = create_mask(read_mask(field_mask_path)).astype(np.float32)
             self.blurred_mask = cv2.blur(self.field_mask, (FIELD_MASK_BLUR, FIELD_MASK_BLUR))
 
-    def update(self, frame, motion_out):
+    def update(self, frame):
         """
         frame: cv2 format.
         motion_out: Output of Motion.update
@@ -47,7 +47,7 @@ class Detector:
         }
         """
         boxes = run_detr(frame).astype(int)
-        filtered_boxes = self.filter_boxes(boxes, motion_out["of"])
+        filtered_boxes = self.filter_boxes(boxes)
 
         return {
             "boxes": boxes,
@@ -55,13 +55,10 @@ class Detector:
             "blurred_mask": self.blurred_mask,
         }
 
-    def filter_boxes(self, boxes, of):
+    def filter_boxes(self, boxes):
         """
         Returns list of boxes that are active players.
-        of: ndarray float (H, W, 2) optical flow.
         """
-        of_mag = np.linalg.norm(of, axis=-1)
-
         ret = []
         for box in boxes:
             x1, y1, x2, y2 = box
@@ -103,7 +100,7 @@ def run_detr(frame):
     return bboxes
 
 
-def vis_detector(frame, detector_out, motion_out):
+def vis_detector(frame, detector_out):
     """
     frame: cv2 format original frame.
     detector_out: Dict output of Detector.update
@@ -117,6 +114,7 @@ def vis_detector(frame, detector_out, motion_out):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     # Draw motion line on each person.
+    """
     of = motion_out["of"]
     for x1, y1, x2, y2 in detector_out["boxes"].astype(int):
         mid_x = (x1 + x2) // 2
@@ -124,6 +122,7 @@ def vis_detector(frame, detector_out, motion_out):
         velocity = of[mid_y, mid_x]
         p2 = (int(mid_x + velocity[0] * 3), int(mid_y + velocity[1] * 3))
         cv2.line(frame, (mid_x, mid_y), p2, (255, 0, 0), 2)
+    """
 
     mask_overlay = (detector_out["blurred_mask"] * 255).astype(np.uint8)
     frame = cv2.addWeighted(frame, 1.0, cv2.cvtColor(mask_overlay, cv2.COLOR_GRAY2BGR), 0.3, 0)

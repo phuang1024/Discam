@@ -26,7 +26,7 @@ class StaticBBox:
         img = (img - img.min()) / (img.max() - img.min() + 1e-5)
         return (img > thres).float()
 
-    def update(self, detector_out, motion_out):
+    def update(self, detector_out):
         """
         Call once per frame, as this will track historical data.
         return {
