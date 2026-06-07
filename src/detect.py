@@ -16,93 +16,64 @@ DETR_MODEL = RTDetrV2ForObjectDetection.from_pretrained("PekingU/rtdetr_v2_r18vd
 
 class Detector:
     """
-    Person detection with RT-DETR, manual field mask,
-    and various post-processing techniques.
+    Person detection with RT-DETR.
+    Spectator filtering with manual field mask
+    and other techniques.
 
-    RT-DETR: Returns bboxes of people.
+    The position of a player (wrt the field mask) is the midpoint of the bottom edge;
+    i.e. where their feet are.
+    Note that however, the entire box is used to query OF.
 
-    Field mask: Manual polygonal mask of where the field is.
-        Check if the lower edge of bbox is in field.
+    Players near the sideline are the most difficult to distinguish.
+    First, we blur the field mask, to obtain a continuous value near the edge.
 
-    Inactive filter: Try to filter out spectators close to the field.
-        We keep a "occupancy" map:
-            Players' bboxes gradually increase magnitude in that location.
-            Entire map slowly decreases.
-        We consider occupancy map most strongly near the edges of the field mask
-            (where spectators probably are).
-        If the occupancy gets too high, we don't consider bboxes in that location.
+    Using OF, predict the near future movement for each player; i.e. r + v*dt
+    If this lies inside the field, they are probably active.
     """
 
     def __init__(self, field_mask_path):
-        self.occupancy_map = np.zeros(RES[::-1], dtype=np.float32)
-
         self.field_mask = None
         if field_mask_path is not None:
-            self.field_mask = create_mask(read_mask(field_mask_path))
-            self.blurred_mask = self.blur_field_mask(self.field_mask)
+            self.field_mask = create_mask(read_mask(field_mask_path)).astype(np.float32)
+            self.blurred_mask = cv2.blur(self.field_mask, (FIELD_MASK_BLUR, FIELD_MASK_BLUR))
 
-    def update(self, frame):
+    def update(self, frame, motion_out):
         """
         frame: cv2 format.
+        motion_out: Output of Motion.update
         return: {
-            occupancy: (H, W) float occupancy map.
-            bboxes: (N, 4) xyxy float bounding boxes.
-            filtered_bboxes: Remaining valid bboxes after field mask and occupancy filter.
+            boxes: ndarray float (N, 4) xyxy bounding boxes.
+            filtered_boxes: Boxes of active players. Subset of bboxes.
         }
         """
-        bboxes = run_detr(frame).astype(int)
-
-        # Update occupancy map.
-        bboxes_mask = np.zeros(RES[::-1], dtype=np.float32)
-        for box in bboxes:
-            x1, y1, x2, y2 = box
-            x1, y1 = clip_coords(x1 - 15, y1 - 15)
-            x2, y2 = clip_coords(x2 + 15, y2 + 15)
-            bboxes_mask[y1:y2, x1:x2] = 1
-
-        # EMA increase with bboxes.
-        self.occupancy_map = self.occupancy_map * (1 - OCCU_INC_FAC) + bboxes_mask * OCCU_INC_FAC
-        # Exponential decrease.
-        self.occupancy_map = self.occupancy_map * (1 - OCCU_DEC_FAC)
-
-        # Check: If box bottom edge is in mask,
-        # and if occupancy * (1 - blurred_mask) is less than thres.
-        filtered_bboxes = bboxes
-        spectator_map = None
-        if self.field_mask is not None:
-            spectator_map = self.occupancy_map * (1 - self.blurred_mask)
-
-            filtered_bboxes = []
-            for box in bboxes:
-                bottom_x = (box[0] + box[2]) // 2
-                bottom_y = box[3]
-                bottom_x, bottom_y = clip_coords(bottom_x, bottom_y)
-
-                in_field = self.field_mask[bottom_y, bottom_x] > 0.5
-                is_spectator = spectator_map[bottom_y - 2, bottom_x] > SPECTATOR_THRES
-                if in_field and not is_spectator:
-                    filtered_bboxes.append(box)
-
-            filtered_bboxes = np.array(filtered_bboxes, dtype=float)
+        boxes = run_detr(frame).astype(int)
+        filtered_boxes = self.filter_boxes(boxes, motion_out["of"])
 
         return {
-            "occupancy": self.occupancy_map,
-            "spectator": spectator_map,
-            "bboxes": bboxes,
-            "filtered_bboxes": filtered_bboxes,
+            "boxes": boxes,
+            "filtered_boxes": filtered_boxes,
+            "blurred_mask": self.blurred_mask,
         }
 
-    def blur_field_mask(self, mask):
+    def filter_boxes(self, boxes, of):
         """
-        mask: ndarray [H, W] float in [0, 1]
-        return: blurred mask.
+        Returns list of boxes that are active players.
+        of: ndarray float (H, W, 2) optical flow.
         """
-        mask = mask.astype(np.uint8) * 255
-        mask = cv2.resize(mask, None, fx=1/FIELD_MASK_BLUR, fy=1/FIELD_MASK_BLUR)
-        mask = cv2.blur(mask, (11, 11))
-        mask = cv2.resize(mask, None, fx=FIELD_MASK_BLUR, fy=FIELD_MASK_BLUR, interpolation=cv2.INTER_LINEAR)
-        mask = mask.astype(float) / 255
-        return mask
+        of_mag = np.linalg.norm(of, axis=-1)
+
+        ret = []
+        for box in boxes:
+            x1, y1, x2, y2 = box
+            mid_x = (x1 + x2) // 2
+            mid_y = (y1 + y2) // 2
+
+            # TODO static thres for now
+            if self.blurred_mask[y2, mid_x] > 0.6:
+                ret.append(box)
+
+        ret = np.array(ret, dtype=np.float32)
+        return ret
 
 
 def run_detr(frame):
@@ -132,30 +103,32 @@ def run_detr(frame):
     return bboxes
 
 
-def vis_detector(frame, detector_out):
+def vis_detector(frame, detector_out, motion_out):
     """
     frame: cv2 format original frame.
     detector_out: Dict output of Detector.update
     """
     frame = frame.copy()
 
-    # Show occupancy map.
-    occupancy = (detector_out["occupancy"] * 255).astype(np.uint8)
-    cv2.imshow("Occupancy", occupancy)
-
-    # Show spectator map.
-    spectator = (detector_out["spectator"] * 255).astype(np.uint8)
-    cv2.imshow("spectator", spectator)
-
     # Draw bboxes.
-    for box in detector_out["bboxes"]:
-        x1, y1, x2, y2 = box.astype(int)
+    for x1, y1, x2, y2 in detector_out["boxes"].astype(int):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-    for box in detector_out["filtered_bboxes"]:
-        x1, y1, x2, y2 = box.astype(int)
+    for x1, y1, x2, y2 in detector_out["filtered_boxes"].astype(int):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
+    # Draw motion line on each person.
+    of = motion_out["of"]
+    for x1, y1, x2, y2 in detector_out["boxes"].astype(int):
+        mid_x = (x1 + x2) // 2
+        mid_y = (y1 + y2) // 2
+        velocity = of[mid_y, mid_x]
+        p2 = (int(mid_x + velocity[0] * 3), int(mid_y + velocity[1] * 3))
+        cv2.line(frame, (mid_x, mid_y), p2, (255, 0, 0), 2)
+
+    mask_overlay = (detector_out["blurred_mask"] * 255).astype(np.uint8)
+    frame = cv2.addWeighted(frame, 1.0, cv2.cvtColor(mask_overlay, cv2.COLOR_GRAY2BGR), 0.3, 0)
     cv2.imshow("Detector", frame)
+
     cv2.waitKey(1)
 
 

@@ -88,7 +88,7 @@ def vis_motion(frame, motion_out):
     vis = flow_to_image(vis).permute(1, 2, 0).numpy()  # (H, W, 3)
     cv2.imshow("OF", vis)
 
-    mag = np.sqrt(of[..., 0] ** 2 + of[..., 1] ** 2)
+    mag = np.linalg.norm(of, axis=-1)
     mag = np.clip(mag / 5 * 255, 0, 255).astype(np.uint8)
     cv2.imshow("OF magnitude", mag)
 
@@ -100,7 +100,7 @@ def vis_of_magnitude(of):
     Visualize magnitude floor.
     of: ndarray float (H, W, 2)
     """
-    mag = np.sqrt(of[..., 0] ** 2 + of[..., 1] ** 2)
+    mag = np.linalg.norm(of, axis=-1)
     max_mag = np.max(mag)
 
     while True:

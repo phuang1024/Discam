@@ -36,7 +36,7 @@ class StaticBBox:
         # Find min and max coords.
         xs = []
         ys = []
-        for box in detector_out["filtered_bboxes"]:
+        for box in detector_out["filtered_boxes"]:
             xs.append(box[0])
             xs.append(box[2])
             ys.append(box[1])

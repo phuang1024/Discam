@@ -27,13 +27,8 @@ STAB_WINDOW = 30
 # Detector params.
 # Run every N frames.
 DETECT_INTERVAL = 5
-# Field mask edges blur scale.
-FIELD_MASK_BLUR = 2
-# Spectator occupancy map increase / decrease factors.
-OCCU_INC_FAC = 0.05
-OCCU_DEC_FAC = 0.02
-# Threshold to be considered spectator.
-SPECTATOR_THRES = 0.2
+# Field mask edges blur size.
+FIELD_MASK_BLUR = 50
 
 # Optical flow params.
 OF_MEDIAN_SIZE = 5
@@ -46,10 +41,25 @@ OUT_ASPECT = 16 / 9
 BBOX_MIN_SIZE = 50
 
 
+class EMA:
+    def __init__(self, alpha=0.5):
+        self.alpha = alpha
+        self.value = None
+
+    def update(self, x):
+        if self.value is None:
+            self.value = x
+        else:
+            self.value = self.alpha * x + (1 - self.alpha) * self.value
+        return self.value
+
+
 def interp(x, from_min, from_max, to_min, to_max, clamp=False):
     y = (x - from_min) / (from_max - from_min) * (to_max - to_min) + to_min
     if clamp:
-        y = np.clip(y, to_min, to_max)
+        lower = np.minimum(to_min, to_max)
+        upper = np.maximum(to_min, to_max)
+        y = np.clip(y, lower, upper)
     return y
 
 
