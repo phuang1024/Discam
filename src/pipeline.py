@@ -18,8 +18,6 @@ class Pipeline:
         #self.motion = Motion(field_mask_path)
         self.static_bbox = StaticBBox()
 
-        self.detect_out = None
-
         self.frame_i = 0
 
     def update(self, frame):
@@ -38,16 +36,12 @@ class Pipeline:
             frame = stab_frame
         """
 
-        # Run motion analysis.
-        #motion_out = self.motion.update(frame)
-        #vis_motion(frame, motion_out)
-
         # Run detector.
-        self.detect_out = self.detector.update(frame)
-        vis_detector(frame, self.detect_out)
+        detect_out = self.detector.update(frame)
+        #vis_detector(frame, self.detect_out)
 
         # Run static bbox.
-        static_bbox_out = self.static_bbox.update(self.detect_out)
+        static_bbox_out = self.static_bbox.update(detect_out)
         #vis_static_bbox(frame, static_bbox_out)
 
         self.frame_i += 1
@@ -55,4 +49,6 @@ class Pipeline:
         return {
             "frame_i": self.frame_i - 1,
             "static_bbox": static_bbox_out["bbox"],
+            "boxes": detect_out["boxes"],
+            "filtered_boxes": detect_out["filtered_boxes"],
         }

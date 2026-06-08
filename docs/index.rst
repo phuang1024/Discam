@@ -1,17 +1,14 @@
-.. Discam documentation master file, created by
-   sphinx-quickstart on Sun Jun  7 19:25:28 2026.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Discam
+======
 
-Discam documentation
-====================
+Discam is a set of computer vision tools for automated filming of
+Ultimate Frisbee games.
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+In development.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
+   :hidden:
 
+   pipeline.rst
