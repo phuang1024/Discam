@@ -22,13 +22,10 @@ class Detector:
 
     The position of a player (wrt the field mask) is the midpoint of the bottom edge;
     i.e. where their feet are.
-    Note that however, the entire box is used to query OF.
+    This position is used to query the field mask.
 
     Players near the sideline are the most difficult to distinguish.
     First, we blur the field mask, to obtain a continuous value near the edge.
-
-    Using OF, predict the near future movement for each player; i.e. r + v*dt
-    If this lies inside the field, they are probably active.
     """
 
     def __init__(self, field_mask_path):

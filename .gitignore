@@ -1,6 +1,8 @@
 __pycache__
 
+*.pt
+
 /data
 /scripts
 
-*.pt
+/docs/_build
