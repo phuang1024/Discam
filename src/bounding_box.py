@@ -1,15 +1,13 @@
 """
-Interpolate bbox.
-Pipeline outputs bounding boxes every N frames.
-This module:
-1. Ensures correct aspect ratio and min size.
-2. Interp between given bboxes.
+Given detections,
+generate overall bounding box for each frame, for post processing.
 
-Filters:
-1. Linear interp between boxes from pipeline.
-2. EMA with different facs for expand vs shrink.
-3. Aspect correction.
-4. Moving average.
+Steps:
+1. Extract box per frame based on person detections.
+2. Linear interp between boxes for remaining frames.
+3. EMA with different facs for expand vs shrink.
+4. Aspect correction.
+5. Large window moving average.
 """
 
 import numpy as np

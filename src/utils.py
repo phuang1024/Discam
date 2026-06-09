@@ -23,11 +23,10 @@ FPS = 2
 FIELD_MASK_BLUR = 50
 
 # Output params.
-# In coordinates of RES. Padding between outermost person and bbox.
-OUT_PADDING = 50
 OUT_RES = (1280, 720)
 OUT_ASPECT = 16 / 9
-# This is in coordinates of RES.
+# In coordinates of RES. Padding between outermost person and bbox.
+OUT_PADDING = 50
 OUT_MIN_SIZE = 50
 # EMA smoothing.
 OUT_EXPAND_EMA = 0.5
