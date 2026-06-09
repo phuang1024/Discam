@@ -1,5 +1,5 @@
 """
-Person detecting using RT-DETR
+Person detecting using RT-DETR.
 """
 
 import cv2
@@ -17,8 +17,7 @@ DETR_MODEL = RTDetrV2ForObjectDetection.from_pretrained("PekingU/rtdetr_v2_r18vd
 class Detector:
     """
     Person detection with RT-DETR.
-    Spectator filtering with manual field mask
-    and other techniques.
+    Spectator filtering with manual field mask.
 
     The position of a player (wrt the field mask) is the midpoint of the bottom edge;
     i.e. where their feet are.
@@ -109,17 +108,6 @@ def vis_detector(frame, detector_out):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
     for x1, y1, x2, y2 in detector_out["filtered_boxes"].astype(int):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-    # Draw motion line on each person.
-    """
-    of = motion_out["of"]
-    for x1, y1, x2, y2 in detector_out["boxes"].astype(int):
-        mid_x = (x1 + x2) // 2
-        mid_y = (y1 + y2) // 2
-        velocity = of[mid_y, mid_x]
-        p2 = (int(mid_x + velocity[0] * 3), int(mid_y + velocity[1] * 3))
-        cv2.line(frame, (mid_x, mid_y), p2, (255, 0, 0), 2)
-    """
 
     mask_overlay = (detector_out["blurred_mask"] * 255).astype(np.uint8)
     frame = cv2.addWeighted(frame, 1.0, cv2.cvtColor(mask_overlay, cv2.COLOR_GRAY2BGR), 0.3, 0)

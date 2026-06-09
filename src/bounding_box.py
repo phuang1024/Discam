@@ -17,11 +17,43 @@ import numpy as np
 from utils import *
 
 
-def lerp_bboxes(in_boxes, frame_count):
+def extract_boxes(detector_out):
     """
-    Linear interpolation between successive given bboxes.
-    in_boxes: Same as for interp_bboxes
-    return: List of ndarrays, one per frame.
+    Extract overall bounding box given person detections.
+    detector_out: List of dicts.
+        Each dict is output of Detector.update
+    return: ndarray float (N, 4) xyxy
+        Boxes corresponding to each element of detector_out.
+    """
+    boxes = []
+    for data in detector_out:
+        # Find min and max coords.
+        xs = []
+        ys = []
+        for box in data["filtered_boxes"]:
+            xs.append(int((box[0] + box[2]) / 2))
+            ys.append(int((box[1] + box[3]) / 2))
+
+        if len(xs) == 0 or len(ys) == 0:
+            x1 = x2 = y1 = y2 = 0
+        else:
+            x1 = min(xs) - OUT_PADDING
+            x2 = max(xs) + OUT_PADDING
+            y1 = min(ys) - OUT_PADDING
+            y2 = max(ys) + OUT_PADDING
+
+        boxes.append((x1, y1, x2, y2))
+
+    boxes = np.array(boxes, dtype=float)
+    return boxes
+
+
+def lerp_boxes(in_boxes, in_frames, frame_count):
+    """
+    Linear interpolation between boxes at frame intervals.
+    in_boxes, in_frames: Output of extract_boxes
+    frame_count: Total number of frames in output video.
+    return: ndarray float (frame_count, 4) xyxy
     """
     # Current frame is between B[i] and B[i+1].
     in_index = 0
@@ -29,23 +61,21 @@ def lerp_bboxes(in_boxes, frame_count):
     ret = []
     for frame in range(frame_count):
         # Before first box.
-        if frame <= in_boxes[0]["frame_i"]:
-            ret.append(in_boxes[0]["static_bbox"])
+        if frame <= in_frames[0]:
+            ret.append(in_boxes[0])
             continue
         # After last box.
-        if frame >= in_boxes[-1]["frame_i"] or in_index >= len(in_boxes) - 1:
-            ret.append(in_boxes[-1]["static_bbox"])
+        if frame >= in_frames[-1] or in_index >= len(in_boxes) - 1:
+            ret.append(in_boxes[-1])
             continue
 
         # Calculate lerp.
-        box1 = in_boxes[in_index]
-        box2 = in_boxes[in_index + 1]
-        fac = (frame - box1["frame_i"]) / (box2["frame_i"] - box1["frame_i"])
-        box = (1 - fac) * box1["static_bbox"] + fac * box2["static_bbox"]
+        fac = (frame - in_frames[in_index]) / (in_frames[in_index+1] - in_frames[in_index])
+        box = (1 - fac) * in_boxes[in_index] + fac * in_boxes[in_index+1]
         ret.append(box)
 
         # Advance index.
-        if frame > in_boxes[in_index + 1]["frame_i"]:
+        if frame > in_frames[in_index + 1]:
             in_index += 1
 
     return ret
@@ -77,11 +107,11 @@ class SmoothEMA:
         return self.ema_value
 
 
-def smooth_bboxes(in_boxes):
+def ema_smooth_boxes(in_boxes):
     """
     Apply EMA variant.
-    in_boxes: Output of lerp_bboxes
-    return: Same format as in_boxes
+    in_boxes: (N, 4)
+    return: Same format.
     """
     x1_ema = SmoothEMA()
     y1_ema = SmoothEMA()
@@ -102,8 +132,8 @@ def smooth_bboxes(in_boxes):
 
 def moving_average(boxes, k=OUT_MOVING_AVG):
     """
-    boxes: ndarray float (N, 4)
-    return: Same as boxes.
+    boxes: (N, 4)
+    return: Same format.
     """
     ret = []
     moment = np.zeros(4, dtype=float)
@@ -124,6 +154,8 @@ def moving_average(boxes, k=OUT_MOVING_AVG):
 def resize_bbox(bbox):
     """
     Resize to satisfy aspect, min size, and in bounds.
+    bbox: xyxy
+    return: xyxy, ndarray float
     """
     cx = (bbox[0] + bbox[2]) / 2
     cy = (bbox[1] + bbox[3]) / 2
@@ -162,15 +194,14 @@ def resize_bbox(bbox):
     if y2 >= RES[1]:
         y1 -= (y2 - RES[1] + 1)
         y2 = RES[1] - 1
-    new_bbox = (x1, y1, x2, y2)
+    new_bbox = np.array([x1, y1, x2, y2], dtype=float)
 
     return new_bbox
 
 
-def interp_bboxes(in_boxes, frame_count, out_fps):
+def compute_final_boxes(detector_out, frame_count, out_fps):
     """
     Main function to call.
-    Handles resizing and interpolation.
 
     in_boxes: Output of pipeline. List of dicts.
         Assumes sorted by frame number.
@@ -179,14 +210,28 @@ def interp_bboxes(in_boxes, frame_count, out_fps):
         Each box is xyxy tuple of ints.
         First element is bbox for the first frame, etc..
     """
-    # Change frame number to be in output video coords.
-    for box in in_boxes:
-        box["static_bbox"] = np.array(box["static_bbox"], dtype=float)
-        box["frame_i"] = box["frame_i"] * out_fps / FPS
-
-    boxes = lerp_bboxes(in_boxes, frame_count)
-    boxes = smooth_bboxes(boxes)
+    boxes = extract_boxes(detector_out)
+    # Frame numbers in output video coords.
+    frames = np.arange(len(boxes)) * out_fps / FPS
+    boxes = lerp_boxes(boxes, frames, frame_count)
+    boxes = ema_smooth_boxes(boxes)
     for i in range(len(boxes)):
         boxes[i] = resize_bbox(boxes[i])
     boxes = moving_average(boxes)
     return boxes
+
+
+def vis_static_bbox(frame, bbox_out):
+    """
+    frame: cv2 format
+    bbox_out: Dict output of StaticBBox.update.
+    """
+    frame = frame.copy()
+
+    # Draw box.
+    box = bbox_out["bbox"]
+    box = [int(x) for x in box]
+    cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+
+    cv2.imshow("StaticBBox", frame)
+    cv2.waitKey(1)

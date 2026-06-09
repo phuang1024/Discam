@@ -1,3 +1,8 @@
+"""
+Entry point for post-recording video processing.
+Crops and trims video.
+"""
+
 import argparse
 import pickle
 
@@ -5,35 +10,35 @@ import cv2
 import torch
 from tqdm import tqdm
 
-from interp_bbox import interp_bboxes
-from pipeline import Pipeline
+from bounding_box import compute_final_boxes
+from detect import Detector
 from video_read import ScaledReader
 from utils import *
 
 torch.set_grad_enabled(False)
 
 
-def run_cv_pipeline(args):
+def run_detector(args):
     """
-    Create and run pipeline on all frames.
+    Run Detector on video.
     return: Sequential list of dict.
-        Each dict is a return value from Pipeline.update
+        Each dict is a return value from Detector.update
     """
     video = ScaledReader(args.video)
-    pipe = Pipeline(args.field_mask)
+    detector = Detector(args.field_mask)
 
-    pipe_outputs = []
+    outputs = []
     pbar = tqdm(total=video.get_len(), desc="CV pipeline")
     while True:
         ret, frame = video.read()
         if not ret:
             break
 
-        pipe_outputs.append(pipe.update(frame))
+        outputs.append(detector.update(frame))
         pbar.update(1)
 
     video.release()
-    return pipe_outputs
+    return outputs
 
 
 def write_output(args, bboxes):
@@ -81,8 +86,14 @@ def main():
     parser.add_argument("--field_mask")
     args = parser.parse_args()
 
-    #pipe_outputs = run_cv_pipeline(args)
+    # Get video info.
+    cap = cv2.VideoCapture(args.video)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    out_fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+
     """
+    pipe_outputs = run_detector(args)
     with open("pipe_out.pkl", "wb") as f:
         pickle.dump(pipe_outputs, f)
     stop
@@ -90,13 +101,8 @@ def main():
     with open("pipe_out.pkl", "rb") as f:
         pipe_outputs = pickle.load(f)
 
-    cap = cv2.VideoCapture(args.video)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    out_fps = cap.get(cv2.CAP_PROP_FPS)
-    cap.release()
-    bboxes = interp_bboxes(pipe_outputs, frame_count, out_fps)
-
-    write_output(args, bboxes)
+    boxes = compute_final_boxes(pipe_outputs, frame_count, out_fps)
+    write_output(args, boxes)
 
 
 if __name__ == "__main__":
