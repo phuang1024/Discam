@@ -11,26 +11,16 @@ torch format:
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Input video res/fps.
+# Video res/fps for NN.
 RES = (640, 360)
 FPS = 2
-
-# VidStab window.
-#STAB_WINDOW = 30
 
 # Detector params.
 # Field mask edges blur size.
 FIELD_MASK_BLUR = 50
-
-# Optical flow params.
-# Temporal median filter window size.
-#OF_MEDIAN_SIZE = 5
-# Magnitude scaling to account for camera perspective.
-#OF_PERSP_SCALE = 3
 
 # Output params.
 # In coordinates of RES. Padding between outermost person and bbox.
@@ -46,9 +36,11 @@ OUT_SHRINK_MARGIN = 20
 # Moving average.
 OUT_MOVING_AVG = 200
 
+VERSION = "0.0.1"
+
 
 class EMA:
-    def __init__(self, alpha=0.5):
+    def __init__(self, alpha):
         self.alpha = alpha
         self.value = None
 

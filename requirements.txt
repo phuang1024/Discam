@@ -1,0 +1,6 @@
+accelerate
+numpy
+opencv-python
+torch
+tqdm
+transformers
