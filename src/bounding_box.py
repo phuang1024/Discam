@@ -3,11 +3,12 @@ Given detections,
 generate overall bounding box for each frame, for post processing.
 
 Steps:
-1. Extract box per frame based on person detections.
-2. Linear interp between boxes for remaining frames.
-3. EMA with different facs for expand vs shrink.
-4. Aspect correction.
-5. Large window moving average.
+- Extract box per frame based on person detections.
+- Temporal median filter.
+- Linear interp between boxes for remaining frames.
+- EMA with different facs for expand vs shrink.
+- Aspect correction.
+- Large window moving average.
 """
 
 import numpy as np
@@ -44,6 +45,21 @@ def extract_boxes(detector_out):
 
     boxes = np.array(boxes, dtype=float)
     return boxes
+
+
+def median_filter(boxes, k=OUT_MEDIAN_FILTER):
+    """
+    boxes: (N, 4)
+    return: Same format.
+    """
+    ret = []
+    for i in range(len(boxes)):
+        start = max(0, i - k // 2)
+        end = min(len(boxes), i + k // 2 + 1)
+        median_box = np.median(boxes[start:end], axis=0)
+        ret.append(median_box)
+
+    return ret
 
 
 def lerp_boxes(in_boxes, in_frames, frame_count):
@@ -209,6 +225,7 @@ def compute_final_boxes(detector_out, frame_count, out_fps):
         First element is bbox for the first frame, etc..
     """
     boxes = extract_boxes(detector_out)
+    boxes = median_filter(boxes)
     # Frame numbers in output video coords.
     frames = np.arange(len(boxes)) * out_fps / FPS
     boxes = lerp_boxes(boxes, frames, frame_count)

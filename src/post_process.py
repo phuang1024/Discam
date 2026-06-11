@@ -131,13 +131,11 @@ def write_output(in_path, out_path, bboxes):
         out_video.write(frame_crop)
 
         # Draw vis
-        """
         vis_frame = frame.copy()
         cv2.rectangle(vis_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imshow("box", vis_frame)
         cv2.imshow("crop", frame_crop)
         cv2.waitKey(1)
-        """
 
         frame_i += 1
         pbar.update(1)
@@ -179,11 +177,13 @@ def main():
     # Check file exists.
     check_file_exists(in_path)
     check_file_exists(field_mask_path)
+    """
     if os.path.exists(out_path):
         choice = input(f"Output path {out_path} exists. Overwrite? [y/N] ").strip().lower()
         if choice != "y":
             print("Aborting.")
             sys.exit(1)
+    """
 
     # Get video info.
     cap = cv2.VideoCapture(args.video)
