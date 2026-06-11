@@ -31,9 +31,10 @@ def read_mask(path):
 
 def create_mask(points, res=RES):
     """
-    Create mask from points.
+    Draw mask binary image.
+    points: From read_mask()
     res: (W, H) resolution.
-    return: ndarray [H, W] bool.
+    return: ndarray bool [H, W]
     """
     points[:, 0] *= res[0]
     points[:, 1] *= res[1]
@@ -43,6 +44,23 @@ def create_mask(points, res=RES):
     cv2.fillPoly(mask, [points], 255)
     mask = mask.astype(bool)
     return mask
+
+
+def create_persp_scale(points, res=RES, max_val=3):
+    """
+    Create per-pixel scaling factor to account for far people being small.
+    Y axis lerp: From (min(points y coord) to yres - 1), to (max_val to 1).
+    return: ndarray float [H, W], from 1 to max_val.
+    """
+    img = np.zeros(res[::-1], dtype=float)
+    min_y = points[:, 1].min()
+    for y in range(res[1]):
+        if y < min_y:
+            img[y] = max_val
+        else:
+            img[y] = np.interp(y, [min_y, res[1] - 1], [max_val, 1])
+
+    return img
 
 
 def click_handler(event, x, y, flags, param):

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from transformers import RTDetrImageProcessor, RTDetrV2ForObjectDetection
 
-from field_mask import read_mask, create_mask
+from field_mask import read_mask, create_mask, create_persp_scale
 from utils import *
 
 DETR_PROCESSOR = RTDetrImageProcessor.from_pretrained("PekingU/rtdetr_v2_r18vd")
@@ -28,10 +28,13 @@ class Detector:
     """
 
     def __init__(self, field_mask_path):
-        self.field_mask = None
-        if field_mask_path is not None:
-            self.field_mask = create_mask(read_mask(field_mask_path)).astype(np.float32)
-            self.blurred_mask = cv2.blur(self.field_mask, (FIELD_MASK_BLUR, FIELD_MASK_BLUR))
+        mask_points = read_mask(field_mask_path)
+        self.field_mask = create_mask(mask_points).astype(np.float32)
+        # Is a measure of closeness to border. -1 outside, 1 center, 0 on border.
+        self.blurred_mask = cv2.blur(self.field_mask, (FIELD_MASK_BLUR, FIELD_MASK_BLUR))
+        self.blurred_mask = 2 * self.blurred_mask - 1
+        # Scale to account for far people being small. 1 near, 3 far.
+        self.persp_scale = create_persp_scale(mask_points)
 
     def update(self, frame):
         """
@@ -62,7 +65,7 @@ class Detector:
             mid_y = (y1 + y2) // 2
 
             # TODO static thres for now
-            if self.blurred_mask[y2, mid_x] > 0.6:
+            if self.blurred_mask[y2, mid_x] * self.persp_scale[y2, mid_x] > 0.3:
                 ret.append(box)
 
         ret = np.array(ret, dtype=np.float32)
@@ -109,8 +112,10 @@ def vis_detector(frame, detector_out):
     for x1, y1, x2, y2 in detector_out["filtered_boxes"].astype(int):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-    mask_overlay = (detector_out["blurred_mask"] * 255).astype(np.uint8)
-    frame = cv2.addWeighted(frame, 1.0, cv2.cvtColor(mask_overlay, cv2.COLOR_GRAY2BGR), 0.3, 0)
+    # Overlay field mask
+    mask = detector_out["blurred_mask"] / 2 + 0.5
+    mask = (mask * 255).astype(np.uint8)
+    frame = cv2.addWeighted(frame, 1.0, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR), 0.3, 0)
     cv2.imshow("Detector", frame)
 
     cv2.waitKey(1)

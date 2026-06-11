@@ -14,7 +14,7 @@ import torch
 from tqdm import tqdm
 
 from bounding_box import compute_final_boxes
-from detect import Detector
+from detect import Detector, vis_detector
 from utils import *
 
 torch.set_grad_enabled(False)
@@ -94,6 +94,7 @@ def run_detector(in_video, field_mask):
             break
 
         outputs.append(detector.update(frame))
+        vis_detector(frame, outputs[-1])
         pbar.update(1)
 
     video.release()
@@ -157,7 +158,7 @@ def main():
     parser.add_argument("video", type=Path)
     parser.add_argument("--output", help="If none, is InputFilm.discout.mp4")
     parser.add_argument("--field_mask", help="If none, is InputFilm.npy")
-    parser.add_argument("--no_load", action="store_true", help="Don't load (or write) cache.")
+    parser.add_argument("--no_cache", action="store_true", help="Don't load (or write) cache.")
     args = parser.parse_args()
 
     # Determine file paths.
@@ -196,9 +197,9 @@ def main():
     # Run detector.
     print("Run detector.")
     cache_path = args.video.parent / (args.video.stem + ".discache.pkl")
-    if args.no_load or not cache_path.exists():
+    if args.no_cache or not cache_path.exists():
         pipe_outputs = run_detector(in_path, field_mask_path)
-        if not args.no_load:
+        if not args.no_cache:
             print(f"    Saving to cache {cache_path}.")
             with open(cache_path, "wb") as f:
                 pickle.dump(pipe_outputs, f)
