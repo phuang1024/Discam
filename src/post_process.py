@@ -16,65 +16,9 @@ from tqdm import tqdm
 from bounding_box import compute_final_boxes
 from detect import Detector, vis_detector
 from utils import *
+from video_rw import ScaledReader, FFmpegWriter
 
 torch.set_grad_enabled(False)
-
-
-class ScaledReader:
-    """
-    Video reader with automatic FPS and res scaling.
-
-    Note that FPS scaling will not necessarily be exact.
-    I.e. 60fps / 8fps = 7.5, so every 7th or 8th frame will be used.
-    """
-
-    def __init__(self, path, fps=FPS, res=RES):
-        """
-        fps, res: Target FPS and res.
-        """
-        self.cap = cv2.VideoCapture(path)
-        self.orig_fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.orig_res = (int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-        self.new_fps = fps
-        self.new_res = res
-
-        # Frame counters in both coordinates.
-        self.orig_frame = 0
-        self.new_frame = 0
-
-        # Last frame read.
-        self.last_frame = None
-
-    def read(self):
-        """
-        Returns (success, frame).
-        """
-        target_frame = self.new_frame * self.orig_fps / self.new_fps
-        self.new_frame += 1
-
-        # Read at least one frame.
-        if self.last_frame is None:
-            ret, self.last_frame = self.cap.read()
-            if not ret:
-                return False, None
-            self.orig_frame += 1
-
-        # Read until target.
-        while self.orig_frame + 0.5 < target_frame:
-            ret, self.last_frame = self.cap.read()
-            if not ret:
-                return False, None
-            self.orig_frame += 1
-
-        frame = cv2.resize(self.last_frame, self.new_res)
-        return True, frame
-
-    def get_len(self):
-        orig_len = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        return int(orig_len * self.new_fps / self.orig_fps)
-
-    def release(self):
-        self.cap.release()
 
 
 def run_detector(in_video, field_mask):
@@ -109,7 +53,7 @@ def write_output(in_path, out_path, bboxes):
     fps = in_video.get(cv2.CAP_PROP_FPS)
     orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
     orig_h = in_video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    out_video = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, OUT_RES)
+    out_video = FFmpegWriter(out_path, fps, OUT_RES)
 
     frame_i = 0
     pbar = tqdm(total=len(bboxes), desc="Writing output")
@@ -131,11 +75,13 @@ def write_output(in_path, out_path, bboxes):
         out_video.write(frame_crop)
 
         # Draw vis
+        """
         vis_frame = frame.copy()
         cv2.rectangle(vis_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imshow("box", vis_frame)
         cv2.imshow("crop", frame_crop)
         cv2.waitKey(1)
+        """
 
         frame_i += 1
         pbar.update(1)
