@@ -68,7 +68,7 @@ def click_handler(event, x, y, flags, param):
     global _interactive_frame, _interactive_mask, _last_click
 
     if event == cv2.EVENT_LBUTTONDOWN and time.time() - _last_click > 0.5:
-        cv2.circle(_interactive_frame, (x, y), 5, (0, 0, 255), -1)
+        cv2.circle(_interactive_frame, (x, y), 3, (0, 0, 255), -1)
         x = x / _interactive_frame.shape[1]
         y = y / _interactive_frame.shape[0]
         _interactive_mask.append((x, y))
@@ -101,8 +101,8 @@ def main():
     _last_click = time.time()
     while True:
         cv2.imshow("Frame", _interactive_frame)
-        cv2.waitKey(100)
-        if len(_interactive_mask) == 4:
+        key = cv2.waitKey(100)
+        if key == ord("q"):
             break
 
     # Un-scale.

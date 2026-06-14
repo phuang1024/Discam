@@ -15,8 +15,8 @@ import torch
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Video res/fps for NN.
-RES = (640, 360)
-FPS = 2
+RES = (1920, 1080)
+FPS = 1
 
 # Detector params.
 # Field mask edges blur size.

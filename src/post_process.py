@@ -12,6 +12,7 @@ from pathlib import Path
 import cv2
 import torch
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from bounding_box import compute_final_boxes
 from detect import Detector, vis_detector
@@ -64,6 +65,7 @@ def write_output(in_path, out_path, bboxes):
 
         bbox = bboxes[frame_i]
         x1, y1, x2, y2 = bbox
+        print(bbox)
         x1 = int(x1 * orig_w / RES[0])
         x2 = int(x2 * orig_w / RES[0])
         y1 = int(y1 * orig_h / RES[1])
@@ -72,16 +74,14 @@ def write_output(in_path, out_path, bboxes):
         # Crop frame
         frame_crop = frame[y1:y2, x1:x2]
         frame_crop = cv2.resize(frame_crop, OUT_RES)
-        out_video.write(frame_crop)
+        #out_video.write(frame_crop)
 
         # Draw vis
-        """
         vis_frame = frame.copy()
         cv2.rectangle(vis_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imshow("box", vis_frame)
         cv2.imshow("crop", frame_crop)
         cv2.waitKey(1)
-        """
 
         frame_i += 1
         pbar.update(1)
@@ -102,7 +102,7 @@ def main():
     parser.add_argument("video", type=Path)
     parser.add_argument("--output", help="If none, is InputFilm.discout.mp4")
     parser.add_argument("--field_mask", help="If none, is InputFilm.npy")
-    parser.add_argument("--no_cache", action="store_true", help="Don't load (or write) cache.")
+    parser.add_argument("--no_cache", action="store_true", help="Don't load cache.")
     args = parser.parse_args()
 
     # Determine file paths.
@@ -144,18 +144,25 @@ def main():
     print("Run detector.")
     cache_path = args.video.parent / (args.video.stem + ".discache.pkl")
     if args.no_cache or not cache_path.exists():
-        pipe_outputs = run_detector(in_path, field_mask_path)
-        if not args.no_cache:
-            print(f"    Saving to cache {cache_path}.")
-            with open(cache_path, "wb") as f:
-                pickle.dump(pipe_outputs, f)
+        detect_out = run_detector(in_path, field_mask_path)
+        print(f"    Saving to cache {cache_path}.")
+        with open(cache_path, "wb") as f:
+            pickle.dump(detect_out, f)
     else:
         print(f"    Loading from cache {cache_path}.")
         with open(cache_path, "rb") as f:
-            pipe_outputs = pickle.load(f)
+            detect_out = pickle.load(f)
+
+    # TEST: plot num boxes per frame, over time
+    #data = [x["player_count"] for x in detect_out]
+    data = [len(x["filtered_boxes"]) for x in detect_out]
+    time = [i / FPS for i in range(len(detect_out))]
+    plt.plot(time, data)
+    plt.show()
+    stop
 
     print("Compute bounding boxes.")
-    boxes = compute_final_boxes(pipe_outputs, frame_count, out_fps)
+    boxes = compute_final_boxes(detect_out, frame_count, out_fps)
 
     print("Write output video.")
     write_output(in_path, out_path, boxes)
