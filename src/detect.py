@@ -75,8 +75,9 @@ class Detector:
         return ret
 
 
-def run_detr(frame):
+def run_detr_single(frame):
     """
+    Run on single frame. Return person boxes.
     frame: cv2 format original frame.
     return: ndarray (N, 4) xyxy float bounding boxes.
     """
@@ -105,37 +106,40 @@ def run_detr(frame):
 def run_detr_tiled(frame):
     """
     2x2 tiled inference.
-    TODO people are sliced in half at the borders currently.
+    Expand each tile a bit. Remove detections near edge.
     frame: cv2 format.
     return: ndarray (N, 4) xyxy
         In coords of frame.
     """
-    mid_w = frame.shape[1] // 2
-    mid_h = frame.shape[0] // 2
+    half_w = frame.shape[1] // 2
+    half_h = frame.shape[0] // 2
 
     all_boxes = []
+    for x in range(2):
+        for y in range(2):
+            # Find tile coords.
+            x1 = x * half_w
+            y1 = y * half_h
+            x2 = (x + 1) * half_w
+            y2 = (y + 1) * half_h
+            # Expand.
+            x1e = np.clip(x1 - 50, 0, frame.shape[1])
+            y1e = np.clip(y1 - 50, 0, frame.shape[0])
+            x2e = np.clip(x2 + 50, 0, frame.shape[1])
+            y2e = np.clip(y2 + 50, 0, frame.shape[0])
 
-    boxes_tl = run_detr(frame[:mid_h, :mid_w])
-    if len(boxes_tl) > 0:
-        all_boxes.append(boxes_tl)
+            tile = frame[y1e:y2e, x1e:x2e]
+            boxes = run_detr_single(tile)
+            # Remove boxes near edge.
+            for bx1, by1, bx2, by2 in boxes:
+                if (bx1 < 10
+                    or by1 < 10
+                    or (tile.shape[1] - bx2) < 10
+                    or (tile.shape[0] - by2) < 10):
+                    continue
+                all_boxes.append((bx1 + x1e, by1 + y1e, bx2 + x1e, by2 + y1e))
 
-    boxes_tr = run_detr(frame[:mid_h, mid_w:])
-    if len(boxes_tr) > 0:
-        boxes_tr[:, [0, 2]] += mid_w
-        all_boxes.append(boxes_tr)
-
-    boxes_bl = run_detr(frame[mid_h:, :mid_w])
-    if len(boxes_bl) > 0:
-        boxes_bl[:, [1, 3]] += mid_h
-        all_boxes.append(boxes_bl)
-
-    boxes_br = run_detr(frame[mid_h:, mid_w:])
-    if len(boxes_br) > 0:
-        boxes_br[:, [0, 2]] += mid_w
-        boxes_br[:, [1, 3]] += mid_h
-        all_boxes.append(boxes_br)
-
-    boxes = np.concatenate(all_boxes, axis=0)
+    boxes = np.array(all_boxes, dtype=np.float32)
     return boxes
 
 
