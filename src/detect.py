@@ -5,6 +5,7 @@ Person detecting using RT-DETR.
 import cv2
 import numpy as np
 import torch
+
 from transformers import RTDetrImageProcessor, RTDetrV2ForObjectDetection
 
 from field_mask import read_mask, create_mask, create_persp_scale
@@ -45,7 +46,9 @@ class Detector:
             filtered_boxes: Boxes of active players. Subset of bboxes.
         }
         """
-        boxes = run_detr(frame).astype(int)
+        frame = cv2.convertScaleAbs(frame, alpha=1.3, beta=0)
+
+        boxes = run_detr_tiled(frame).astype(int)
         filtered_boxes = self.filter_boxes(boxes)
 
         return {
@@ -65,7 +68,7 @@ class Detector:
             mid_y = (y1 + y2) // 2
 
             # TODO static thres for now
-            if self.blurred_mask[y2, mid_x] * self.persp_scale[y2, mid_x] > 0.3:
+            if self.blurred_mask[y2, mid_x] * self.persp_scale[y2, mid_x] > 0.4:
                 ret.append(box)
 
         ret = np.array(ret, dtype=np.float32)
@@ -83,8 +86,8 @@ def run_detr(frame):
     outputs = DETR_MODEL(**inputs)
     results = DETR_PROCESSOR.post_process_object_detection(
         outputs,
-        target_sizes=torch.tensor([RES[::-1]]),
-        threshold=0.2,
+        target_sizes=torch.tensor([[frame.shape[0], frame.shape[1]]]),
+        threshold=0.3,
     )
 
     # Convert to bboxes.
@@ -97,6 +100,43 @@ def run_detr(frame):
     bboxes = np.array(bboxes, dtype=np.float32)
 
     return bboxes
+
+
+def run_detr_tiled(frame):
+    """
+    2x2 tiled inference.
+    TODO people are sliced in half at the borders currently.
+    frame: cv2 format.
+    return: ndarray (N, 4) xyxy
+        In coords of frame.
+    """
+    mid_w = frame.shape[1] // 2
+    mid_h = frame.shape[0] // 2
+
+    all_boxes = []
+
+    boxes_tl = run_detr(frame[:mid_h, :mid_w])
+    if len(boxes_tl) > 0:
+        all_boxes.append(boxes_tl)
+
+    boxes_tr = run_detr(frame[:mid_h, mid_w:])
+    if len(boxes_tr) > 0:
+        boxes_tr[:, [0, 2]] += mid_w
+        all_boxes.append(boxes_tr)
+
+    boxes_bl = run_detr(frame[mid_h:, :mid_w])
+    if len(boxes_bl) > 0:
+        boxes_bl[:, [1, 3]] += mid_h
+        all_boxes.append(boxes_bl)
+
+    boxes_br = run_detr(frame[mid_h:, mid_w:])
+    if len(boxes_br) > 0:
+        boxes_br[:, [0, 2]] += mid_w
+        boxes_br[:, [1, 3]] += mid_h
+        all_boxes.append(boxes_br)
+
+    boxes = np.concatenate(all_boxes, axis=0)
+    return boxes
 
 
 def vis_detector(frame, detector_out):
