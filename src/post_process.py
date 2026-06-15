@@ -52,9 +52,23 @@ def run_detector(in_video, field_mask):
     return outputs
 
 
-def write_output(in_path, out_path, bboxes):
+def find_trim_sections(detect_out):
     """
-    Write output video with bboxes drawn.
+    Detect in between points.
+    Returns sections to trim from output video.
+    return: ndarray (N, 2)
+        (start, end) timestamps in seconds.
+    """
+    data = [len(x["player_boxes"]) for x in detect_out]
+    time = [i / FPS for i in range(len(detect_out))]
+    plt.plot(time, data)
+    plt.show()
+    stop
+
+
+def write_output(in_path, out_path, bboxes, trim_sections):
+    """
+    Write output video with crop and trim.
     """
     in_video = cv2.VideoCapture(in_path)
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
@@ -150,19 +164,13 @@ def main():
         with open(cache_path, "rb") as f:
             detect_out = pickle.load(f)
 
-    # TEST: plot num boxes per frame, over time
-    #data = [x["player_count"] for x in detect_out]
-    data = [len(x["player_boxes"]) for x in detect_out]
-    time = [i / FPS for i in range(len(detect_out))]
-    plt.plot(time, data)
-    plt.show()
-    stop
-
     print("Compute bounding boxes.")
     boxes = compute_final_boxes(detect_out, frame_count, out_fps)
+    trim_sections = find_trim_sections(detect_out)
+    print(f"  Found trim sections: {trim_sections}")
 
     print("Write output video.")
-    write_output(in_path, out_path, boxes)
+    write_output(in_path, out_path, boxes, trim_sections)
 
 
 if __name__ == "__main__":

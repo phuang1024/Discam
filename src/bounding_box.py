@@ -29,14 +29,13 @@ def extract_box(detections, padding=BOX_PADDING):
         ys.append(int((box[1] + box[3]) / 2))
 
     if len(xs) == 0 or len(ys) == 0:
-        x1 = x2 = y1 = y2 = 0
+        return None
     else:
         x1 = min(xs) - padding
         x2 = max(xs) + padding
         y1 = min(ys) - padding
         y2 = max(ys) + padding
-
-    return x1, y1, x2, y2
+        return x1, y1, x2, y2
 
 
 def median_filter(boxes, k=BOX_MEDIAN_FILTER):
@@ -188,6 +187,8 @@ def resize_bbox(bbox):
 
     # In bounds.
     x1, y1, x2, y2 = new_bbox
+    if x2 - x1 > RES[0] or y2 - y1 > RES[1]:
+        return np.array([0, 0, RES[0], RES[1]], dtype=float)
     if x1 < 0:
         x2 -= x1
         x1 = 0
@@ -216,6 +217,7 @@ def compute_final_boxes(detector_out, frame_count, out_fps):
         Each box is xyxy tuple of ints.
         First element is bbox for the first frame, etc..
     """
+    # TODO!!! when extract_box returns None
     boxes = np.array([extract_box(d["player_boxes"]) for d in detector_out], dtype=float)
     boxes = median_filter(boxes)
     # Frame numbers in output video coords.

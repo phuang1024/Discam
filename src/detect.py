@@ -37,6 +37,9 @@ class Detector:
         # Scale to account for far people being small. 1 near, 3 far.
         self.persp_scale = create_persp_scale(mask_points)
 
+        # Last box in detr two step; in case none found in current frame.
+        self.last_detr_box = np.array([0, 0, RES[0], RES[1]], dtype=np.float32)
+
     def update(self, frames):
         """
         frame: ndarray (T, H, W, 3)
@@ -79,7 +82,11 @@ class Detector:
 
         # Find bbox.
         box = extract_box(players_coarse, 150)
-        box = resize_bbox(box)
+        if box is None:
+            box = self.last_detr_box
+        else:
+            box = resize_bbox(box)
+            self.last_detr_box = box
 
         # Crop and second pass. High person thres, medium field mask thres.
         x1, y1, x2, y2 = box.astype(int)
