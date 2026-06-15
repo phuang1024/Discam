@@ -14,16 +14,14 @@ import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Detector params.
 # Video res/fps for NN.
 RES = (1920, 1080)
-# FPS that NN is run on. Boxes are generated per NN frame.
 FPS = 1
-
-# Dims for optical flow.
+# For optical flow.
 OF_RES = (960, 540)
 OF_FPS = 15
-
-# Detector params.
+OF_FRAMES = 3
 # Field mask edges blur size.
 FIELD_MASK_BLUR = 50
 

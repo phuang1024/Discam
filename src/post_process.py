@@ -16,43 +16,10 @@ import matplotlib.pyplot as plt
 
 from bounding_box import compute_final_boxes
 from detect import Detector, vis_detector
-from motion import OpticalFlow, vis_of
 from utils import *
 from video_rw import ScaledReader, FFmpegWriter
 
 torch.set_grad_enabled(False)
-
-
-def run_of(in_video):
-    """
-    Run optical flow on video. Convert output time scale to FPS.
-    return: ndarray float (T, H, W, 2)
-        T: Time. Index i corresponds to index i of the NN.
-    """
-    video = ScaledReader(in_video, OF_FPS, OF_RES)
-    of = OpticalFlow()
-
-    outputs = []
-    pbar = tqdm(total=video.get_len(), desc="Optical flow")
-    frame_i = 0
-    while True:
-        ret, frame = video.read()
-        if not ret:
-            break
-
-        out = of.update(frame)
-        vis_of(frame, out)
-
-        # Time scaling.
-        if frame_i / OF_FPS >= len(outputs) / FPS:
-            outputs.append(out)
-            print(frame_i, len(outputs))
-
-        frame_i += 1
-        pbar.update(1)
-
-    video.release()
-    return np.array(outputs)
 
 
 def run_detector(in_video, field_mask):
@@ -61,18 +28,24 @@ def run_detector(in_video, field_mask):
     return: Sequential list of dict.
         Each dict is a return value from Detector.update
     """
-    video = ScaledReader(in_video, FPS, RES)
+    video = ScaledReader(
+        in_video,
+        res=RES,
+        major_fps=FPS,
+        minor_fps=OF_FPS,
+        minor_frame_count=OF_FRAMES,
+    )
     detector = Detector(field_mask)
 
     outputs = []
     pbar = tqdm(total=video.get_len(), desc="Detector")
     while True:
-        ret, frame = video.read()
-        if not ret:
+        frames = video.read()
+        if frames is None:
             break
 
-        outputs.append(detector.update(frame))
-        vis_detector(frame, outputs[-1])
+        outputs.append(detector.update(frames))
+        vis_detector(frames[-1], outputs[-1])
         pbar.update(1)
 
     video.release()
@@ -168,8 +141,6 @@ def main():
     print("Run CV.")
     cache_path = args.video.parent / (args.video.stem + ".discache.pkl")
     if args.no_cache or not cache_path.exists():
-        of_out = run_of(in_path)
-        stop
         detect_out = run_detector(in_path, field_mask_path)
         print(f"    Saving to cache {cache_path}.")
         with open(cache_path, "wb") as f:

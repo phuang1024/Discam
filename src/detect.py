@@ -1,5 +1,6 @@
 """
 Person detecting using RT-DETR.
+Motion analysis using Farneback optical flow.
 """
 
 import cv2
@@ -19,16 +20,11 @@ DETR_MODEL = RTDetrV2ForObjectDetection.from_pretrained("PekingU/rtdetr_v2_r18vd
 class Detector:
     """
     Person detection with RT-DETR, and spectator classification.
+    Motion analysis using optical flow.
 
-    Player's position is the midpoint of the bottom edge; i.e. where their feet are.
-    This position is used to query the field mask.
-
-    Blur the field mask to obtain continuous measure near border.
-
-    2 step detection:
+    2 step DETR detection:
     First detect and filter with high threshold.
-    Then crop frame around all detections.
-    Then detect again with lower threshold.
+    Then crop frame around all detections for better res. Detect again with lower threshold.
     """
 
     def __init__(self, field_mask_path):
@@ -40,9 +36,9 @@ class Detector:
         # Scale to account for far people being small. 1 near, 3 far.
         self.persp_scale = create_persp_scale(mask_points)
 
-    def update(self, frame):
+    def update(self, frames):
         """
-        frame: cv2 format.
+        frame: ndarray (T, H, W, 3)
         motion_out: Output of Motion.update
         return: {
             boxes: All detected coarse bounding boxes.
@@ -50,6 +46,18 @@ class Detector:
             player_boxes: Boxes (fine) of active players.
             crop: xyxy crop used for second pass.
         }
+        """
+        boxes_coarse, _, _, players_fine, box = self.run_detr_twopass(frames[-1])
+
+        return {
+            "boxes": boxes_coarse,
+            "player_boxes": players_fine,
+            "crop": box,
+        }
+
+    def run_detr_twopass(self, frame):
+        """
+        Two pass detection. See Detector docs.
         """
         # First pass. Low person thres, high field mask thres.
         boxes_coarse = run_detr_single(frame, 0.2).astype(int)
@@ -69,11 +77,7 @@ class Detector:
             boxes_fine[:, [1, 3]] += y1
         players_fine = self.filter_boxes(boxes_fine, 0.5)
 
-        return {
-            "boxes": boxes_coarse,
-            "player_boxes": players_fine,
-            "crop": box,
-        }
+        return boxes_coarse, players_coarse, boxes_fine, players_fine, box
 
     def filter_boxes(self, boxes, thres):
         """

@@ -15,54 +15,56 @@ class ScaledReader:
     """
     Video reader with automatic FPS and res scaling.
 
-    Note that FPS scaling will not necessarily be exact.
-    I.e. 60fps / 8fps = 7.5, so every 7th or 8th frame will be used.
+        [                   ] major_fps
+    ----|--|--|--|----------|--|--|--|----------|--|--|--|----
+        [  ] minor_fps     (1  2  3  4) minor_frame_count
+
+    Each read, returns stack of "minor_frame_count" frames.
     """
 
-    def __init__(self, path, fps, res):
+    def __init__(self, path, res, major_fps, minor_fps, minor_frame_count):
         """
         fps, res: Target FPS and res.
         """
         self.cap = cv2.VideoCapture(path)
         self.orig_fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.orig_res = (int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-        self.new_fps = fps
-        self.new_res = res
 
-        # Frame counters in both coordinates.
-        self.orig_frame = 0
-        self.new_frame = 0
+        self.major_fps = major_fps
+        self.minor_fps = minor_fps
+        self.minor_frame_count = minor_frame_count
+        self.res = res
 
-        # Last frame read.
-        self.last_frame = None
+        self.out_frame_i = 0
 
     def read(self):
         """
-        Returns (success, frame).
+        return: ndarray uint8 (T, H, W, 3)
         """
-        target_frame = self.new_frame * self.orig_fps / self.new_fps
-        self.new_frame += 1
+        # Corresponding frame number in input.
+        frame_start = int(self.out_frame_i * self.orig_fps / self.major_fps)
+        frame_step = int(self.orig_fps / self.minor_fps)
+        self.out_frame_i += 1
 
-        # Read at least one frame.
-        if self.last_frame is None:
-            ret, self.last_frame = self.cap.read()
+        frames = np.empty((self.minor_frame_count, self.res[1], self.res[0], 3), dtype=np.uint8)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_start)
+        for i in range(self.minor_frame_count):
+            ret, frame = self.cap.read()
             if not ret:
                 return False, None
-            self.orig_frame += 1
 
-        # Read until target.
-        while self.orig_frame + 0.5 < target_frame:
-            ret, self.last_frame = self.cap.read()
-            if not ret:
-                return False, None
-            self.orig_frame += 1
+            frame = cv2.resize(frame, self.res)
+            frames[i] = frame
+            # Jump forward minor fps.
+            if i != self.minor_frame_count - 1:
+                for _ in range(frame_step - 1):
+                    self.cap.read()
 
-        frame = cv2.resize(self.last_frame, self.new_res)
-        return True, frame
+        return True, frames
 
     def get_len(self):
         orig_len = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        return int(orig_len * self.new_fps / self.orig_fps)
+        return int(orig_len * self.major_fps / self.orig_fps)
 
     def release(self):
         self.cap.release()
