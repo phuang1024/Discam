@@ -8,6 +8,7 @@ import torch
 
 from transformers import RTDetrImageProcessor, RTDetrV2ForObjectDetection
 
+from bounding_box import extract_box, resize_bbox
 from field_mask import read_mask, create_mask, create_persp_scale
 from utils import *
 
@@ -17,15 +18,17 @@ DETR_MODEL = RTDetrV2ForObjectDetection.from_pretrained("PekingU/rtdetr_v2_r18vd
 
 class Detector:
     """
-    Person detection with RT-DETR.
-    Spectator filtering with manual field mask.
+    Person detection with RT-DETR, and spectator classification.
 
-    The position of a player (wrt the field mask) is the midpoint of the bottom edge;
-    i.e. where their feet are.
+    Player's position is the midpoint of the bottom edge; i.e. where their feet are.
     This position is used to query the field mask.
 
-    Players near the sideline are the most difficult to distinguish.
-    First, we blur the field mask, to obtain a continuous value near the edge.
+    Blur the field mask to obtain continuous measure near border.
+
+    2 step detection:
+    First detect and filter with high threshold.
+    Then crop frame around all detections.
+    Then detect again with lower threshold.
     """
 
     def __init__(self, field_mask_path):
@@ -42,22 +45,36 @@ class Detector:
         frame: cv2 format.
         motion_out: Output of Motion.update
         return: {
-            boxes: ndarray float (N, 4) xyxy bounding boxes.
-            filtered_boxes: Boxes of active players. Subset of bboxes.
+            boxes: All detected coarse bounding boxes.
+                ndarray float (N, 4) xyxy
+            player_boxes: Boxes (fine) of active players.
+            crop: xyxy crop used for second pass.
         }
         """
-        frame = cv2.convertScaleAbs(frame, alpha=1.3, beta=0)
+        # First pass. Low person thres, high field mask thres.
+        boxes_coarse = run_detr_single(frame, 0.2).astype(int)
+        players_coarse = self.filter_boxes(boxes_coarse, 0.7)
 
-        boxes = run_detr_tiled(frame).astype(int)
-        filtered_boxes = self.filter_boxes(boxes)
+        # Find bbox.
+        box = extract_box(players_coarse, 150)
+        box = resize_bbox(box)
+
+        # Crop and second pass. High person thres, medium field mask thres.
+        x1, y1, x2, y2 = box.astype(int)
+        frame_crop = frame[y1:y2, x1:x2]
+        boxes_fine = run_detr_single(frame_crop, 0.5).astype(int)
+        # Correct coords.
+        boxes_fine[:, [0, 2]] += x1
+        boxes_fine[:, [1, 3]] += y1
+        players_fine = self.filter_boxes(boxes_fine, 0.5)
 
         return {
-            "boxes": boxes,
-            "filtered_boxes": filtered_boxes,
-            "blurred_mask": self.blurred_mask,
+            "boxes": boxes_coarse,
+            "player_boxes": players_fine,
+            "crop": box,
         }
 
-    def filter_boxes(self, boxes):
+    def filter_boxes(self, boxes, thres):
         """
         Returns list of boxes that are active players.
         """
@@ -68,14 +85,14 @@ class Detector:
             mid_y = (y1 + y2) // 2
 
             # TODO static thres for now
-            if self.blurred_mask[y2, mid_x] * self.persp_scale[y2, mid_x] > 0.4:
+            if self.blurred_mask[y2, mid_x] * self.persp_scale[y2, mid_x] > thres:
                 ret.append(box)
 
         ret = np.array(ret, dtype=np.float32)
         return ret
 
 
-def run_detr_single(frame):
+def run_detr_single(frame, thres):
     """
     Run on single frame. Return person boxes.
     frame: cv2 format original frame.
@@ -88,7 +105,7 @@ def run_detr_single(frame):
     results = DETR_PROCESSOR.post_process_object_detection(
         outputs,
         target_sizes=torch.tensor([[frame.shape[0], frame.shape[1]]]),
-        threshold=0.3,
+        threshold=thres,
     )
 
     # Convert to bboxes.
@@ -103,46 +120,6 @@ def run_detr_single(frame):
     return bboxes
 
 
-def run_detr_tiled(frame):
-    """
-    2x2 tiled inference.
-    Expand each tile a bit. Remove detections near edge.
-    frame: cv2 format.
-    return: ndarray (N, 4) xyxy
-        In coords of frame.
-    """
-    half_w = frame.shape[1] // 2
-    half_h = frame.shape[0] // 2
-
-    all_boxes = []
-    for x in range(2):
-        for y in range(2):
-            # Find tile coords.
-            x1 = x * half_w
-            y1 = y * half_h
-            x2 = (x + 1) * half_w
-            y2 = (y + 1) * half_h
-            # Expand.
-            x1e = np.clip(x1 - 50, 0, frame.shape[1])
-            y1e = np.clip(y1 - 50, 0, frame.shape[0])
-            x2e = np.clip(x2 + 50, 0, frame.shape[1])
-            y2e = np.clip(y2 + 50, 0, frame.shape[0])
-
-            tile = frame[y1e:y2e, x1e:x2e]
-            boxes = run_detr_single(tile)
-            # Remove boxes near edge.
-            for bx1, by1, bx2, by2 in boxes:
-                if (bx1 < 10
-                    or by1 < 10
-                    or (tile.shape[1] - bx2) < 10
-                    or (tile.shape[0] - by2) < 10):
-                    continue
-                all_boxes.append((bx1 + x1e, by1 + y1e, bx2 + x1e, by2 + y1e))
-
-    boxes = np.array(all_boxes, dtype=np.float32)
-    return boxes
-
-
 def vis_detector(frame, detector_out):
     """
     frame: cv2 format original frame.
@@ -151,17 +128,25 @@ def vis_detector(frame, detector_out):
     frame = frame.copy()
 
     # Draw bboxes.
+    """
     for x1, y1, x2, y2 in detector_out["boxes"].astype(int):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-    for x1, y1, x2, y2 in detector_out["filtered_boxes"].astype(int):
+    """
+    for x1, y1, x2, y2 in detector_out["player_boxes"].astype(int):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
+    # Draw crop box.
+    x1, y1, x2, y2 = detector_out["crop"].astype(int)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
     # Overlay field mask
+    """
     mask = detector_out["blurred_mask"] / 2 + 0.5
     mask = (mask * 255).astype(np.uint8)
     frame = cv2.addWeighted(frame, 1.0, cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR), 0.3, 0)
-    cv2.imshow("Detector", frame)
+    """
 
+    cv2.imshow("Detector", frame)
     cv2.waitKey(1)
 
 

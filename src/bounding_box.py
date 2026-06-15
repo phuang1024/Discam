@@ -1,6 +1,6 @@
 """
-Given detections,
-generate overall bounding box for each frame, for post processing.
+Compute overall bounding box given detections.
+Also post processing smoothing.
 
 Steps:
 - Extract box per frame based on person detections.
@@ -16,35 +16,27 @@ import numpy as np
 from utils import *
 
 
-def extract_boxes(detector_out):
+def extract_box(detections, padding=OUT_PADDING):
     """
     Extract overall bounding box given person detections.
-    detector_out: List of dicts.
-        Each dict is output of Detector.update
-    return: ndarray float (N, 4) xyxy
-        Boxes corresponding to each element of detector_out.
+    detections: (N, 4) xyxy
     """
-    boxes = []
-    for data in detector_out:
-        # Find min and max coords.
-        xs = []
-        ys = []
-        for box in data["filtered_boxes"]:
-            xs.append(int((box[0] + box[2]) / 2))
-            ys.append(int((box[1] + box[3]) / 2))
+    # Find min and max coords.
+    xs = []
+    ys = []
+    for box in detections:
+        xs.append(int((box[0] + box[2]) / 2))
+        ys.append(int((box[1] + box[3]) / 2))
 
-        if len(xs) == 0 or len(ys) == 0:
-            x1 = x2 = y1 = y2 = 0
-        else:
-            x1 = min(xs) - OUT_PADDING
-            x2 = max(xs) + OUT_PADDING
-            y1 = min(ys) - OUT_PADDING
-            y2 = max(ys) + OUT_PADDING
+    if len(xs) == 0 or len(ys) == 0:
+        x1 = x2 = y1 = y2 = 0
+    else:
+        x1 = min(xs) - padding
+        x2 = max(xs) + padding
+        y1 = min(ys) - padding
+        y2 = max(ys) + padding
 
-        boxes.append((x1, y1, x2, y2))
-
-    boxes = np.array(boxes, dtype=float)
-    return boxes
+    return x1, y1, x2, y2
 
 
 def median_filter(boxes, k=OUT_MEDIAN_FILTER):
@@ -224,7 +216,7 @@ def compute_final_boxes(detector_out, frame_count, out_fps):
         Each box is xyxy tuple of ints.
         First element is bbox for the first frame, etc..
     """
-    boxes = extract_boxes(detector_out)
+    boxes = np.array([extract_box(d["player_boxes"]) for d in detector_out], dtype=float)
     boxes = median_filter(boxes)
     # Frame numbers in output video coords.
     frames = np.arange(len(boxes)) * out_fps / FPS

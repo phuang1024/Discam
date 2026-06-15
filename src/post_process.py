@@ -155,7 +155,7 @@ def main():
 
     # TEST: plot num boxes per frame, over time
     #data = [x["player_count"] for x in detect_out]
-    data = [len(x["filtered_boxes"]) for x in detect_out]
+    data = [len(x["player_boxes"]) for x in detect_out]
     time = [i / FPS for i in range(len(detect_out))]
     plt.plot(time, data)
     plt.show()
