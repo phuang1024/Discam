@@ -51,7 +51,7 @@ class ScaledReader:
         for i in range(self.minor_frame_count):
             ret, frame = self.cap.read()
             if not ret:
-                return False, None
+                return None
 
             frame = cv2.resize(frame, self.res)
             frames[i] = frame
@@ -60,7 +60,7 @@ class ScaledReader:
                 for _ in range(frame_step - 1):
                     self.cap.read()
 
-        return True, frames
+        return frames
 
     def get_len(self):
         orig_len = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)

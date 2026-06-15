@@ -6,6 +6,7 @@ Motion analysis using Farneback optical flow.
 import cv2
 import numpy as np
 import torch
+from torchvision.utils import flow_to_image
 
 from transformers import RTDetrImageProcessor, RTDetrV2ForObjectDetection
 
@@ -48,6 +49,7 @@ class Detector:
         }
         """
         boxes_coarse, _, _, players_fine, box = self.run_detr_twopass(frames[-1])
+        optical_flow = run_optical_flow(frames)
 
         return {
             "boxes": boxes_coarse,
@@ -125,6 +127,26 @@ def run_detr_single(frame, thres):
     return bboxes
 
 
+def run_optical_flow(frames):
+    """
+    frames: ndarray (T, H, W, 3)
+    return: ndarray (H, W, 2) optical flow of last frame.
+    """
+    prev_frame = cv2.resize(frames[0], OF_RES)
+    flow = np.zeros((OF_RES[1], OF_RES[0], 2), dtype=np.float32)
+    for i in range(1, len(frames)):
+        frame = cv2.resize(frames[i], OF_RES)
+        flow = cv2.calcOpticalFlowFarneback(
+            cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY),
+            cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY),
+            flow,
+            0.5, 3, 15, 3, 5, 1.2, 0,
+        )
+        prev_frame = frame
+
+    return flow
+
+
 def vis_detector(frame, detector_out):
     """
     frame: cv2 format original frame.
@@ -155,10 +177,9 @@ def vis_detector(frame, detector_out):
     cv2.waitKey(1)
 
 
-def vis_field_mask(mask):
-    """
-    mask: ndarray [H, W] bool
-    """
-    vis = (mask * 255).astype(np.uint8)
-    cv2.imshow("Field Mask", vis)
-    cv2.waitKey(0)
+def vis_of(of):
+    of = torch.from_numpy(of).permute(2, 0, 1)  # (2, H, W)
+    vis = flow_to_image(of).permute(1, 2, 0).numpy()  # (H, W, 3)
+    cv2.imshow("Optical Flow", vis)
+
+    cv2.waitKey(1)

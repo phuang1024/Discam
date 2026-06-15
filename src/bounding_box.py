@@ -16,7 +16,7 @@ import numpy as np
 from utils import *
 
 
-def extract_box(detections, padding=OUT_PADDING):
+def extract_box(detections, padding=BOX_PADDING):
     """
     Extract overall bounding box given person detections.
     detections: (N, 4) xyxy
@@ -39,7 +39,7 @@ def extract_box(detections, padding=OUT_PADDING):
     return x1, y1, x2, y2
 
 
-def median_filter(boxes, k=OUT_MEDIAN_FILTER):
+def median_filter(boxes, k=BOX_MEDIAN_FILTER):
     """
     boxes: (N, 4)
     return: Same format.
@@ -105,10 +105,10 @@ class SmoothEMA:
 
         if value > self.ema_value:
             # Expanding.
-            self.ema_value = OUT_EXPAND_EMA * value + (1 - OUT_EXPAND_EMA) * self.ema_value
+            self.ema_value = BOX_EXPAND_EMA * value + (1 - BOX_EXPAND_EMA) * self.ema_value
         else:
-            value = min(value + OUT_SHRINK_MARGIN, self.ema_value)
-            self.ema_value = OUT_SHRINK_EMA * value + (1 - OUT_SHRINK_EMA) * self.ema_value
+            value = min(value + BOX_SHRINK_MARGIN, self.ema_value)
+            self.ema_value = BOX_SHRINK_EMA * value + (1 - BOX_SHRINK_EMA) * self.ema_value
 
         return self.ema_value
 
@@ -136,7 +136,7 @@ def ema_smooth_boxes(in_boxes):
     return ret
 
 
-def moving_average(boxes, k=OUT_MOVING_AVG):
+def moving_average(boxes, k=BOX_MOVING_AVG):
     """
     boxes: (N, 4)
     return: Same format.
@@ -169,8 +169,8 @@ def resize_bbox(bbox):
     height = bbox[3] - bbox[1]
 
     # Min size.
-    width = max(width, OUT_MIN_SIZE)
-    height = max(height, OUT_MIN_SIZE)
+    width = max(width, BOX_MIN_SIZE)
+    height = max(height, BOX_MIN_SIZE)
 
     # Aspect: Expand one of width or height.
     aspect = width / height

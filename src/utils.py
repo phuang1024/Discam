@@ -29,16 +29,16 @@ FIELD_MASK_BLUR = 50
 OUT_RES = (1280, 720)
 OUT_ASPECT = 16 / 9
 # In coordinates of RES. Padding between outermost person and bbox.
-OUT_PADDING = 30
-OUT_MIN_SIZE = 50
+BOX_PADDING = 30
+BOX_MIN_SIZE = 50
 # Output median filter.
-OUT_MEDIAN_FILTER = 5
+BOX_MEDIAN_FILTER = 5
 # EMA smoothing.
-OUT_EXPAND_EMA = 0.5
-OUT_SHRINK_EMA = 0.01
-OUT_SHRINK_MARGIN = 30
+BOX_EXPAND_EMA = 0.5
+BOX_SHRINK_EMA = 0.01
+BOX_SHRINK_MARGIN = 30
 # Moving average.
-OUT_MOVING_AVG = 100
+BOX_MOVING_AVG = 100
 
 VERSION = "0.0.1"
 
