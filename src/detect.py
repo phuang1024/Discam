@@ -44,17 +44,29 @@ class Detector:
         return: {
             boxes: All detected coarse bounding boxes.
                 ndarray float (N, 4) xyxy
-            player_boxes: Boxes (fine) of active players.
+            player_boxes: Fine boxes of active players.
+            speeds: Speeds corresponding to player_boxes.
+                ndarray float (M,)
             crop: xyxy crop used for second pass.
         }
         """
-        boxes_coarse, _, _, players_fine, box = self.run_detr_twopass(frames[-1])
+        boxes_coarse, _, _, players_fine, crop_box = self.run_detr_twopass(frames[-1])
         optical_flow = run_optical_flow(frames)
+        #vis_of(optical_flow)
+
+        # Speeds corresponding to players_fine.
+        speeds = []
+        for box in players_fine:
+            vel = compute_velocity(box, optical_flow)
+            speed = np.linalg.norm(vel)
+            speeds.append(speed)
+        speeds = np.array(speeds, dtype=np.float32)
 
         return {
             "boxes": boxes_coarse,
             "player_boxes": players_fine,
-            "crop": box,
+            "speeds": speeds,
+            "crop": crop_box,
         }
 
     def run_detr_twopass(self, frame):
@@ -145,6 +157,27 @@ def run_optical_flow(frames):
         prev_frame = frame
 
     return flow
+
+
+def compute_velocity(box, flow):
+    """
+    Compute velocity by averaging flow in middle 50% of box.
+    box: xyxy, in coordinates of RES.
+    flow: (H, W, 2) in coordinates of OF_RES.
+    """
+    # Scale coords.
+    x1, y1, x2, y2 = box
+    x1 = x1 * OF_RES[0] / RES[0]
+    x2 = x2 * OF_RES[0] / RES[0]
+    y1 = y1 * OF_RES[1] / RES[1]
+    y2 = y2 * OF_RES[1] / RES[1]
+
+    mid_x1 = int(0.75*x1 + 0.25*x2)
+    mid_y1 = int(0.75*y1 + 0.25*y2)
+    mid_x2 = int(0.25*x1 + 0.75*x2)
+    mid_y2 = int(0.25*y1 + 0.75*y2)
+    vel = flow[mid_y1:mid_y2, mid_x1:mid_x2].mean(axis=(0, 1))
+    return vel
 
 
 def vis_detector(frame, detector_out):
