@@ -62,10 +62,11 @@ class Detector:
         # Crop and second pass. High person thres, medium field mask thres.
         x1, y1, x2, y2 = box.astype(int)
         frame_crop = frame[y1:y2, x1:x2]
-        boxes_fine = run_detr_single(frame_crop, 0.5).astype(int)
+        boxes_fine = run_detr_single(frame_crop, 0.4).astype(int)
         # Correct coords.
-        boxes_fine[:, [0, 2]] += x1
-        boxes_fine[:, [1, 3]] += y1
+        if len(boxes_fine) > 0:
+            boxes_fine[:, [0, 2]] += x1
+            boxes_fine[:, [1, 3]] += y1
         players_fine = self.filter_boxes(boxes_fine, 0.5)
 
         return {
