@@ -19,7 +19,7 @@ class ScaledReader:
     I.e. 60fps / 8fps = 7.5, so every 7th or 8th frame will be used.
     """
 
-    def __init__(self, path, fps=FPS, res=RES):
+    def __init__(self, path, fps, res):
         """
         fps, res: Target FPS and res.
         """
@@ -73,7 +73,7 @@ class FFmpegWriter:
     Video writer using ffmpeg subprocess.
     """
 
-    def __init__(self, path, fps=FPS, res=RES):
+    def __init__(self, path, fps, res):
         self.proc = Popen([
             FFMPEG, "-y",
             "-f", "rawvideo", 

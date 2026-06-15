@@ -16,10 +16,43 @@ import matplotlib.pyplot as plt
 
 from bounding_box import compute_final_boxes
 from detect import Detector, vis_detector
+from motion import OpticalFlow, vis_of
 from utils import *
 from video_rw import ScaledReader, FFmpegWriter
 
 torch.set_grad_enabled(False)
+
+
+def run_of(in_video):
+    """
+    Run optical flow on video. Convert output time scale to FPS.
+    return: ndarray float (T, H, W, 2)
+        T: Time. Index i corresponds to index i of the NN.
+    """
+    video = ScaledReader(in_video, OF_FPS, OF_RES)
+    of = OpticalFlow()
+
+    outputs = []
+    pbar = tqdm(total=video.get_len(), desc="Optical flow")
+    frame_i = 0
+    while True:
+        ret, frame = video.read()
+        if not ret:
+            break
+
+        out = of.update(frame)
+        vis_of(frame, out)
+
+        # Time scaling.
+        if frame_i / OF_FPS >= len(outputs) / FPS:
+            outputs.append(out)
+            print(frame_i, len(outputs))
+
+        frame_i += 1
+        pbar.update(1)
+
+    video.release()
+    return np.array(outputs)
 
 
 def run_detector(in_video, field_mask):
@@ -28,7 +61,7 @@ def run_detector(in_video, field_mask):
     return: Sequential list of dict.
         Each dict is a return value from Detector.update
     """
-    video = ScaledReader(in_video)
+    video = ScaledReader(in_video, FPS, RES)
     detector = Detector(field_mask)
 
     outputs = []
@@ -51,10 +84,10 @@ def write_output(in_path, out_path, bboxes):
     Write output video with bboxes drawn.
     """
     in_video = cv2.VideoCapture(in_path)
-    fps = in_video.get(cv2.CAP_PROP_FPS)
+    orig_fps = in_video.get(cv2.CAP_PROP_FPS)
     orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
     orig_h = in_video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    out_video = FFmpegWriter(out_path, fps, OUT_RES)
+    out_video = FFmpegWriter(out_path, orig_fps, OUT_RES)
 
     frame_i = 0
     pbar = tqdm(total=len(bboxes), desc="Writing output")
@@ -65,7 +98,6 @@ def write_output(in_path, out_path, bboxes):
 
         bbox = bboxes[frame_i]
         x1, y1, x2, y2 = bbox
-        print(bbox)
         x1 = int(x1 * orig_w / RES[0])
         x2 = int(x2 * orig_w / RES[0])
         y1 = int(y1 * orig_h / RES[1])
@@ -120,16 +152,8 @@ def main():
           f"    Output video: {out_path}",
           f"    Field mask: {field_mask_path}", sep="\n")
 
-    # Check file exists.
     check_file_exists(in_path)
     check_file_exists(field_mask_path)
-    """
-    if os.path.exists(out_path):
-        choice = input(f"Output path {out_path} exists. Overwrite? [y/N] ").strip().lower()
-        if choice != "y":
-            print("Aborting.")
-            sys.exit(1)
-    """
 
     # Get video info.
     cap = cv2.VideoCapture(args.video)
@@ -141,9 +165,11 @@ def main():
           f"    FPS: {out_fps}", sep="\n")
 
     # Run detector.
-    print("Run detector.")
+    print("Run CV.")
     cache_path = args.video.parent / (args.video.stem + ".discache.pkl")
     if args.no_cache or not cache_path.exists():
+        of_out = run_of(in_path)
+        stop
         detect_out = run_detector(in_path, field_mask_path)
         print(f"    Saving to cache {cache_path}.")
         with open(cache_path, "wb") as f:
