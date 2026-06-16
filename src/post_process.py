@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from bounding_box import compute_final_boxes
 from detect import Detector, vis_detector
-from trim import find_trim_sections
+from trim import find_trim_sections, gen_timestamps
 from utils import *
 from video_rw import ScaledReader, FFmpegWriter
 
@@ -57,6 +57,8 @@ def write_output(in_path, out_path, bboxes, trim_sections):
     """
     Write output video with crop and trim.
     """
+    trim_sections = trim_sections.tolist()
+
     in_video = cv2.VideoCapture(in_path)
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
     orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -66,31 +68,41 @@ def write_output(in_path, out_path, bboxes, trim_sections):
     frame_i = 0
     pbar = tqdm(total=len(bboxes), desc="Writing output")
     while True:
+        # Increment at beginning.
+        frame_i += 1
+        pbar.update(1)
         ret, frame = in_video.read()
         if not ret:
             break
 
-        bbox = bboxes[frame_i]
+        # Check trim.
+        if len(trim_sections) > 0:
+            curr_time = (frame_i - 1) / orig_fps
+            if curr_time > trim_sections[0][1]:
+                trim_sections.pop(0)
+            if trim_sections[0][0] <= curr_time <= trim_sections[0][1]:
+                continue
+
+        # Get bbox.
+        bbox = bboxes[frame_i - 1]
         x1, y1, x2, y2 = bbox
         x1 = int(x1 * orig_w / RES[0])
         x2 = int(x2 * orig_w / RES[0])
         y1 = int(y1 * orig_h / RES[1])
         y2 = int(y2 * orig_h / RES[1])
-
         # Crop frame
         frame_crop = frame[y1:y2, x1:x2]
         frame_crop = cv2.resize(frame_crop, OUT_RES)
-        #out_video.write(frame_crop)
+        out_video.write(frame_crop)
 
         # Draw vis
+        """
         vis_frame = frame.copy()
         cv2.rectangle(vis_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imshow("box", vis_frame)
         cv2.imshow("crop", frame_crop)
         cv2.waitKey(1)
-
-        frame_i += 1
-        pbar.update(1)
+        """
 
     pbar.close()
     in_video.release()
@@ -153,11 +165,18 @@ def main():
 
     print("Compute bounding boxes.")
     boxes = compute_final_boxes(detect_out, frame_count, out_fps)
+
     trim_sections = find_trim_sections(detect_out)
-    print(f"  Found trim sections: ", end="")
+    print(f"Found trim sections: ", end="")
     for x in trim_sections:
         print(x, end=" ")
     print()
+
+    ts_string = gen_timestamps(trim_sections)
+    ts_file = args.video.parent / (args.video.stem + ".ts.txt")
+    print(f"    Writing timestamps to {ts_file}")
+    with open(ts_file, "w") as f:
+        f.write(ts_string)
 
     print("Write output video.")
     write_output(in_path, out_path, boxes, trim_sections)

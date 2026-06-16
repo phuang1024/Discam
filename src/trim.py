@@ -81,6 +81,29 @@ def find_trim_sections(detect_out):
     return ret
 
 
+def gen_timestamps(sections):
+    """
+    Generate timestamp string in YT format.
+    sections: Sections that were trimmed, in seconds.
+    """
+    times = [0]
+    for _, end in sections:
+        times.append(end)
+
+    ret = ""
+    for t in times:
+        t = int(t)
+        s = int(t % 60)
+        m = int((t // 60) % 60)
+        h = int(t // 3600)
+        if h > 0:
+            string = f"{h}:{m:02d}:{s:02d}"
+        else:
+            string = f"{m}:{s:02d}"
+        ret += string + "\n"
+    return ret
+
+
 def plot_data(counts, speeds):
     time = [i / FPS for i in range(len(counts))]
     plt.plot(time, counts)

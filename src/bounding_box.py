@@ -38,7 +38,7 @@ def extract_box(detections, padding=BOX_PADDING):
         return x1, y1, x2, y2
 
 
-def median_filter(boxes, k=BOX_MEDIAN_FILTER):
+def median_filter(boxes, k):
     """
     boxes: (N, 4)
     return: Same format.
@@ -217,15 +217,25 @@ def compute_final_boxes(detector_out, frame_count, out_fps):
         Each box is xyxy tuple of ints.
         First element is bbox for the first frame, etc..
     """
-    # TODO!!! when extract_box returns None
-    boxes = np.array([extract_box(d["player_boxes"]) for d in detector_out], dtype=float)
-    boxes = median_filter(boxes)
+    boxes = []
+    for d in detector_out:
+        box = extract_box(d["player_boxes"])
+        if box is None:
+            box = boxes[-1] if boxes else (0, 0, 0, 0)
+        boxes.append(box)
+    boxes = np.array(boxes, dtype=float)
+
+    #boxes = median_filter(boxes, BOX_MEDIAN_FILTER)
+
     # Frame numbers in output video coords.
     frames = np.arange(len(boxes)) * out_fps / FPS
     boxes = lerp_boxes(boxes, frames, frame_count)
+
     boxes = ema_smooth_boxes(boxes)
+
     for i in range(len(boxes)):
         boxes[i] = resize_bbox(boxes[i])
+
     boxes = moving_average(boxes)
     return boxes
 
