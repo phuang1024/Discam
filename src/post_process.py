@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 
 from bounding_box import compute_final_boxes
 from detect import Detector, vis_detector
+from trim import find_trim_sections
 from utils import *
 from video_rw import ScaledReader, FFmpegWriter
 
@@ -50,25 +51,6 @@ def run_detector(in_video, field_mask):
 
     video.release()
     return outputs
-
-
-def find_trim_sections(detect_out):
-    """
-    Detect in between points.
-    Returns sections to trim from output video.
-    return: ndarray (N, 2)
-        (start, end) timestamps in seconds.
-    """
-    player_counts = [len(x["player_boxes"]) for x in detect_out]
-    speeds = [x["speeds"].mean() for x in detect_out]
-    #counts_hpf = EMA.run_array(player_counts, 0.1) - EMA.run_array(player_counts, 0.03)
-    speeds_hpf = EMA.run_array(speeds, 0.1) - EMA.run_array(speeds, 0.03)
-
-    time = [i / FPS for i in range(len(detect_out))]
-    plt.plot(time, player_counts)
-    plt.plot(time, speeds_hpf)
-    plt.show()
-    stop
 
 
 def write_output(in_path, out_path, bboxes, trim_sections):
@@ -172,7 +154,10 @@ def main():
     print("Compute bounding boxes.")
     boxes = compute_final_boxes(detect_out, frame_count, out_fps)
     trim_sections = find_trim_sections(detect_out)
-    print(f"  Found trim sections: {trim_sections}")
+    print(f"  Found trim sections: ", end="")
+    for x in trim_sections:
+        print(x, end=" ")
+    print()
 
     print("Write output video.")
     write_output(in_path, out_path, boxes, trim_sections)

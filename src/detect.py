@@ -60,7 +60,7 @@ class Detector:
         # Speeds corresponding to players_fine.
         speeds = []
         for box in players_fine:
-            vel = compute_velocity(box, optical_flow)
+            vel = compute_velocity(box, optical_flow, self.persp_scale)
             speed = np.linalg.norm(vel)
             speeds.append(speed)
         speeds = np.array(speeds, dtype=np.float32)
