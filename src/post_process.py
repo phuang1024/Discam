@@ -59,9 +59,14 @@ def find_trim_sections(detect_out):
     return: ndarray (N, 2)
         (start, end) timestamps in seconds.
     """
-    data = [len(x["player_boxes"]) for x in detect_out]
+    player_counts = [len(x["player_boxes"]) for x in detect_out]
+    speeds = [x["speeds"].mean() for x in detect_out]
+    #counts_hpf = EMA.run_array(player_counts, 0.1) - EMA.run_array(player_counts, 0.03)
+    speeds_hpf = EMA.run_array(speeds, 0.1) - EMA.run_array(speeds, 0.03)
+
     time = [i / FPS for i in range(len(detect_out))]
-    plt.plot(time, data)
+    plt.plot(time, player_counts)
+    plt.plot(time, speeds_hpf)
     plt.show()
     stop
 

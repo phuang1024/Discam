@@ -166,24 +166,30 @@ def run_optical_flow(frames):
     return flow
 
 
-def compute_velocity(box, flow):
+def compute_velocity(box, flow, persp_scale):
     """
     Compute velocity by averaging flow in middle 50% of box.
     box: xyxy, in coordinates of RES.
     flow: (H, W, 2) in coordinates of OF_RES.
+    persp_scale: In coordinates of RES.
     """
-    # Scale coords.
+    # Scale coords to account for res.
     x1, y1, x2, y2 = box
     x1 = x1 * OF_RES[0] / RES[0]
     x2 = x2 * OF_RES[0] / RES[0]
     y1 = y1 * OF_RES[1] / RES[1]
     y2 = y2 * OF_RES[1] / RES[1]
 
+    # Average vel in middle of box.
     mid_x1 = int(0.75*x1 + 0.25*x2)
     mid_y1 = int(0.75*y1 + 0.25*y2)
     mid_x2 = int(0.25*x1 + 0.75*x2)
     mid_y2 = int(0.25*y1 + 0.75*y2)
     vel = flow[mid_y1:mid_y2, mid_x1:mid_x2].mean(axis=(0, 1))
+
+    # Persp scale.
+    scale = persp_scale[int(box[3]), int((box[0] + box[2]) / 2)]
+    vel = vel * scale
     return vel
 
 

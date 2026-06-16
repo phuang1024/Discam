@@ -55,6 +55,15 @@ class EMA:
             self.value = self.alpha * x + (1 - self.alpha) * self.value
         return self.value
 
+    @staticmethod
+    def run_array(data, alpha):
+        """
+        Run EMA on elements of data.
+        """
+        ema = EMA(alpha)
+        ret = np.array([ema.update(x) for x in data])
+        return ret
+
 
 def interp(x, from_min, from_max, to_min, to_max, clamp=False):
     y = (x - from_min) / (from_max - from_min) * (to_max - to_min) + to_min
