@@ -187,20 +187,20 @@ def resize_bbox(bbox):
 
     # In bounds.
     x1, y1, x2, y2 = new_bbox
-    if x2 - x1 > RES[0] or y2 - y1 > RES[1]:
-        return np.array([0, 0, RES[0], RES[1]], dtype=float)
+    if x2 - x1 > NN_RES[0] or y2 - y1 > NN_RES[1]:
+        return np.array([0, 0, NN_RES[0], NN_RES[1]], dtype=float)
     if x1 < 0:
         x2 -= x1
         x1 = 0
     if y1 < 0:
         y2 -= y1
         y1 = 0
-    if x2 >= RES[0]:
-        x1 -= (x2 - RES[0] + 1)
-        x2 = RES[0] - 1
-    if y2 >= RES[1]:
-        y1 -= (y2 - RES[1] + 1)
-        y2 = RES[1] - 1
+    if x2 >= NN_RES[0]:
+        x1 -= (x2 - NN_RES[0] + 1)
+        x2 = NN_RES[0] - 1
+    if y2 >= NN_RES[1]:
+        y1 -= (y2 - NN_RES[1] + 1)
+        y2 = NN_RES[1] - 1
     new_bbox = np.array([x1, y1, x2, y2], dtype=float)
 
     return new_bbox

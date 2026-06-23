@@ -6,6 +6,9 @@ cv2 format:
     ndarray, [H, W, C], uint8 (0, 255), BGR
 torch format:
     Tensor, [C, H, W], float32 (0.0, 1.0), RGB
+
+boxes format:
+    ndarray, [N, 4], int, xyxy
 """
 
 import cv2
@@ -14,14 +17,9 @@ import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Detector params.
-# Video res/fps for NN.
-RES = (1920, 1080)
-FPS = 1
-# For optical flow.
-OF_RES = (960, 540)
-OF_FPS = 15
-OF_FRAMES = 3
+# NN fps.
+NN_RES = (1920, 1080)
+NN_FPS = 1
 # Field mask edges blur size.
 FIELD_MASK_BLUR = 50
 
@@ -89,7 +87,7 @@ def interp(x, from_min, from_max, to_min, to_max, clamp=False):
     return y
 
 
-def clip_coords(x, y, res=RES):
+def clip_coords(x, y, res=NN_RES):
     """
     Clip coordinates to be within res.
     """

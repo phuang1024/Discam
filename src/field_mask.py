@@ -29,7 +29,7 @@ def read_mask(path):
     return np.load(path)
 
 
-def create_mask(points, res=RES):
+def create_mask(points, res=NN_RES):
     """
     Draw mask binary image.
     points: From read_mask()
@@ -46,7 +46,7 @@ def create_mask(points, res=RES):
     return mask
 
 
-def create_persp_scale(points, res=RES, max_val=3):
+def create_persp_scale(points, res=NN_RES, max_val=3):
     """
     Create per-pixel scaling factor to account for far people being small.
     Y axis lerp: From (min(points y coord) to yres - 1), to (max_val to 1).

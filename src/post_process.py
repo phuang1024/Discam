@@ -12,13 +12,11 @@ from pathlib import Path
 import cv2
 import torch
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 from bounding_box import compute_final_boxes
-from detect import Detector, vis_detector
+from detect import Detector
 from trim import find_trim_sections, gen_timestamps
 from utils import *
-from video_rw import ScaledReader, FFmpegWriter
 
 torch.set_grad_enabled(False)
 
@@ -29,24 +27,22 @@ def run_detector(in_video, field_mask):
     return: Sequential list of dict.
         Each dict is a return value from Detector.update
     """
-    video = ScaledReader(
-        in_video,
-        res=RES,
-        major_fps=FPS,
-        minor_fps=OF_FPS,
-        minor_frame_count=OF_FRAMES,
-    )
+    video = cv2.VideoCapture(in_video)
+    orig_fps = int(video.get(cv2.CAP_PROP_FPS))
+    orig_len = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps_scale = int(orig_fps / NN_FPS)
+
     detector = Detector(field_mask)
 
     outputs = []
-    pbar = tqdm(total=video.get_len(), desc="Detector")
+    pbar = tqdm(total=orig_len // fps_scale, desc="Detector")
     while True:
-        frames = video.read()
-        if frames is None:
+        for _ in range(fps_scale):
+            ret, frame = video.read()
+        if not ret:
             break
 
-        outputs.append(detector.update(frames))
-        vis_detector(frames[-1], outputs[-1])
+        outputs.append(detector.update(frame))
         pbar.update(1)
 
     video.release()
@@ -86,10 +82,10 @@ def write_output(in_path, out_path, bboxes, trim_sections):
         # Get bbox.
         bbox = bboxes[frame_i - 1]
         x1, y1, x2, y2 = bbox
-        x1 = int(x1 * orig_w / RES[0])
-        x2 = int(x2 * orig_w / RES[0])
-        y1 = int(y1 * orig_h / RES[1])
-        y2 = int(y2 * orig_h / RES[1])
+        x1 = int(x1 * orig_w / NN_RES[0])
+        x2 = int(x2 * orig_w / NN_RES[0])
+        y1 = int(y1 * orig_h / NN_RES[1])
+        y2 = int(y2 * orig_h / NN_RES[1])
         # Crop frame
         frame_crop = frame[y1:y2, x1:x2]
         frame_crop = cv2.resize(frame_crop, OUT_RES)
