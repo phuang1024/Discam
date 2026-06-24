@@ -13,40 +13,12 @@ import cv2
 import torch
 from tqdm import tqdm
 
-from bounding_box import compute_final_boxes
-from detect import Detector
-from trim import find_trim_sections, gen_timestamps
+#from bounding_box import compute_final_boxes
+from detect import post_run_detector
+#from trim import find_trim_sections, gen_timestamps
 from utils import *
 
 torch.set_grad_enabled(False)
-
-
-def run_detector(in_video, field_mask):
-    """
-    Run Detector on video.
-    return: Sequential list of dict.
-        Each dict is a return value from Detector.update
-    """
-    video = cv2.VideoCapture(in_video)
-    orig_fps = int(video.get(cv2.CAP_PROP_FPS))
-    orig_len = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps_scale = int(orig_fps / NN_FPS)
-
-    detector = Detector(field_mask)
-
-    outputs = []
-    pbar = tqdm(total=orig_len // fps_scale, desc="Detector")
-    while True:
-        for _ in range(fps_scale):
-            ret, frame = video.read()
-        if not ret:
-            break
-
-        outputs.append(detector.update(frame))
-        pbar.update(1)
-
-    video.release()
-    return outputs
 
 
 def write_output(in_path, out_path, bboxes, trim_sections):
@@ -150,7 +122,7 @@ def main():
     print("Run CV.")
     cache_path = args.video.parent / (args.video.stem + ".discache.pkl")
     if args.no_cache or not cache_path.exists():
-        detect_out = run_detector(in_path, field_mask_path)
+        detect_out = post_run_detector(args.video)
         print(f"    Saving to cache {cache_path}.")
         with open(cache_path, "wb") as f:
             pickle.dump(detect_out, f)
@@ -158,6 +130,7 @@ def main():
         print(f"    Loading from cache {cache_path}.")
         with open(cache_path, "rb") as f:
             detect_out = pickle.load(f)
+    stop
 
     print("Compute bounding boxes.")
     boxes = compute_final_boxes(detect_out, frame_count, out_fps)
