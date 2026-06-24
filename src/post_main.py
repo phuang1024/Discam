@@ -14,8 +14,7 @@ import torch
 from tqdm import tqdm
 
 #from bounding_box import compute_final_boxes
-from cv.detect import post_run_detector
-#from perspective import compute_vanishing
+from cv.pipeline import post_run_pipeline
 #from trim import find_trim_sections, gen_timestamps
 from utils.constants import *
 
@@ -97,7 +96,30 @@ def get_file_paths(video_path):
         "cache": with_suffix(".discache"),
     }
     check_file_exists(paths["in"])
+    check_file_exists(paths["field_mask"])
+    paths["cache"].mkdir(exist_ok=True)
     return paths
+
+
+def run_pipe_wrapper(args, paths):
+    """
+    Load from cache, or
+    run pipeline and save to cache.
+    """
+    print("Run CV pipeline:")
+    cache_file = paths["cache"] / "pipeline_post.pkl"
+    if args.no_cache or not cache_file.exists():
+        data = post_run_pipeline(paths["in"], paths["field_mask"])
+        print(f"    Saving to cache {cache_file}.")
+        with open(cache_file, "wb") as f:
+            pickle.dump(data, f)
+
+    else:
+        print(f"    Loading from cache {cache_file}.")
+        with open(cache_file, "rb") as f:
+            data = pickle.load(f)
+
+    return data
 
 
 def main():
@@ -108,9 +130,7 @@ def main():
 
     # Get paths.
     paths = get_file_paths(args.video)
-    paths["cache"].mkdir(exist_ok=True)
-    print(f"Discpost:",
-          f"    Discam version: {VERSION}",
+    print(f"Discpost: Discam version {VERSION}",
           f"    Input video: {paths['in']}",
           f"    Output video: {paths['out']}",
           f"    Field mask: {paths['field_mask']}", sep="\n")
@@ -124,24 +144,12 @@ def main():
           f"    Frame count: {orig_len}",
           f"    FPS: {orig_fps}", sep="\n")
 
-    # Run detector.
-    print("Detection and tracking:")
-    cache_path = paths["cache"] / "detector.pkl"
-    if args.no_cache or not cache_path.exists():
-        detect_out = post_run_detector(args.video)
-        print(f"    Saving to cache {cache_path}.")
-        with open(cache_path, "wb") as f:
-            pickle.dump(detect_out, f)
-    else:
-        print(f"    Loading from cache {cache_path}.")
-        with open(cache_path, "rb") as f:
-            detect_out = pickle.load(f)
-
-    compute_vanishing(detect_out)
+    # Run pipeline.
+    pipe_out, frame_is = run_pipe_wrapper(args, paths)
     stop
 
     print("Compute bounding boxes.")
-    boxes = compute_final_boxes(detect_out, frame_count, out_fps)
+    boxes = compute_final_boxes(detector_outs, frame_count, out_fps)
 
     trim_sections = find_trim_sections(detect_out)
     print(f"Found trim sections: ", end="")
