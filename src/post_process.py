@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 #from bounding_box import compute_final_boxes
 from detect import post_run_detector
+from perspective import compute_vanishing
 #from trim import find_trim_sections, gen_timestamps
 from utils import *
 
@@ -130,6 +131,8 @@ def main():
         print(f"    Loading from cache {cache_path}.")
         with open(cache_path, "rb") as f:
             detect_out = pickle.load(f)
+
+    compute_vanishing(detect_out)
     stop
 
     print("Compute bounding boxes.")
