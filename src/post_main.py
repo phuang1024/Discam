@@ -14,10 +14,10 @@ import torch
 from tqdm import tqdm
 
 #from bounding_box import compute_final_boxes
-from detect import post_run_detector
-from perspective import compute_vanishing
+from cv.detect import post_run_detector
+#from perspective import compute_vanishing
 #from trim import find_trim_sections, gen_timestamps
-from utils import *
+from utils.constants import *
 
 torch.set_grad_enabled(False)
 
@@ -84,44 +84,49 @@ def check_file_exists(path):
         sys.exit(1)
 
 
+def get_file_paths(video_path):
+    """
+    Get file paths based on input video path.
+    """
+    def with_suffix(suffix):
+        return video_path.parent / (video_path.stem + suffix)
+    paths = {
+        "in": video_path,
+        "out": with_suffix(".discout.mp4"),
+        "field_mask": with_suffix(".npy"),
+        "cache": with_suffix(".discache"),
+    }
+    check_file_exists(paths["in"])
+    return paths
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("video", type=Path)
-    parser.add_argument("--output", help="If none, is InputFilm.discout.mp4")
-    parser.add_argument("--field_mask", help="If none, is InputFilm.npy")
-    parser.add_argument("--no_cache", action="store_true", help="Don't load cache.")
+    parser.add_argument("--no_cache", action="store_true", help="Don't read from cache.")
     args = parser.parse_args()
 
-    # Determine file paths.
-    in_path = str(args.video)
-    if args.output is None:
-        out_path = str(args.video.parent / (args.video.stem + ".discout.mp4"))
-    else:
-        out_path = args.output
-    if args.field_mask is None:
-        field_mask_path = str(args.video.parent / (args.video.stem + ".npy"))
-    else:
-        field_mask_path = args.field_mask
-    print(f"Discam {VERSION}: Video post processing.",
-          f"    Input video: {in_path}",
-          f"    Output video: {out_path}",
-          f"    Field mask: {field_mask_path}", sep="\n")
-
-    check_file_exists(in_path)
-    check_file_exists(field_mask_path)
+    # Get paths.
+    paths = get_file_paths(args.video)
+    paths["cache"].mkdir(exist_ok=True)
+    print(f"Discpost:",
+          f"    Discam version: {VERSION}",
+          f"    Input video: {paths['in']}",
+          f"    Output video: {paths['out']}",
+          f"    Field mask: {paths['field_mask']}", sep="\n")
 
     # Get video info.
-    cap = cv2.VideoCapture(args.video)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    out_fps = cap.get(cv2.CAP_PROP_FPS)
+    cap = cv2.VideoCapture(str(paths["in"]))
+    orig_len = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    orig_fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
     print(f"Input video:",
-          f"    Frame count: {frame_count}",
-          f"    FPS: {out_fps}", sep="\n")
+          f"    Frame count: {orig_len}",
+          f"    FPS: {orig_fps}", sep="\n")
 
     # Run detector.
-    print("Run CV.")
-    cache_path = args.video.parent / (args.video.stem + ".discache.pkl")
+    print("Detection and tracking:")
+    cache_path = paths["cache"] / "detector.pkl"
     if args.no_cache or not cache_path.exists():
         detect_out = post_run_detector(args.video)
         print(f"    Saving to cache {cache_path}.")

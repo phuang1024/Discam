@@ -9,7 +9,7 @@ from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 from tqdm import tqdm
 
-from utils import *
+from utils.constants import *
 
 YOLO = AutoDetectionModel.from_pretrained(
     model_type="ultralytics",
@@ -53,16 +53,18 @@ class Detector:
 def post_run_detector(video_path):
     """
     Run detector on video file.
-    Respects FPS and RES.
+    Respects FPS and RES setting.
     return: List of {
         "frame_i": Frame index in original video coord.
         "boxes": Detector.update()
     }
     """
     video = cv2.VideoCapture(video_path)
+    orig_w = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    orig_h = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     orig_fps = int(video.get(cv2.CAP_PROP_FPS))
     orig_len = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps_scale = int(orig_fps / NN_FPS)
+    fps_scale = int(orig_fps / DET_FPS)
 
     detector = Detector()
 
@@ -75,6 +77,9 @@ def post_run_detector(video_path):
         frame_i += fps_scale
         if not ret:
             break
+
+        if orig_w != DET_RES[0] or orig_h != DET_RES[1]:
+            frame = cv2.resize(frame, DET_RES)
 
         outputs.append({
             "frame_i": frame_i,
