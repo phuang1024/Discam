@@ -23,7 +23,7 @@ follow the action in a game.
 
 * This can be applied as a post processing step after filming, dynamically
   cropping the video.
-* It can also be deployed on a PTZ camera live during the game, but
+* It can also be deployed on a PTZ camera live during the game, which
   requires extra mechanical parts.
 
 In development.

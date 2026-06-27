@@ -11,70 +11,14 @@ from pathlib import Path
 
 import cv2
 import torch
-from tqdm import tqdm
 
-#from bounding_box import compute_final_boxes
 from cv.pipeline import post_run_pipeline
+from post.bounding_box import compute_final_boxes
 #from trim import find_trim_sections, gen_timestamps
 from utils.constants import *
+from utils.video_rw import post_write_video
 
 torch.set_grad_enabled(False)
-
-
-def write_output(in_path, out_path, bboxes, trim_sections):
-    """
-    Write output video with crop and trim.
-    """
-    trim_sections = trim_sections.tolist()
-
-    in_video = cv2.VideoCapture(in_path)
-    orig_fps = in_video.get(cv2.CAP_PROP_FPS)
-    orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
-    orig_h = in_video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    out_video = FFmpegWriter(out_path, orig_fps, OUT_RES)
-
-    frame_i = 0
-    pbar = tqdm(total=len(bboxes), desc="Writing output")
-    while True:
-        # Increment at beginning.
-        frame_i += 1
-        pbar.update(1)
-        ret, frame = in_video.read()
-        if not ret:
-            break
-
-        # Check trim.
-        if len(trim_sections) > 0:
-            curr_time = (frame_i - 1) / orig_fps
-            if curr_time > trim_sections[0][1]:
-                trim_sections.pop(0)
-            if trim_sections[0][0] <= curr_time <= trim_sections[0][1]:
-                continue
-
-        # Get bbox.
-        bbox = bboxes[frame_i - 1]
-        x1, y1, x2, y2 = bbox
-        x1 = int(x1 * orig_w / NN_RES[0])
-        x2 = int(x2 * orig_w / NN_RES[0])
-        y1 = int(y1 * orig_h / NN_RES[1])
-        y2 = int(y2 * orig_h / NN_RES[1])
-        # Crop frame
-        frame_crop = frame[y1:y2, x1:x2]
-        frame_crop = cv2.resize(frame_crop, OUT_RES)
-        out_video.write(frame_crop)
-
-        # Draw vis
-        """
-        vis_frame = frame.copy()
-        cv2.rectangle(vis_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.imshow("box", vis_frame)
-        cv2.imshow("crop", frame_crop)
-        cv2.waitKey(1)
-        """
-
-    pbar.close()
-    in_video.release()
-    out_video.release()
 
 
 def check_file_exists(path):
@@ -145,12 +89,12 @@ def main():
           f"    FPS: {orig_fps}", sep="\n")
 
     # Run pipeline.
-    pipe_out, frame_is = run_pipe_wrapper(args, paths)
-    stop
+    pipe_outs, frame_is = run_pipe_wrapper(args, paths)
 
     print("Compute bounding boxes.")
-    boxes = compute_final_boxes(detector_outs, frame_count, out_fps)
+    boxes = compute_final_boxes(pipe_outs, frame_is, orig_len)
 
+    """
     trim_sections = find_trim_sections(detect_out)
     print(f"Found trim sections: ", end="")
     for x in trim_sections:
@@ -162,9 +106,10 @@ def main():
     print(f"    Writing timestamps to {ts_file}")
     with open(ts_file, "w") as f:
         f.write(ts_string)
+    """
 
     print("Write output video.")
-    write_output(in_path, out_path, boxes, trim_sections)
+    post_write_video(paths["in"], paths["out"], boxes, None)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,19 @@ DET_FPS = 1
 
 
 ### Output params for Post Processing.
+BOX_PADDING = 30
+"""Padding btwn people and crop box, in RES coords."""
+BOX_MIN_SIZE = 50
+"""Min h and w in RES coords."""
+BOX_EXPAND_EMA = 0.5
+"""EMA factor when box is growing."""
+BOX_SHRINK_EMA = 0.01
+"""EMA factor when box is shrinking."""
+BOX_SHRINK_MARGIN = 30
+"""Margin before box starts to shrink."""
+BOX_MOVING_AVG = 100
+"""Moving average window."""
+
 OUT_RES = (1280, 720)
 """Output video resolution."""
 
@@ -31,18 +44,6 @@ VERSION = "0.0.1"
 
 
 
-# Bounding box params.
-# In coordinates of RES. Padding between outermost person and bbox.
-BOX_PADDING = 30
-BOX_MIN_SIZE = 50
-# Output median filter.
-#BOX_MEDIAN_FILTER = 5
-# EMA smoothing.
-BOX_EXPAND_EMA = 0.5
-BOX_SHRINK_EMA = 0.01
-BOX_SHRINK_MARGIN = 30
-# Moving average.
-BOX_MOVING_AVG = 100
 
 # Trim params.
 # Multiplied by FPS.

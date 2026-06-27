@@ -25,6 +25,9 @@ class Pipeline:
         classifier_out = self.classifier.update(detector_out)
         vis_pipeline(frame, detector_out, classifier_out, self.classifier.field_mask)
 
+        active_boxes = detector_out[classifier_out]
+        return active_boxes
+
 
 def post_run_pipeline(video_path, mask_path):
     """

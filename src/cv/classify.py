@@ -30,6 +30,6 @@ class Classifier:
         for i, box in enumerate(detector_out):
             x1, y1, x2, y2 = box
             mid_x = (x1 + x2) // 2
-            if self.field_mask[y2, mid_x] > 0:
+            if self.field_mask[y2, mid_x] > 0.8:
                 indices.append(i)
         return indices

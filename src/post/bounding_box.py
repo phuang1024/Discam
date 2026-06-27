@@ -11,9 +11,10 @@ Steps:
 - Large window moving average.
 """
 
+import cv2
 import numpy as np
 
-from utils import *
+from utils.constants import *
 
 
 def extract_box(detections, padding=BOX_PADDING):
@@ -56,9 +57,10 @@ def median_filter(boxes, k):
 def lerp_boxes(in_boxes, in_frames, frame_count):
     """
     Linear interpolation between boxes at frame intervals.
-    in_boxes, in_frames: Output of extract_boxes
+    in_boxes: boxes format.
+    in_frames: List of frame numbers in output coordinates corresponding to each box.
     frame_count: Total number of frames in output video.
-    return: ndarray float (frame_count, 4) xyxy
+    return: boxes format. Length `frame_count`.
     """
     # Current frame is between B[i] and B[i+1].
     in_index = 0
@@ -114,8 +116,8 @@ class SmoothEMA:
 
 def ema_smooth_boxes(in_boxes):
     """
-    Apply EMA variant.
-    in_boxes: (N, 4)
+    Apply EMA variant filter.
+    in_boxes: boxes format.
     return: Same format.
     """
     x1_ema = SmoothEMA()
@@ -137,7 +139,8 @@ def ema_smooth_boxes(in_boxes):
 
 def moving_average(boxes, k=BOX_MOVING_AVG):
     """
-    boxes: (N, 4)
+    Apply moving average filter.
+    boxes: boxes format.
     return: Same format.
     """
     ret = []
@@ -156,16 +159,17 @@ def moving_average(boxes, k=BOX_MOVING_AVG):
     return ret
 
 
-def resize_bbox(bbox):
+def resize_box(box, out_aspect):
     """
     Resize to satisfy aspect, min size, and in bounds.
-    bbox: xyxy
+    box: xyxy
+    out_aspect: Target W/H aspect ratio.
     return: xyxy, ndarray float
     """
-    cx = (bbox[0] + bbox[2]) / 2
-    cy = (bbox[1] + bbox[3]) / 2
-    width = bbox[2] - bbox[0]
-    height = bbox[3] - bbox[1]
+    cx = (box[0] + box[2]) / 2
+    cy = (box[1] + box[3]) / 2
+    width = box[2] - box[0]
+    height = box[3] - box[1]
 
     # Min size.
     width = max(width, BOX_MIN_SIZE)
@@ -173,82 +177,78 @@ def resize_bbox(bbox):
 
     # Aspect: Expand one of width or height.
     aspect = width / height
-    if aspect > OUT_ASPECT:
-        height = width / OUT_ASPECT
+    if aspect > out_aspect:
+        height = width / out_aspect
     else:
-        width = height * OUT_ASPECT
+        width = height * out_aspect
+    x1 = int(cx - width / 2)
+    y1 = int(cy - height / 2)
+    x2 = int(cx + width / 2)
+    y2 = int(cy + height / 2)
 
-    new_bbox = (
-        int(cx - width / 2),
-        int(cy - height / 2),
-        int(cx + width / 2),
-        int(cy + height / 2),
-    )
-
-    # In bounds.
-    x1, y1, x2, y2 = new_bbox
-    if x2 - x1 > NN_RES[0] or y2 - y1 > NN_RES[1]:
-        return np.array([0, 0, NN_RES[0], NN_RES[1]], dtype=float)
+    # Check in bounds.
+    if x2 - x1 > DET_RES[0] or y2 - y1 > DET_RES[1]:
+        return [0, 0, DET_RES[0], DET_RES[1]]
     if x1 < 0:
         x2 -= x1
         x1 = 0
     if y1 < 0:
         y2 -= y1
         y1 = 0
-    if x2 >= NN_RES[0]:
-        x1 -= (x2 - NN_RES[0] + 1)
-        x2 = NN_RES[0] - 1
-    if y2 >= NN_RES[1]:
-        y1 -= (y2 - NN_RES[1] + 1)
-        y2 = NN_RES[1] - 1
-    new_bbox = np.array([x1, y1, x2, y2], dtype=float)
+    if x2 >= DET_RES[0]:
+        x1 -= (x2 - DET_RES[0] + 1)
+        x2 = DET_RES[0] - 1
+    if y2 >= DET_RES[1]:
+        y1 -= (y2 - DET_RES[1] + 1)
+        y2 = DET_RES[1] - 1
 
-    return new_bbox
+    return [x1, y1, x2, y2]
 
 
-def compute_final_boxes(detector_out, frame_count, out_fps):
+def compute_final_boxes(pipe_outs, frame_is, frame_count):
     """
     Main function to call.
+    Converts pipeline outputs (list of active player detections)
+    to a sequence of crop boxes for each frame, with filtering.
 
-    in_boxes: Output of pipeline. List of dicts.
-        Assumes sorted by frame number.
-    frame_count: Total number of frames (i.e. ending frame number).
-    return: List of bboxes for all frames.
-        Each box is xyxy tuple of ints.
-        First element is bbox for the first frame, etc..
+    pipe_outs: List of pipeline outputs.
+    frame_is: List of frame indices the pipe outputs correspond to,
+        in input video coords.
+    frame_count: Total number of frames in output video.
+    return: boxes format. Length `frame_count`.
+        Corresponds to each frame in out video.
     """
     boxes = []
-    for d in detector_out:
-        box = extract_box(d["player_boxes"])
+    for player_boxes in pipe_outs:
+        box = extract_box(player_boxes)
         if box is None:
-            box = boxes[-1] if boxes else (0, 0, 0, 0)
+            box = boxes[-1] if boxes else (0, 0, OUT_RES[0], OUT_RES[1])
         boxes.append(box)
-    boxes = np.array(boxes, dtype=float)
+    boxes = np.array(boxes, dtype=int)
 
     #boxes = median_filter(boxes, BOX_MEDIAN_FILTER)
 
-    # Frame numbers in output video coords.
-    frames = np.arange(len(boxes)) * out_fps / FPS
-    boxes = lerp_boxes(boxes, frames, frame_count)
+    # In and out video FPS is same, so we can use frame_is as is.
+    boxes = lerp_boxes(boxes, frame_is, frame_count)
 
     boxes = ema_smooth_boxes(boxes)
 
+    out_aspect = OUT_RES[0] / OUT_RES[1]
     for i in range(len(boxes)):
-        boxes[i] = resize_bbox(boxes[i])
+        boxes[i] = resize_box(boxes[i], out_aspect)
 
     boxes = moving_average(boxes)
     return boxes
 
 
-def vis_static_bbox(frame, bbox_out):
+def vis_static_bbox(frame, box):
     """
-    frame: cv2 format
-    bbox_out: Dict output of StaticBBox.update.
+    frame: cv2 format.
+    box: xyxy.
     """
     frame = frame.copy()
 
     # Draw box.
-    box = bbox_out["bbox"]
     box = [int(x) for x in box]
     cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
 
