@@ -17,15 +17,15 @@ class Pipeline:
         self.detector = Detector()
         self.classifier = Classifier(mask_path)
 
-    def update(self, frame):
+    def update(self, frame, frame_i):
         """
         frame: cv2 format.
         """
-        detector_out = self.detector.update(frame)
-        classifier_out = self.classifier.update(detector_out)
-        vis_pipeline(frame, detector_out, classifier_out, self.classifier.field_mask)
+        boxes = self.detector.update(frame)
+        active_inds = self.classifier.update(boxes, frame_i)
+        vis_pipeline(frame, boxes, active_inds, self.classifier.tracks, self.classifier.field_mask)
 
-        active_boxes = detector_out[classifier_out]
+        active_boxes = boxes[active_inds]
         return active_boxes
 
 
@@ -59,7 +59,7 @@ def post_run_pipeline(video_path, mask_path):
         if orig_w != DET_RES[0] or orig_h != DET_RES[1]:
             frame = cv2.resize(frame, DET_RES)
 
-        pipe_out.append(pipeline.update(frame))
+        pipe_out.append(pipeline.update(frame, frame_i))
         frame_is.append(frame_i)
         pbar.update(1)
 
@@ -68,18 +68,24 @@ def post_run_pipeline(video_path, mask_path):
     return pipe_out, frame_is
 
 
-def vis_pipeline(frame, boxes, player_inds, field_mask):
+def vis_pipeline(frame, boxes, active_inds, tracks, field_mask):
     """
     frame: cv2 format.
-    boxes: List of all boxes. Detector output.
-    player_inds: List of indices of active player boxes. Classifier output.
+    boxes: tracked boxes format.
+    active_inds: List of indices of active player boxes.
+    tracks: Classifier.tracks
     field_mask: Classifier.field_mask
     """
     frame = frame.copy()
 
+    # Draw tracks.
+    for track in tracks.values():
+        for i in range(len(track.points) - 1):
+            cv2.line(frame, track.points[i], track.points[i+1], (255, 0, 0), 1)
+
     # Draw boxes.
     for i, box in enumerate(boxes):
-        color = (0, 255, 0) if i in player_inds else (0, 0, 255)
+        color = (0, 255, 0) if i in active_inds else (0, 0, 255)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color, 2)
 
     # Overlay field mask
