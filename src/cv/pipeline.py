@@ -24,9 +24,11 @@ class Pipeline:
         frame: cv2 format.
         """
         boxes = self.detector.update(frame)
-        self.perspective.update(boxes)
+        player_locs = self.perspective.update(boxes)
         active_inds = self.classifier.update(boxes, frame_i)
-        #vis_pipeline(frame, boxes, active_inds, self.classifier.field_mask)
+
+        vis_frame(frame, boxes, active_inds, self.classifier.field_mask)
+        vis_locations(player_locs, self.perspective)
 
         active_boxes = boxes[active_inds]
         return active_boxes
@@ -71,8 +73,9 @@ def post_run_pipeline(video_path, mask_path):
     return pipe_out, frame_is
 
 
-def vis_pipeline(frame, boxes, active_inds, field_mask):
+def vis_frame(frame, boxes, active_inds, field_mask):
     """
+    Visualize image frame detections.
     frame: cv2 format.
     boxes: tracked boxes format.
     active_inds: List of indices of active player boxes.
@@ -99,5 +102,46 @@ def vis_pipeline(frame, boxes, active_inds, field_mask):
     field_mask = cv2.cvtColor(field_mask, cv2.COLOR_GRAY2BGR)
     frame = cv2.addWeighted(frame, 1.0, field_mask, 0.3, 0)
 
-    cv2.imshow("Classifier", frame)
+    cv2.imshow("Pipeline", frame)
+    cv2.waitKey(1)
+
+
+def vis_locations(locs, persp: ComputePersp):
+    """
+    Visualize physical locations.
+    """
+    RES = 800
+
+    def exterp(value, from_min, from_max, to_min, to_max):
+        """Linear interp that supports extrap."""
+        return (value - from_min) / (from_max - from_min) * (to_max - to_min) + to_min
+
+    def interp_coords(coords):
+        """From XY location to vis image pixel pos."""
+        return (
+            exterp(coords[:, 0], -40, 40, 0, RES),
+            exterp(coords[:, 1], 0, 80, RES, 0),
+        )
+
+    img = np.full((RES, RES, 3), 255, dtype=np.uint8)
+
+    # Overall camera FOV cone.
+    view_points = np.array(((0, 0), (DET_RES[0], 0), (DET_RES[0], DET_RES[1]), (0, DET_RES[1])), dtype=float)
+    view_locs = persp.compute_locations(view_points)
+    view_locs = interp_coords(view_locs)
+    view_locs = np.array(view_locs, dtype=int).swapaxes(0, 1)
+    cv2.fillPoly(img, [view_locs], (180, 180, 180))
+
+    # Field mask.
+    mask_locs = persp.compute_locations(persp.mask_points)
+    mask_locs = interp_coords(mask_locs)
+    mask_locs = np.array(mask_locs, dtype=int).swapaxes(0, 1)
+    cv2.polylines(img, [mask_locs], True, (0, 0, 255), 4)
+
+    # Players.
+    xs, ys = interp_coords(locs)
+    for x, y in zip(xs, ys):
+        cv2.circle(img, (int(x), int(y)), 5, (255, 0, 0), -1)
+
+    cv2.imshow("Locations", img)
     cv2.waitKey(1)
