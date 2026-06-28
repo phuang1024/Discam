@@ -21,7 +21,11 @@ class ComputePersp:
         m, b: Model params.
     """
 
-    def __init__(self):
+    def __init__(self, mask_path):
+        self.mask_points = np.load(mask_path)
+        self.mask_points[:, 0] *= DET_RES[0]
+        self.mask_points[:, 1] *= DET_RES[1]
+
         # FOV in rad.
         self.hori_fov = np.radians(CAM_FOV)
         self.vert_fov = self.hori_fov / DET_RES[0] * DET_RES[1]
@@ -43,8 +47,14 @@ class ComputePersp:
             self.data.pop(0)
 
         self.compute_vanishing()
-        locs = self.compute_locations(boxes)
-        vis_locations(locs)
+
+        px_x = (boxes[:, 0] + boxes[:, 2]) / 2
+        px_y = boxes[:, 3]
+        px_pos = np.stack((px_x, px_y), axis=1, dtype=float)
+        locs = self.compute_locations(px_pos, True)
+        mask_locs = self.compute_locations(self.mask_points, False)
+        print(self.mask_points, mask_locs)
+        vis_locations(locs, mask_locs)
         return locs
 
     def compute_vanishing(self):
@@ -69,24 +79,23 @@ class ComputePersp:
 
         #vis_vanishing(y2s, heights, self.m, self.b)
 
-    def compute_locations(self, boxes):
+    def compute_locations(self, px_pos, filter):
         """
         Compute XY physical locations of detections.
-        boxes: tracked boxes format.
-        return: ndarray float (N, 2) xy
+        px_pos: ndarray float (N, 2) xy, pixel positions.
+        return: ndarray float (N, 2) xy, physical positions.
         """
-        boxes = boxes.astype(float)
-        heights = self.m * boxes[:, 3] + self.b
-        hori_pos = (boxes[:, 2] + boxes[:, 0]) / 2
-        hori_pos = (hori_pos / DET_RES[0]) - 0.5
+        heights = self.m * px_pos[:, 1] + self.b
+        hori_pos = (px_pos[:, 0] / DET_RES[0]) - 0.5
 
         dists = self.dist_min * self.height_max / heights
         y_pos = np.sqrt(np.pow(dists, 2) - CAM_HEIGHT ** 2)
         x_pos = hori_pos * 2 * dists * np.tan(self.hori_fov / 2)
 
-        good_inds = heights > self.height_max / 10
-        x_pos = x_pos[good_inds]
-        y_pos = y_pos[good_inds]
+        if filter:
+            good_inds = heights > self.height_max / 10
+            x_pos = x_pos[good_inds]
+            y_pos = y_pos[good_inds]
 
         ret = np.stack((x_pos, y_pos), axis=1)
         return ret
@@ -107,10 +116,21 @@ def vis_vanishing(xs, ys, m, b):
     plt.show()
 
 
-def vis_locations(locs):
+def vis_locations(locs, mask_locs):
+    def interp_coords(coords):
+        coords[:, 0] = np.interp(coords[:, 0], (-40, 40), (0, 800))
+        coords[:, 1] = np.interp(coords[:, 1], (0, 80), (800, 0))
+
     img = np.full((800, 800, 3), 255, dtype=np.uint8)
+
+    interp_coords(mask_locs)
+    mask_locs = mask_locs.astype(int)
+    print(mask_locs)
+    cv2.polylines(img, [mask_locs], True, (0, 0, 255), 4)
+
+    interp_coords(locs)
+    locs = locs.astype(int)
     for x, y in locs:
-        px_x = int(np.interp(x, (-40, 40), (0, 800)))
-        px_y = int(np.interp(y, (0, 80), (800, 0)))
-        cv2.circle(img, (px_x, px_y), 3, (255, 0, 0), -1)
+        cv2.circle(img, (x, y), 5, (255, 0, 0), -1)
+
     cv2.imshow("Locations", img)

@@ -16,7 +16,7 @@ from utils.constants import *
 class Pipeline:
     def __init__(self, mask_path):
         self.detector = Detector()
-        self.perspective = ComputePersp()
+        self.perspective = ComputePersp(mask_path)
         self.classifier = Classifier(mask_path)
 
     def update(self, frame, frame_i):

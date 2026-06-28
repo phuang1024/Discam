@@ -47,8 +47,7 @@ class Classifier:
 
     def __init__(self, mask_path):
         # Load and blur field mask. Convert to [-1, 1] range.
-        points = np.load(mask_path)
-        self.field_mask = create_mask(points, DET_RES)
+        self.field_mask = create_mask(np.load(mask_path), DET_RES)
         self.field_mask = cv2.blur(self.field_mask, (50, 50))
         self.field_mask = self.field_mask / 127.5 - 1
 
