@@ -26,7 +26,7 @@ class Pipeline:
         boxes = self.detector.update(frame)
         self.perspective.update(boxes)
         active_inds = self.classifier.update(boxes, frame_i)
-        vis_pipeline(frame, boxes, active_inds, self.classifier.field_mask)
+        #vis_pipeline(frame, boxes, active_inds, self.classifier.field_mask)
 
         active_boxes = boxes[active_inds]
         return active_boxes

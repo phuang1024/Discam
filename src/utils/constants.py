@@ -22,14 +22,14 @@ DET_FPS = 1
 
 
 ### Perspective module params.
-PERSP_QSIZE = 20
+PERSP_QSIZE = 50
 """Number of past frames to consider."""
 CAM_HEIGHT = 4
 """Cam height in meters."""
 CAM_FOV = 74
 """Cam horizontal FOV at widest setting."""
-PERSON_HEIGHT = 1.8
-"""Person height in meters."""
+PERSP_MIN_SIZE = 0.01
+"""Min size factor clamp (when boxes are close to vanishing point)."""
 
 
 ### Classifier module params.

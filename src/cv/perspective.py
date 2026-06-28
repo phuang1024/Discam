@@ -10,15 +10,12 @@ from utils.constants import *
 
 class ComputePersp:
     """
-    TODO
-    Fit linear model to box height by Y position using detected boxes.
-    Updates every N detector frames.
+    Camera perspective estimation.
+    Estimate vanishing point with linear model of box heights.
+    Project pixel positions to locations on the field with model and other constants.
 
-    Vanishing point model format:
-        height = m * y2_pos + b
-        height: Box height at some y position.
-        y2: Pixel position of bottom box edge.
-        m, b: Model params.
+    "Location" refers to physical location on the field.
+    "Pixel position" refers to position on image frame.
     """
 
     def __init__(self, mask_path):
@@ -33,34 +30,40 @@ class ComputePersp:
         # Queue of detected boxes per frame.
         self.data = []
 
-        # Vanishing point model params (see above).
-        self.m = 0
-        self.b = 0
-
     def update(self, boxes):
         """
         boxes: tracked boxes format.
         return: m parameter.
         """
+        # Add data to queue.
         self.data.append(boxes)
         if len(self.data) > PERSP_QSIZE:
             self.data.pop(0)
 
         self.compute_vanishing()
 
-        px_x = (boxes[:, 0] + boxes[:, 2]) / 2
-        px_y = boxes[:, 3]
-        px_pos = np.stack((px_x, px_y), axis=1, dtype=float)
-        locs = self.compute_locations(px_pos, True)
-        mask_locs = self.compute_locations(self.mask_points, False)
-        print(self.mask_points, mask_locs)
-        vis_locations(locs, mask_locs)
+        # Pixel pos of boxes bottom edge.
+        px_pos = np.stack((
+            (boxes[:, 0] + boxes[:, 2]) / 2,
+            boxes[:, 3],
+        ), axis=1, dtype=float)
+        locs = self.compute_locations(px_pos)
+
+        if True:
+            mask_locs = self.compute_locations(self.mask_points)
+            vis_locations(locs, mask_locs)
+
         return locs
 
     def compute_vanishing(self):
         """
         Uses self.data
+        Computes:
+        - vanishing: Y pixel pos of vanishing line (horizon).
+        - dist_min: Distance from camera to ground location
+            corresponding to the bottom of the frame.
         """
+        # Fit linear model of box height vs Y pixel pos.
         heights = []
         y2s = []
         for box_list in self.data:
@@ -69,39 +72,42 @@ class ComputePersp:
                 y2s.append(box[3])
         # height = m * y2_pos + b
         m, b = np.polyfit(y2s, heights, 1)
-        self.m = m
-        self.b = b
 
-        self.height_max = m * DET_RES[1] + b
+        # Find vanishing, by setting height = 0
         self.vanishing = -b / m
+        # Find min dist with trig.
         theta_bottom = np.pi / 2 - (1 - self.vanishing / DET_RES[1]) * self.vert_fov
         self.dist_min = CAM_HEIGHT / np.cos(theta_bottom)
 
-        #vis_vanishing(y2s, heights, self.m, self.b)
+        #vis_vanishing(y2s, heights, m, b)
 
-    def compute_locations(self, px_pos, filter):
+    def compute_locations(self, px_pos):
         """
-        Compute XY physical locations of detections.
+        Convert pixel pos to locations.
         px_pos: ndarray float (N, 2) xy, pixel positions.
-        return: ndarray float (N, 2) xy, physical positions.
+        return: ndarray float (N, 2) xy, physical locations.
         """
-        heights = self.m * px_pos[:, 1] + self.b
-        hori_pos = (px_pos[:, 0] / DET_RES[0]) - 0.5
+        # Distance from cam, using linearity of size up to vanishing point.
+        size_facs = np.interp(px_pos[:, 1], (self.vanishing, DET_RES[1]), (0, 1))
+        size_facs = np.clip(size_facs, PERSP_MIN_SIZE, 1)
+        dists = self.dist_min / size_facs
 
-        dists = self.dist_min * self.height_max / heights
-        y_pos = np.sqrt(np.pow(dists, 2) - CAM_HEIGHT ** 2)
-        x_pos = hori_pos * 2 * dists * np.tan(self.hori_fov / 2)
+        # Y loc, using Pythag.
+        y_locs = np.sqrt(np.pow(dists, 2) - CAM_HEIGHT ** 2)
 
-        if filter:
-            good_inds = heights > self.height_max / 10
-            x_pos = x_pos[good_inds]
-            y_pos = y_pos[good_inds]
+        # X loc, using trig.
+        # Horizontal pixel position normalized [-0.5, 0.5]
+        hori_pos = px_pos[:, 0] / DET_RES[0] - 0.5
+        x_locs = hori_pos * 2 * dists * np.tan(self.hori_fov / 2)
 
-        ret = np.stack((x_pos, y_pos), axis=1)
+        ret = np.stack((x_locs, y_locs), axis=1)
         return ret
 
 
 def vis_vanishing(xs, ys, m, b):
+    """
+    Visualize linear regression to compute vanishing point.
+    """
     import matplotlib.pyplot as plt
     # Plot data
     plt.scatter(xs, ys, label="Data", alpha=0.5)
@@ -117,20 +123,27 @@ def vis_vanishing(xs, ys, m, b):
 
 
 def vis_locations(locs, mask_locs):
+    """
+    Visualize computed locations.
+    """
+    RES = 800
+
     def interp_coords(coords):
-        coords[:, 0] = np.interp(coords[:, 0], (-40, 40), (0, 800))
-        coords[:, 1] = np.interp(coords[:, 1], (0, 80), (800, 0))
+        """From XY location to vis image pixel pos."""
+        return (
+            np.interp(coords[:, 0], (-40, 40), (0, RES)),
+            np.interp(coords[:, 1], (0, 80), (RES, 0)),
+        )
 
-    img = np.full((800, 800, 3), 255, dtype=np.uint8)
+    img = np.full((RES, RES, 3), 255, dtype=np.uint8)
 
-    interp_coords(mask_locs)
-    mask_locs = mask_locs.astype(int)
-    print(mask_locs)
+    mask_locs = interp_coords(mask_locs)
+    mask_locs = np.array(mask_locs, dtype=int).swapaxes(0, 1)
     cv2.polylines(img, [mask_locs], True, (0, 0, 255), 4)
 
-    interp_coords(locs)
-    locs = locs.astype(int)
-    for x, y in locs:
-        cv2.circle(img, (x, y), 5, (255, 0, 0), -1)
+    xs, ys = interp_coords(locs)
+    for x, y in zip(xs, ys):
+        cv2.circle(img, (int(x), int(y)), 5, (255, 0, 0), -1)
 
     cv2.imshow("Locations", img)
+    cv2.waitKey(1)
