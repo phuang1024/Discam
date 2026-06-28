@@ -72,7 +72,7 @@ class Classifier:
             scale_value = self.persp_scale[box[3], x_mid]
             mask_value = self.field_mask[box[3], x_mid] / scale_value
             active_inds[i] = mask_value > FIELD_MASK_THRES
-            do_filter[i] = -0.5 < mask_value < 0.5
+            do_filter[i] = -0.8 < mask_value < 0.8
 
             # Check if velocity is too low.
             """
@@ -83,7 +83,8 @@ class Classifier:
                     active = False
             """
 
-        active_inds = self.knn_median_filter(boxes, active_inds, do_filter, KNN_NUM)
+        #active_inds = self.knn_median_filter(boxes, active_inds, do_filter, KNN_NUM)
+        active_inds = self.stddev_filter(boxes, active_inds, do_filter, 3)
         return active_inds
 
     def knn_median_filter(self, boxes, active_inds, do_filter, k):
@@ -115,6 +116,32 @@ class Classifier:
                 active_count += active_inds[dists[j][0]]
             ret[i] = active_count > k / 2
 
+        return ret
+
+    def stddev_filter(self, boxes, active_inds, do_filter, z_thres):
+        """
+        Filtering with mean and stddev of given active players.
+        """
+        xs = []
+        ys = []
+        for i, box in enumerate(boxes):
+            if active_inds[i]:
+                xs.append((box[2] + box[0]) // 2)
+                ys.append((box[3] + box[1]) // 2)
+        x_mean = np.mean(xs)
+        y_mean = np.mean(ys)
+        x_std = np.std(xs)
+        y_std = np.std(ys)
+
+        ret = active_inds.copy()
+        for i, box in enumerate(boxes):
+            if do_filter[i]:
+                cx = (box[2] + box[0]) // 2
+                cy = (box[3] + box[1]) // 2
+                zx = (cx - x_mean) / x_std
+                zy = (cy - y_mean) / y_std
+                z_score = np.hypot(zx, zy)
+                ret[i] = z_score < z_thres
         return ret
 
     def compute_distance(self, box1, box2):

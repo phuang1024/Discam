@@ -22,7 +22,7 @@ DET_FPS = 1
 
 
 ### Classifier module params.
-FIELD_MASK_THRES = 0
+FIELD_MASK_THRES = 0.5
 """Field mask thres for initial classification."""
 YX_SCALE = 2
 """Scale distances in Y direction by this amount wrt X."""
