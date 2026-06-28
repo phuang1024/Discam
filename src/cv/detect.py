@@ -52,7 +52,7 @@ class Detector:
             slice_width=500,
             overlap_height_ratio=0.3,
             overlap_width_ratio=0.3,
-            #verbose=0,
+            verbose=0,
         )
 
         # Convert to (x, y, x, y, conf, cls)

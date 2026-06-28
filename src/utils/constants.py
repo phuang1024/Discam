@@ -22,22 +22,28 @@ DET_FPS = 1
 
 
 ### Classifier module params.
+FIELD_MASK_THRES = 0
+"""Field mask thres for initial classification."""
 YX_SCALE = 2
 """Scale distances in Y direction by this amount wrt X."""
 PERSP_SCALE = 3
 """From bottom to top of field mask, linearly increase distance scale from 1 to this."""
+KNN_NUM = 3
+"""Number of neighbors to consider for classification."""
 
 
 ### Output params for Post Processing.
-BOX_PADDING = 30
+BOX_PADDING = 50
 """Padding btwn people and crop box, in RES coords."""
 BOX_MIN_SIZE = 50
 """Min h and w in RES coords."""
+BOX_MEDIAN_FILTER = 3
+"""Median filter size."""
 BOX_EXPAND_EMA = 0.5
 """EMA factor when box is growing."""
 BOX_SHRINK_EMA = 0.01
 """EMA factor when box is shrinking."""
-BOX_SHRINK_MARGIN = 30
+BOX_SHRINK_MARGIN = 80
 """Margin before box starts to shrink."""
 BOX_MOVING_AVG = 100
 """Moving average window."""

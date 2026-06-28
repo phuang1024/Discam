@@ -37,6 +37,23 @@ def create_mask(points, res):
     return mask
 
 
+def create_persp_scale(points, res, max_val):
+    """
+    Create per-pixel scaling factor to account for far people being small.
+    Y axis lerp: From (min(points y coord) to yres - 1), to (max_val to 1).
+    return: ndarray float [H, W], from 1 to max_val.
+    """
+    img = np.zeros(res[::-1], dtype=float)
+    min_y = points[:, 1].min()
+    for y in range(res[1]):
+        if y < min_y:
+            img[y] = max_val
+        else:
+            img[y] = np.interp(y, [min_y, res[1] - 1], [max_val, 1])
+
+    return img
+
+
 def main():
     global _interactive_frame, _interactive_mask, _last_click
     def click_handler(event, x, y, flags, param):
