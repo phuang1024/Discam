@@ -2,7 +2,6 @@
 Perspective estimation module.
 """
 
-import cv2
 import numpy as np
 from sklearn.linear_model import RANSACRegressor, LinearRegression
 
@@ -45,7 +44,9 @@ class ComputePersp:
     def update(self, boxes):
         """
         boxes: tracked boxes format.
-        return: m parameter.
+        return: (player_locs, mask_locs)
+            player_locs: ndarray float (N, 2) xy, physical locations of each box.
+            mask_locs: ndarray float (M, 2) xy, field mask vertex locations.
         """
         # Add data to queue.
         self.data.append(boxes)
@@ -59,9 +60,11 @@ class ComputePersp:
             (boxes[:, 0] + boxes[:, 2]) / 2,
             boxes[:, 3],
         ), axis=1, dtype=float)
-        locs = self.compute_locations(px_pos)
+        player_locs = self.compute_locations(px_pos)
 
-        return locs
+        mask_locs = self.compute_locations(self.mask_points)
+
+        return player_locs, mask_locs
 
     def compute_vanishing(self):
         """

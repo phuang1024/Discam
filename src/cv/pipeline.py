@@ -17,18 +17,19 @@ class Pipeline:
     def __init__(self, mask_path):
         self.detector = Detector()
         self.perspective = ComputePersp(mask_path)
-        self.classifier = Classifier(mask_path)
+        self.classifier = Classifier()
 
     def update(self, frame, frame_i):
         """
         frame: cv2 format.
+        frame_i: Frame index number.
         """
         boxes = self.detector.update(frame)
-        player_locs = self.perspective.update(boxes)
-        active_inds = self.classifier.update(boxes, frame_i)
+        player_locs, mask_locs = self.perspective.update(boxes)
+        active_inds = self.classifier.update(player_locs, mask_locs)
 
-        vis_frame(frame, boxes, active_inds, self.classifier.field_mask)
-        vis_locations(player_locs, self.perspective)
+        vis_frame(frame, boxes, active_inds)
+        vis_locations(player_locs, mask_locs, active_inds, self.perspective)
 
         active_boxes = boxes[active_inds]
         return active_boxes
@@ -73,40 +74,24 @@ def post_run_pipeline(video_path, mask_path):
     return pipe_out, frame_is
 
 
-def vis_frame(frame, boxes, active_inds, field_mask):
+def vis_frame(frame, boxes, active_inds):
     """
     Visualize image frame detections.
     frame: cv2 format.
     boxes: tracked boxes format.
-    active_inds: List of indices of active player boxes.
-    tracks: Classifier.tracks
-    field_mask: Classifier.field_mask
+    active_inds: Bool array of whether each box is active.
     """
     frame = frame.copy()
-
-    # Draw tracks.
-    """
-    for track in tracks.values():
-        for i in range(len(track.points) - 1):
-            cv2.line(frame, track.points[i], track.points[i+1], (255, 0, 0), 2)
-    """
-
     # Draw boxes.
     for i, box in enumerate(boxes):
         color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color, 2)
 
-    # Overlay field mask
-    field_mask = field_mask / 2 + 0.5
-    field_mask = (field_mask * 255).astype(np.uint8)
-    field_mask = cv2.cvtColor(field_mask, cv2.COLOR_GRAY2BGR)
-    frame = cv2.addWeighted(frame, 1.0, field_mask, 0.3, 0)
-
     cv2.imshow("Pipeline", frame)
     cv2.waitKey(1)
 
 
-def vis_locations(locs, persp: ComputePersp):
+def vis_locations(locs, mask_locs, active_inds, persp: ComputePersp):
     """
     Visualize physical locations.
     """
@@ -119,8 +104,8 @@ def vis_locations(locs, persp: ComputePersp):
     def interp_coords(coords):
         """From XY location to vis image pixel pos."""
         return (
-            exterp(coords[:, 0], -40, 40, 0, RES),
-            exterp(coords[:, 1], 0, 80, RES, 0),
+            exterp(coords[:, 0], -50, 50, 0, RES),
+            exterp(coords[:, 1], 0, 100, RES, 0),
         )
 
     img = np.full((RES, RES, 3), 255, dtype=np.uint8)
@@ -130,18 +115,18 @@ def vis_locations(locs, persp: ComputePersp):
     view_locs = persp.compute_locations(view_points)
     view_locs = interp_coords(view_locs)
     view_locs = np.array(view_locs, dtype=int).swapaxes(0, 1)
-    cv2.fillPoly(img, [view_locs], (180, 180, 180))
+    cv2.fillPoly(img, [view_locs], (200, 200, 200))
 
     # Field mask.
-    mask_locs = persp.compute_locations(persp.mask_points)
     mask_locs = interp_coords(mask_locs)
     mask_locs = np.array(mask_locs, dtype=int).swapaxes(0, 1)
-    cv2.polylines(img, [mask_locs], True, (0, 0, 255), 4)
+    cv2.polylines(img, [mask_locs], True, (255, 0, 0), 4)
 
     # Players.
     xs, ys = interp_coords(locs)
-    for x, y in zip(xs, ys):
-        cv2.circle(img, (int(x), int(y)), 5, (255, 0, 0), -1)
+    for i, (x, y) in enumerate(zip(xs, ys)):
+        color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
+        cv2.circle(img, (int(x), int(y)), 5, color, -1)
 
     cv2.imshow("Locations", img)
     cv2.waitKey(1)

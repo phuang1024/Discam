@@ -226,7 +226,7 @@ def compute_final_boxes(pipe_outs, frame_is, frame_count):
         boxes.append(box)
     boxes = np.array(boxes, dtype=int)
 
-    boxes = median_filter(boxes, BOX_MEDIAN_FILTER)
+    #boxes = median_filter(boxes, BOX_MEDIAN_FILTER)
 
     # In and out video FPS is same, so we can use frame_is as is.
     boxes = lerp_boxes(boxes, frame_is, frame_count)

@@ -35,14 +35,12 @@ PERSP_MIN_SIZE = 0.01
 
 
 ### Classifier module params.
-FIELD_MASK_THRES = 0.5
+POS_THRES = 3
 """Field mask thres for initial classification."""
-YX_SCALE = 2
-"""Scale distances in Y direction by this amount wrt X."""
-PERSP_SCALE = 3
-"""From bottom to top of field mask, linearly increase distance scale from 1 to this."""
-KNN_NUM = 3
-"""Number of neighbors to consider for classification."""
+MAYBE_POS_THRES = 0
+"""Thres for consideration during filtering."""
+ACTIVE_STD_THRES = 2.5
+"""Std Z score threshold for stddev filtering."""
 
 
 ### Output params for Post Processing.
@@ -50,13 +48,13 @@ BOX_PADDING = 50
 """Padding btwn people and crop box, in RES coords."""
 BOX_MIN_SIZE = 50
 """Min h and w in RES coords."""
-BOX_MEDIAN_FILTER = 3
+#BOX_MEDIAN_FILTER = 3
 """Median filter size."""
 BOX_EXPAND_EMA = 0.5
 """EMA factor when box is growing."""
 BOX_SHRINK_EMA = 0.01
 """EMA factor when box is shrinking."""
-BOX_SHRINK_MARGIN = 80
+BOX_SHRINK_MARGIN = 30
 """Margin before box starts to shrink."""
 BOX_MOVING_AVG = 100
 """Moving average window."""
@@ -72,7 +70,7 @@ VERSION = "0.0.1"
 
 
 
-
+"""
 # Trim params.
 # Multiplied by FPS.
 PLATEAU_LEN = 5
@@ -85,3 +83,4 @@ MAX_STOP_TIME = 120
 MIN_PLAY_TIME = 10
 # Margin (sec). Positive means include more footage.
 TRIM_MARGIN = 5
+"""
