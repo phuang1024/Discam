@@ -4,6 +4,7 @@ Perspective estimation module.
 
 import cv2
 import numpy as np
+from sklearn.linear_model import RANSACRegressor, LinearRegression
 
 from utils.constants import *
 
@@ -30,6 +31,16 @@ class ComputePersp:
 
         # Queue of detected boxes per frame.
         self.data = []
+        # Initial model.
+        self.vanishing = None
+        self.dist_min = None
+
+        self.ransac = RANSACRegressor(
+            LinearRegression(),
+            min_samples=30,
+            max_trials=100,
+            residual_threshold=10,
+        )
 
     def update(self, boxes):
         """
@@ -67,15 +78,27 @@ class ComputePersp:
             for box in box_list:
                 heights.append(box[3] - box[1])
                 y2s.append(box[3])
+        heights = np.array(heights)
+        y2s = np.array(y2s)[:, None]
+
         # height = m * y2_pos + b
-        m, b = np.polyfit(y2s, heights, 1)
-        #vis_vanishing(y2s, heights, m, b)
+        self.ransac.fit(y2s, heights)
+        m = self.ransac.estimator_.coef_[0]
+        b = self.ransac.estimator_.intercept_
+        #vis_vanishing(y2s, heights, m, b, self.ransac.inlier_mask_)
 
         # Find vanishing, by setting height = 0
-        self.vanishing = -b / m
+        vanishing = -b / m
         # Find min dist with trig.
-        theta_bottom = np.pi / 2 - (1 - self.vanishing / DET_RES[1]) * self.vert_fov
-        self.dist_min = CAM_HEIGHT / np.cos(theta_bottom)
+        theta_bottom = np.pi / 2 - (1 - vanishing / DET_RES[1]) * self.vert_fov
+        dist_min = CAM_HEIGHT / np.cos(theta_bottom)
+
+        if self.vanishing is None:
+            self.vanishing = vanishing
+            self.dist_min = dist_min
+        else:
+            self.vanishing = PERSP_EMA * vanishing + (1 - PERSP_EMA) * self.vanishing
+            self.dist_min = PERSP_EMA * dist_min + (1 - PERSP_EMA) * self.dist_min
 
     def compute_locations(self, px_pos):
         """
@@ -100,13 +123,15 @@ class ComputePersp:
         return ret
 
 
-def vis_vanishing(xs, ys, m, b):
+def vis_vanishing(xs, ys, m, b, inliers):
     """
     Visualize linear regression to compute vanishing point.
     """
     import matplotlib.pyplot as plt
     # Plot data
-    plt.scatter(xs, ys, label="Data", alpha=0.5)
+    plt.scatter(xs[inliers], ys[inliers], label="Data", alpha=0.5, color="blue")
+    plt.scatter(xs[np.logical_not(inliers)], ys[np.logical_not(inliers)], label="Data", alpha=0.5, color="red")
+
     # Plot fitted line
     x_min = min(xs) - 100
     x_max = max(xs) + 100

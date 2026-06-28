@@ -22,8 +22,10 @@ DET_FPS = 1
 
 
 ### Perspective module params.
-PERSP_QSIZE = 50
+PERSP_QSIZE = 20
 """Number of past frames to consider."""
+PERSP_EMA = 0.05
+"""EMA fac of linear model params over time."""
 CAM_HEIGHT = 4
 """Cam height in meters."""
 CAM_FOV = 74
