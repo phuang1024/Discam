@@ -43,7 +43,7 @@ class ComputePersp:
 
     def update(self, boxes):
         """
-        boxes: tracked boxes format.
+        boxes: boxes format.
         return: (player_locs, mask_locs)
             player_locs: ndarray float (N, 2) xy, physical locations of each box.
             mask_locs: ndarray float (M, 2) xy, field mask vertex locations.

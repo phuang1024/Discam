@@ -1,9 +1,9 @@
 Installation
 ============
 
-The Discam project is developed in Python.
-Installation consists of installing a (reasonably modern) Python environment
-and the dependencies.
+Discam is written in Python.
+It requires a (reasonably modern) Python environment and the dependencies.
+
 Then, use various Discam utilities by running Python files.
 
 .. code-block:: bash
@@ -12,3 +12,6 @@ Then, use various Discam utilities by running Python files.
    cd Discam
    pip install -r requirements.txt
    cd src
+
+   # E.g. to run post processing:
+   python post_main.py /path/to/video.mp4

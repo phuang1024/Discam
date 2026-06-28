@@ -5,4 +5,8 @@ __pycache__
 /data
 /scripts
 
+/build
+/dist
+/*.egg-info
+
 /docs/_build

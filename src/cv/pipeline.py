@@ -78,7 +78,7 @@ def vis_frame(frame, boxes, active_inds):
     """
     Visualize image frame detections.
     frame: cv2 format.
-    boxes: tracked boxes format.
+    boxes: boxes format.
     active_inds: Bool array of whether each box is active.
     """
     frame = frame.copy()

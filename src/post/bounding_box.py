@@ -241,7 +241,7 @@ def compute_final_boxes(pipe_outs, frame_is, frame_count):
     return boxes
 
 
-def vis_static_bbox(frame, box):
+def vis_static_box(frame, box):
     """
     frame: cv2 format.
     box: xyxy.

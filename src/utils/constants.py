@@ -9,8 +9,6 @@ torch format:
 
 boxes format:
     ndarray, [N, 4], int, xyxy
-tracked boxes format:
-    ndarray, [N, 5], int, (x, y, x, y, track_id)
 """
 
 ### Detector module params.

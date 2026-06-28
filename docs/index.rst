@@ -5,15 +5,16 @@ Discam
    :caption: Usage
    :hidden:
 
-   install.rst
-   post_processing.rst
+   usage/install.rst
+   usage/post_processing.rst
 
 .. toctree::
    :caption: Developers
    :hidden:
 
-   computer_vision.rst
-   code_details.rst
+   dev/computer_vision.rst
+   dev/code_details.rst
+   dev/api.rst
 
 Discam is a set of computer vision tools for automated filming of
 Ultimate Frisbee games.
