@@ -9,12 +9,14 @@ from tqdm import tqdm
 
 from cv.classify import Classifier
 from cv.detect import Detector
+from cv.perspective import ComputePersp
 from utils.constants import *
 
 
 class Pipeline:
     def __init__(self, mask_path):
         self.detector = Detector()
+        self.perspective = ComputePersp()
         self.classifier = Classifier(mask_path)
 
     def update(self, frame, frame_i):
@@ -22,6 +24,7 @@ class Pipeline:
         frame: cv2 format.
         """
         boxes = self.detector.update(frame)
+        self.perspective.update(boxes)
         active_inds = self.classifier.update(boxes, frame_i)
         vis_pipeline(frame, boxes, active_inds, self.classifier.field_mask)
 

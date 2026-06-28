@@ -21,6 +21,17 @@ DET_FPS = 1
 """FPS to run detector module at."""
 
 
+### Perspective module params.
+PERSP_QSIZE = 20
+"""Number of past frames to consider."""
+CAM_HEIGHT = 4
+"""Cam height in meters."""
+CAM_FOV = 74
+"""Cam horizontal FOV at widest setting."""
+PERSON_HEIGHT = 1.8
+"""Person height in meters."""
+
+
 ### Classifier module params.
 FIELD_MASK_THRES = 0.5
 """Field mask thres for initial classification."""
