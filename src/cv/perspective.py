@@ -5,35 +5,52 @@ TODO this should be made streamable!
 
 import numpy as np
 
-from utils import *
+from utils.constants import *
 
 
-def compute_vanishing(detector_out):
+class ComputePersp:
     """
-    Fit linear model to box height by Y position
-    using detector outputs.
-    detector_out: List of detector outputs.
-    return: m, b, y0, height_max
-        m, b: height = m * y + b
-            In pixels, wrt image coordinates, with y=0 at the top.
-        y0: Y position where box height becomes 0.
-        height_max: Box height at the bottom of the image.
-    """
-    # Gather data. X is "box y2 position". Y is "box height".
-    xs = []
-    ys = []
-    for data in detector_out:
-        for box in data["boxes"]:
-            xs.append(box[3])
-            ys.append(box[3] - box[1])
-    # h = m * y + b
-    m, b = np.polyfit(xs, ys, 1)
+    Fit linear model to box height by Y position using detected boxes.
+    Updates every N detector frames.
 
-    # Extract output params.
-    y0 = -b / m
-    height_max = m * NN_RES[1] + b
-    vis_vanishing(xs, ys, m, b)
-    return m, b, y0, height_max
+    Model format:
+        height_scale = -m * (RES[1] - y2)
+        height_scale <= 1: 1 at the bottom of the screen, decreases linearly moving up.
+            Height of boxes at y as fraction of box height at bottom.
+        y2 in (0, RES[1]): Pixel position of bottom box edge.
+        m > 0: scale per px
+    """
+
+    def __init__(self):
+        # Append to this each frame. When it reaches set interval, compute new model.
+        self.data = []
+
+        # Default model: Assume 1/3x scale halfway up image.
+        self.m = 1/3 / (DET_RES[1] / 2)
+
+    def update(self, boxes):
+        """
+        boxes: tracked boxes format.
+        return: m parameter.
+        """
+
+    def compute_param(self):
+        """
+        Uses self.data
+        """
+        heights = []
+        y2s = []
+        for box_list in self.data:
+            for box in box_list:
+                heights.append(box[3] - box[1])
+                y2s.append(box[3])
+        # height = a * y2_pos + b
+        a, b = np.polyfit(y2s, heights, 1)
+
+        # Extract output param.
+        height_max = a * DET_RES[1] + b
+        m = -a / height_max
+        return m
 
 
 def vis_vanishing(xs, ys, m, b):

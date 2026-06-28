@@ -10,7 +10,7 @@ torch format:
 boxes format:
     ndarray, [N, 4], int, xyxy
 tracked boxes format:
-    ndarray, [N, 4], int, (x, y, x, y, track_id)
+    ndarray, [N, 5], int, (x, y, x, y, track_id)
 """
 
 ### Detector module params.
@@ -19,6 +19,13 @@ DET_RES = (1920, 1080)
 Since SAHI is used, this is not the input res of YOLO."""
 DET_FPS = 1
 """FPS to run detector module at."""
+
+
+### Classifier module params.
+YX_SCALE = 2
+"""Scale distances in Y direction by this amount wrt X."""
+PERSP_SCALE = 3
+"""From bottom to top of field mask, linearly increase distance scale from 1 to this."""
 
 
 ### Output params for Post Processing.

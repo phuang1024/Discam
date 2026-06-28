@@ -23,7 +23,7 @@ class Pipeline:
         """
         boxes = self.detector.update(frame)
         active_inds = self.classifier.update(boxes, frame_i)
-        vis_pipeline(frame, boxes, active_inds, self.classifier.tracks, self.classifier.field_mask)
+        vis_pipeline(frame, boxes, active_inds, self.classifier.field_mask)
 
         active_boxes = boxes[active_inds]
         return active_boxes
@@ -68,7 +68,7 @@ def post_run_pipeline(video_path, mask_path):
     return pipe_out, frame_is
 
 
-def vis_pipeline(frame, boxes, active_inds, tracks, field_mask):
+def vis_pipeline(frame, boxes, active_inds, field_mask):
     """
     frame: cv2 format.
     boxes: tracked boxes format.
@@ -79,13 +79,15 @@ def vis_pipeline(frame, boxes, active_inds, tracks, field_mask):
     frame = frame.copy()
 
     # Draw tracks.
+    """
     for track in tracks.values():
         for i in range(len(track.points) - 1):
-            cv2.line(frame, track.points[i], track.points[i+1], (255, 0, 0), 1)
+            cv2.line(frame, track.points[i], track.points[i+1], (255, 0, 0), 2)
+    """
 
     # Draw boxes.
     for i, box in enumerate(boxes):
-        color = (0, 255, 0) if i in active_inds else (0, 0, 255)
+        color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color, 2)
 
     # Overlay field mask

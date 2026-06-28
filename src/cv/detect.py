@@ -22,7 +22,7 @@ YOLO = AutoDetectionModel.from_pretrained(
 
 class Detector:
     """
-    Detection with YOLO and SAHI. Tracking with TODO.
+    Detection with YOLO and SAHI. Tracking with ByteTrack.
     """
 
     def __init__(self):
