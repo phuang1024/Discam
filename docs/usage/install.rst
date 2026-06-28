@@ -2,9 +2,11 @@ Installation
 ============
 
 Discam is written in Python.
-It requires a (reasonably modern) Python environment and the dependencies.
+Install a Python 3 environment, and the required packages.
 
 Then, use various Discam utilities by running Python files.
+
+In the future, Discam will be packaged in a Python module with executable entry points.
 
 .. code-block:: bash
 

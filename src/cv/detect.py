@@ -3,11 +3,14 @@ Person detection and tracking module.
 """
 
 import numpy as np
+import torch
 
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
 from utils.constants import *
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Detector:
@@ -20,6 +23,7 @@ class Detector:
             model_type="ultralytics",
             model_path="yolo26n.pt",
             confidence_threshold=0.2,
+            device=DEVICE,
         )
 
     def update(self, frame):
