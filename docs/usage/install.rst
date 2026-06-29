@@ -1,7 +1,7 @@
 Installation
 ============
 
-Discam can be packaged and installed as a Python package.
+Install Discam as a Python package.
 
 .. code-block:: bash
 
@@ -9,6 +9,9 @@ Discam can be packaged and installed as a Python package.
 
    # E.g. to run post processing (see docs):
    discpost /path/to/video.mp4
+
+For developers
+--------------
 
 To install as an editable package for development, run:
 

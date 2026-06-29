@@ -31,7 +31,7 @@ In development.
 Getting started
 ---------------
 
-See "Installation", and then "Post processing film".
+See "Installation", and then "Post Processing".
 
 Features
 --------
