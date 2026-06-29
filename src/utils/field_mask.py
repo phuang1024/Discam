@@ -11,7 +11,8 @@ import time
 import cv2
 import numpy as np
 
-from utils.constants import *
+if __name__ != "__main__":
+    from utils.constants import *
 
 _interactive_frame = None
 # In coordinates of [0, 1] relative to W, H
@@ -57,6 +58,7 @@ def create_persp_scale(points, res, max_val):
 def main():
     global _interactive_frame, _interactive_mask, _last_click
     def click_handler(event, x, y, flags, param):
+        global _interactive_frame, _interactive_mask, _last_click
         """Mouse click handler."""
         if event == cv2.EVENT_LBUTTONDOWN and time.time() - _last_click > 0.5:
             cv2.circle(_interactive_frame, (x, y), 3, (0, 0, 255), -1)

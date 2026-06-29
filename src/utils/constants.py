@@ -33,7 +33,7 @@ PERSP_MIN_SIZE = 0.01
 
 
 ### Classifier module params.
-POS_THRES = 3
+POS_THRES = 4
 """Field mask thres for initial classification."""
 MAYBE_POS_THRES = 0
 """Thres for consideration during filtering."""
