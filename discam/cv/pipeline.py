@@ -1,12 +1,56 @@
 """
-Computer vision visualization functions.
+Computer vision sub-pipeline.
 """
 
 import cv2
 import numpy as np
 
+from .classify import Classifier
+from .detect import Detector
 from .perspective import ComputePersp
+from ..utils import logger
 from ..utils.constants import *
+
+
+class CVPipeline:
+    def __init__(self, mask_path):
+        self.detector = Detector()
+        self.perspective = ComputePersp(mask_path)
+        self.classifier = Classifier()
+
+        # For logging.
+        self.iter_i = 0
+
+    def update(self, frame, frame_i):
+        """
+        frame: cv2 format.
+        frame_i: Index of frame.
+        """
+        boxes = self.detector.update(frame)
+        player_locs, mask_locs = self.perspective.update(boxes, self.iter_i)
+        active_inds = self.classifier.update(player_locs, mask_locs)
+        active_boxes = boxes[active_inds]
+
+        # Vis and logging.
+        if logger.enabled:
+            det_vis = vis_frame(frame, boxes, active_inds)
+            locs_vis = vis_locations(player_locs, mask_locs, active_inds, self.perspective)
+            if self.iter_i % LOG_IMG_INTERVAL == 0:
+                logger.add_image("detections_vis", det_vis, frame_i)
+                logger.add_image("locations_vis", locs_vis, frame_i)
+            cv2.imshow("Detections", det_vis)
+            cv2.imshow("Locations", locs_vis)
+            cv2.waitKey(1)
+
+            logger.add_scalar("num_active", np.sum(active_inds), frame_i)
+            logger.add_scalar("persp_vanishing", self.perspective.vanishing, frame_i)
+            logger.add_scalar("persp_min_dist", self.perspective.dist_min, frame_i)
+
+            self.iter_i += 1
+
+        return {
+            "active_boxes": active_boxes,
+        }
 
 
 def vis_frame(frame, boxes, active_inds):

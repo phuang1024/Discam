@@ -219,8 +219,8 @@ def compute_final_boxes(pipe_outs, frame_is, frame_count):
         Corresponds to each frame in out video.
     """
     boxes = []
-    for player_boxes in pipe_outs:
-        box = extract_box(player_boxes)
+    for data in pipe_outs:
+        box = extract_box(data["active_boxes"])
         if box is None:
             box = boxes[-1] if boxes else (0, 0, OUT_RES[0], OUT_RES[1])
         boxes.append(box)
