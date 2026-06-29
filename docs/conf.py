@@ -6,10 +6,15 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import sys
+sys.path.insert(0, "../src")
+
+from utils.constants import VERSION
+
 project = 'Discam'
 copyright = '2026, Patrick Huang'
 author = 'Patrick Huang'
-release = '0.0.1'
+release = VERSION
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -30,7 +35,3 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 html_title = "Discam"
-
-
-import sys
-sys.path.insert(0, "../src")

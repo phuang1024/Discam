@@ -62,7 +62,7 @@ OUT_RES = (1280, 720)
 
 
 ### Misc.
-VERSION = "0.0.1"
+VERSION = "0.1.0"
 
 
 
