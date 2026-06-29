@@ -10,7 +10,7 @@ from sahi.predict import get_sliced_prediction
 
 from utils.constants import *
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class Detector:

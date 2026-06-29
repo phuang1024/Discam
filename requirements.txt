@@ -1,5 +1,7 @@
 numpy
 opencv-python
+sahi
 scikit-learn
 torch
 tqdm
+ultralytics

@@ -40,3 +40,7 @@ The overall pipeline consists of a few steps.
      - Write output video, apply video cropping, command PTZ camera, etc..
 
 Details can be found in their corresponding docs.
+
+Configuration
+-------------
+

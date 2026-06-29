@@ -3,15 +3,12 @@ Video read and write utils.
 """
 
 import shutil
-from subprocess import Popen, PIPE
+from subprocess import Popen, DEVNULL, PIPE
 
 import cv2
 from tqdm import tqdm
 
 from utils.constants import *
-
-FFMPEG = shutil.which("ffmpeg")
-assert FFMPEG is not None, "ffmpeg not found in PATH"
 
 
 class FFmpegWriter:
@@ -20,8 +17,11 @@ class FFmpegWriter:
     """
 
     def __init__(self, path, fps, res):
+        ffmpeg = shutil.which("ffmpeg")
+        assert ffmpeg is not None, "ffmpeg not found in PATH"
+
         self.proc = Popen([
-            FFMPEG, "-y",
+            ffmpeg, "-y",
             "-f", "rawvideo", 
             "-vcodec", "rawvideo",
             "-pix_fmt", "bgr24",
@@ -33,7 +33,7 @@ class FFmpegWriter:
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
             path,
-        ], stdin=PIPE, stderr=PIPE, stdout=PIPE)
+        ], stdin=PIPE, stderr=DEVNULL, stdout=DEVNULL)
 
     def write(self, frame):
         """
