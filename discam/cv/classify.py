@@ -4,6 +4,7 @@ Active player classification module.
 
 import cv2
 import numpy as np
+from sklearn.mixture import GaussianMixture
 
 from ..utils.constants import *
 
@@ -14,19 +15,43 @@ class Classifier:
     Uses manual field mask, computed physical locations, and data analysis.
     """
 
-    def update(self, player_locs, mask_locs):
+    def __init__(self):
+        self.gmm1 = GaussianMixture(1)
+        self.gmm2 = GaussianMixture(2)
+
+    def update(self, person_locs, mask_locs):
         """
-        player_locs: ndarray float (N, 2) xy
+        person_locs: ndarray float (N, 2) xy
         mask_locs: ndarray float (M, 2) xy
-        return: ndarray bool, same length as `player_locs`.
+        return: ndarray bool, same length as `person_locs`.
             Whether each box is active.
         """
-        player_locs = player_locs.astype(np.float32)
+        # Run initial field mask filter.
+        person_locs = person_locs.astype(np.float32)
         mask_locs = mask_locs.astype(np.float32)
+        active_inds, do_filter = self.filter_field_mask(person_locs, mask_locs)
 
-        active_inds = np.zeros([len(player_locs)], dtype=bool)
+        # Train GMM.
+        active_locs = person_locs[active_inds]
+        self.gmm1.fit(active_locs)
+        self.gmm2.fit(active_locs)
+        self.gmm1_bic = self.gmm1.bic(active_locs)
+        self.gmm2_bic = self.gmm2.bic(active_locs)
+
+        active_inds = stddev_filter(person_locs, active_inds, do_filter)
+        return active_inds
+
+    def filter_field_mask(self, person_locs, mask_locs):
+        """
+        Filter by proximity to field mask.
+        person_locs: Physical locations of all detected people.
+        mask_locs: Physical locations of mask points.
+        return: (active_inds, do_filter)
+            Categorizations by 2 thresholds. See constants and docs.
+        """
+        active_inds = np.zeros([len(person_locs)], dtype=bool)
         do_filter = np.zeros_like(active_inds)
-        for i, loc in enumerate(player_locs):
+        for i, loc in enumerate(person_locs):
             dist = cv2.pointPolygonTest(mask_locs, loc, True)
             if dist > POS_THRES:
                 # Definitely active.
@@ -35,23 +60,22 @@ class Classifier:
                 # Maybe active.
                 do_filter[i] = True
 
-        active_inds = stddev_filter(player_locs, active_inds, do_filter)
-        return active_inds
+        return active_inds, do_filter
 
 
-def stddev_filter(player_locs, active_inds, do_filter):
+def stddev_filter(person_locs, active_inds, do_filter):
     """
     Filtering with mean and stddev of given active players.
     """
-    xs = player_locs[active_inds, 0]
-    ys = player_locs[active_inds, 1]
+    xs = person_locs[active_inds, 0]
+    ys = person_locs[active_inds, 1]
     x_mean = np.mean(xs)
     y_mean = np.mean(ys)
     x_std = np.std(xs)
     y_std = np.std(ys)
 
     ret = active_inds.copy()
-    for i, (x, y) in enumerate(player_locs):
+    for i, (x, y) in enumerate(person_locs):
         if do_filter[i]:
             zx = (x - x_mean) / x_std
             zy = (y - y_mean) / y_std

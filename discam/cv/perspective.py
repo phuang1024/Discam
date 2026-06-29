@@ -45,8 +45,8 @@ class ComputePersp:
         """
         boxes: boxes format.
         iter_i: CV pipeline iteration number.
-        return: (player_locs, mask_locs)
-            player_locs: ndarray float (N, 2) xy, physical locations of each box.
+        return: (person_locs, mask_locs)
+            person_locs: ndarray float (N, 2) xy, physical locations of each box.
             mask_locs: ndarray float (M, 2) xy, field mask vertex locations.
         """
         # Add data to queue.
@@ -62,11 +62,11 @@ class ComputePersp:
             (boxes[:, 0] + boxes[:, 2]) / 2,
             boxes[:, 3],
         ), axis=1, dtype=float)
-        player_locs = self.compute_locations(px_pos)
+        person_locs = self.compute_locations(px_pos)
 
         mask_locs = self.compute_locations(self.mask_points)
 
-        return player_locs, mask_locs
+        return person_locs, mask_locs
 
     def compute_vanishing(self, ema_fac):
         """
