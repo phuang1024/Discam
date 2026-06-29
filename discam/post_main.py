@@ -70,6 +70,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("video", type=Path)
     parser.add_argument("--no_cache", action="store_true", help="Don't read from cache.")
+    parser.add_argument("--fps_scale", type=int, default=1, help="Output FPS downscale factor.")
     args = parser.parse_args()
 
     # Get paths.
@@ -109,4 +110,4 @@ def main():
     """
 
     print("Write output video.")
-    post_write_video(paths["in"], paths["out"], boxes, None)
+    post_write_video(paths["in"], paths["out"], args.fps_scale, boxes, None)

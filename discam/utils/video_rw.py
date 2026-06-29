@@ -29,7 +29,7 @@ class FFmpegWriter:
             "-r", str(fps),
             "-i", "-",
             "-c:v", "libx265",
-            "-crf", "28",
+            "-crf", "32",
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
             path,
@@ -47,7 +47,7 @@ class FFmpegWriter:
         self.proc.wait()
 
 
-def post_write_video(in_path, out_path, boxes, trim_sections):
+def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
     """
     Write output video in post processing mode.
     Use given bounding boxes to crop.
@@ -59,7 +59,7 @@ def post_write_video(in_path, out_path, boxes, trim_sections):
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
     orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
     orig_h = in_video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    out_video = FFmpegWriter(out_path, orig_fps, OUT_RES)
+    out_video = FFmpegWriter(out_path, orig_fps / fps_scale, OUT_RES)
 
     frame_i = 0
     pbar = tqdm(total=len(boxes), desc="Writing output")
@@ -70,6 +70,9 @@ def post_write_video(in_path, out_path, boxes, trim_sections):
         ret, frame = in_video.read()
         if not ret:
             break
+        # Check output FPS downscaling.
+        if frame_i % fps_scale != 0:
+            continue
 
         # Check trim.
         """
