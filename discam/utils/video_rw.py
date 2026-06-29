@@ -8,7 +8,7 @@ from subprocess import Popen, DEVNULL, PIPE
 import cv2
 from tqdm import tqdm
 
-from utils.constants import *
+from .constants import *
 
 
 class FFmpegWriter:

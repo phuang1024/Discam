@@ -5,7 +5,7 @@ Active player classification module.
 import cv2
 import numpy as np
 
-from utils.constants import *
+from ..utils.constants import *
 
 
 class Classifier:

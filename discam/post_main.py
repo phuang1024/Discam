@@ -12,11 +12,11 @@ from pathlib import Path
 import cv2
 import torch
 
-from cv.pipeline import post_run_pipeline
-from post.bounding_box import compute_final_boxes
+from .cv.pipeline import post_run_pipeline
+from .post.bounding_box import compute_final_boxes
 #from trim import find_trim_sections, gen_timestamps
-from utils.constants import *
-from utils.video_rw import post_write_video
+from .utils.constants import *
+from .utils.video_rw import post_write_video
 
 torch.set_grad_enabled(False)
 

@@ -14,7 +14,7 @@ Steps:
 import cv2
 import numpy as np
 
-from utils.constants import *
+from ..utils.constants import *
 
 
 def extract_box(detections, padding=BOX_PADDING):

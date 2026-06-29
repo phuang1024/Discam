@@ -5,7 +5,7 @@ Perspective estimation module.
 import numpy as np
 from sklearn.linear_model import RANSACRegressor, LinearRegression
 
-from utils.constants import *
+from ..utils.constants import *
 
 
 class ComputePersp:

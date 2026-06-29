@@ -7,9 +7,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import sys
-sys.path.insert(0, "../src")
+sys.path.insert(0, "..")
 
-from utils.constants import VERSION
+from discam.utils.constants import VERSION
 
 project = 'Discam'
 copyright = '2026, Patrick Huang'

@@ -8,7 +8,7 @@ import torch
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
-from utils.constants import *
+from ..utils.constants import *
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

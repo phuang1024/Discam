@@ -7,10 +7,10 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from cv.classify import Classifier
-from cv.detect import Detector
-from cv.perspective import ComputePersp
-from utils.constants import *
+from .classify import Classifier
+from .detect import Detector
+from .perspective import ComputePersp
+from ..utils.constants import *
 
 
 class Pipeline:
