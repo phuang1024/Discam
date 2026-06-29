@@ -22,7 +22,7 @@ DET_FPS = 1
 ### Perspective module params.
 PERSP_QSIZE = 20
 """Number of past frames to consider."""
-PERSP_EMA = 0.05
+PERSP_EMA = 1#0.05
 """EMA fac of linear model params over time."""
 CAM_HEIGHT = 4
 """Cam height in meters."""
@@ -59,6 +59,13 @@ BOX_MOVING_AVG = 100
 
 OUT_RES = (1280, 720)
 """Output video resolution."""
+OUT_FPS_DOWNSCALE = 1
+"""out_fps = in_fps / scale"""
+
+
+### Tensorboard logging params.
+LOG_IMAGE_RES = 0.5
+"""Log image resolution factor."""
 
 
 ### Misc.

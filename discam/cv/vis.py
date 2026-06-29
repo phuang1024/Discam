@@ -22,8 +22,7 @@ def vis_frame(frame, boxes, active_inds):
         color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color, 2)
 
-    cv2.imshow("Pipeline", frame)
-    cv2.waitKey(1)
+    return frame
 
 
 def vis_locations(locs, mask_locs, active_inds, persp: ComputePersp):
@@ -63,5 +62,4 @@ def vis_locations(locs, mask_locs, active_inds, persp: ComputePersp):
         color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
         cv2.circle(img, (int(x), int(y)), 5, color, -1)
 
-    cv2.imshow("Locations", img)
-    cv2.waitKey(1)
+    return img

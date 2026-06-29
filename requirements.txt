@@ -2,6 +2,7 @@ numpy
 opencv-python
 sahi
 scikit-learn
+tensorboard
 torch
 tqdm
 ultralytics

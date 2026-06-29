@@ -14,6 +14,7 @@ import torch
 from .post.bounding_box import compute_final_boxes
 from .post.pipeline import post_run_pipeline
 #from trim import find_trim_sections, gen_timestamps
+from .utils import logger
 from .utils.constants import *
 from .utils.video_rw import post_write_video
 
@@ -71,6 +72,7 @@ def main():
     parser.add_argument("video", type=Path)
     parser.add_argument("--no_cache", action="store_true", help="Don't read from cache.")
     parser.add_argument("--fps_scale", type=int, default=1, help="Output FPS downscale factor.")
+    parser.add_argument("--log", action="store_true", help="Enable tensorboard logging.")
     args = parser.parse_args()
 
     # Get paths.
@@ -79,6 +81,10 @@ def main():
           f"    Input video: {paths['in']}",
           f"    Output video: {paths['out']}",
           f"    Field mask: {paths['field_mask']}", sep="\n")
+
+    if args.log:
+        print("Init logger:", paths["cache"])
+        logger.init_logger(paths["cache"])
 
     # Get video info.
     cap = cv2.VideoCapture(str(paths["in"]))
