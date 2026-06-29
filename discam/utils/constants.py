@@ -22,8 +22,12 @@ DET_FPS = 1
 ### Perspective module params.
 PERSP_QSIZE = 20
 """Number of past frames to consider."""
-PERSP_EMA = 1#0.05
-"""EMA fac of linear model params over time."""
+PERSP_EMA1 = 0.5
+"""EMA fac for first `PERSP_EMA1_DUR` iterations."""
+PERSP_EMA1_DUR = 30
+"""The EMA fac is `PERSP_EMA1` for this many iters at the beginning."""
+PERSP_EMA2 = 0.01
+"""EMA fac for remainder of video."""
 CAM_HEIGHT = 4
 """Cam height in meters."""
 CAM_FOV = 74
@@ -64,7 +68,9 @@ OUT_FPS_DOWNSCALE = 1
 
 
 ### Tensorboard logging params.
-LOG_IMAGE_RES = 0.5
+LOG_IMG_INTERVAL = 5
+"""Log image every N CV pipeline iterations."""
+LOG_IMG_RES = 0.5
 """Log image resolution factor."""
 
 

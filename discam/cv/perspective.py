@@ -41,9 +41,10 @@ class ComputePersp:
             residual_threshold=10,
         )
 
-    def update(self, boxes):
+    def update(self, boxes, iter_i):
         """
         boxes: boxes format.
+        iter_i: CV pipeline iteration number.
         return: (player_locs, mask_locs)
             player_locs: ndarray float (N, 2) xy, physical locations of each box.
             mask_locs: ndarray float (M, 2) xy, field mask vertex locations.
@@ -53,7 +54,8 @@ class ComputePersp:
         if len(self.data) > PERSP_QSIZE:
             self.data.pop(0)
 
-        self.compute_vanishing()
+        ema_fac = PERSP_EMA1 if iter_i < PERSP_EMA1_DUR else PERSP_EMA2
+        self.compute_vanishing(ema_fac)
 
         # Pixel pos of boxes bottom edge.
         px_pos = np.stack((
@@ -66,13 +68,15 @@ class ComputePersp:
 
         return player_locs, mask_locs
 
-    def compute_vanishing(self):
+    def compute_vanishing(self, ema_fac):
         """
         Uses self.data
         Computes:
         - vanishing: Y pixel pos of vanishing line (horizon).
         - dist_min: Distance from camera to ground location
             corresponding to the bottom of the frame.
+
+        ema_fac: EMA factor for parameters update.
         """
         # Fit linear model of box height vs Y pixel pos.
         heights = []
@@ -100,8 +104,8 @@ class ComputePersp:
             self.vanishing = vanishing
             self.dist_min = dist_min
         else:
-            self.vanishing = PERSP_EMA * vanishing + (1 - PERSP_EMA) * self.vanishing
-            self.dist_min = PERSP_EMA * dist_min + (1 - PERSP_EMA) * self.dist_min
+            self.vanishing = ema_fac * vanishing + (1 - ema_fac) * self.vanishing
+            self.dist_min = ema_fac * dist_min + (1 - ema_fac) * self.dist_min
 
     def compute_locations(self, px_pos):
         """

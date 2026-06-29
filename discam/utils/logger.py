@@ -27,7 +27,7 @@ def add_image(tag, image, frame_i):
     image: cv2 format.
     """
     if _logger is not None:
-        image = cv2.resize(image, None, fx=LOG_IMAGE_RES, fy=LOG_IMAGE_RES)
+        image = cv2.resize(image, None, fx=LOG_IMG_RES, fy=LOG_IMG_RES)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = np.permute_dims(image, (2, 0, 1))
         _logger.add_image(tag, image, frame_i)
