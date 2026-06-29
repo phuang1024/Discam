@@ -13,11 +13,9 @@ Discam
    :hidden:
 
    dev/code_details.rst
-   dev/input_proc.rst
    dev/detection.rst
    dev/perspective.rst
    dev/classification.rst
-   dev/output_proc.rst
    dev/api.rst
 
 

@@ -8,3 +8,7 @@ This is implemented with the
 neural network, and the
 `SAHI <https://github.com/obss/SAHI>`_
 hyper inference tool.
+
+.. image:: ../img/DetectVis.jpg
+
+This image shows the bounding boxes drawn around all detected people.
