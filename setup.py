@@ -23,6 +23,7 @@ setup(
     entry_points={
         "console_scripts": [
             "discpost = discam.post_main:main",
+            "discmask = discam.utils.field_mask:main",
         ]
     },
 )

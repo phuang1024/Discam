@@ -2,6 +2,8 @@
 Person detection and tracking module.
 """
 
+import os
+
 import numpy as np
 import torch
 
@@ -12,6 +14,8 @@ from ..utils.constants import *
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+ROOT = os.path.dirname(os.path.abspath(__file__))
+
 
 class Detector:
     """
@@ -21,7 +25,7 @@ class Detector:
     def __init__(self):
         self.YOLO = AutoDetectionModel.from_pretrained(
             model_type="ultralytics",
-            model_path="yolo26n.pt",
+            model_path=os.path.join(ROOT, "yolo26n.pt"),
             confidence_threshold=0.2,
             device=DEVICE,
         )

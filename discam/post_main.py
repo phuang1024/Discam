@@ -110,7 +110,3 @@ def main():
 
     print("Write output video.")
     post_write_video(paths["in"], paths["out"], boxes, None)
-
-
-if __name__ == "__main__":
-    main()

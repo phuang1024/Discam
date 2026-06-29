@@ -11,8 +11,7 @@ import time
 import cv2
 import numpy as np
 
-if __name__ != "__main__":
-    from utils.constants import *
+from .constants import *
 
 _interactive_frame = None
 # In coordinates of [0, 1] relative to W, H
@@ -98,7 +97,3 @@ def main():
 
     print("Writing to", args.output)
     np.save(args.output, mask)
-
-
-if __name__ == "__main__":
-    main()

@@ -1,12 +1,12 @@
 Code details
 ============
 
-Discam is written in Python.
+Structure
+---------
 
-Code design
------------
 
-TODO
+Design
+------
 
 Every component of Discam is designed to be *streamable*, or able to process frames on
 the fly and return results at every iteration.
@@ -20,27 +20,9 @@ When running Discam in Post Processing, the pipeline is run sequentially through
 Pipeline
 --------
 
-The overall pipeline consists of a few steps.
+.. image:: ../img/pipeline.jpg
 
-.. list-table:: Pipeline steps
-   :widths: 20 80
-   :header-rows: 1
+This image shows a schematic of the modules that make up the overall pipeline.
 
-   * - Task
-     - Description
-   * - Input processing
-     - Read input video, check resolution and FPS, etc..
-   * - Detection
-     - Detect person bounding boxes.
-   * - Perspective
-     - Camera location and perspective estimation.
-   * - Classification
-     - Active and inactive player classification.
-   * - Output processing
-     - Write output video, apply video cropping, command PTZ camera, etc..
-
-Details can be found in their corresponding docs.
-
-Configuration
--------------
-
+The different modes (Post Processing and Live) have different inputs and outputs.
+A shared set of computer vision modules is used to determine the outputs.

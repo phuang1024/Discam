@@ -1,10 +1,10 @@
 Perspective
 ===========
 
-The perspective module estimates camera location and perspective with respect
+The perspective module estimates 3D camera location and perspective with respect
 to the ground plane.
 
-This is to determine the physical location of each detected person, which increases
+This is to determine the physical location of each person, which increases
 active player classification accuracy.
 
 .. image:: ../img/LocsVis.jpg
