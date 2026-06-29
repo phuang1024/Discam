@@ -1,6 +1,5 @@
 """
-Entry point for post-recording video processing.
-Crops and trims video.
+Entry point for Post Processing mode.
 """
 
 import argparse
@@ -12,8 +11,8 @@ from pathlib import Path
 import cv2
 import torch
 
-from .cv.pipeline import post_run_pipeline
 from .post.bounding_box import compute_final_boxes
+from .post.pipeline import post_run_pipeline
 #from trim import find_trim_sections, gen_timestamps
 from .utils.constants import *
 from .utils.video_rw import post_write_video
@@ -38,6 +37,7 @@ def get_file_paths(video_path):
         "out": with_suffix(".discout.mp4"),
         "field_mask": with_suffix(".npy"),
         "cache": with_suffix(".discache"),
+        "timestamps": with_suffix(".ts.txt"),
     }
     check_file_exists(paths["in"])
     check_file_exists(paths["field_mask"])
