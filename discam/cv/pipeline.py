@@ -27,7 +27,7 @@ class CVPipeline:
         frame_i: Index of frame.
         """
         boxes = self.detector.update(frame)
-        person_locs, mask_locs = self.perspective.update(boxes, self.iter_i)
+        person_locs, mask_locs = self.perspective.update(frame, boxes, self.iter_i)
         active_inds = self.classifier.update(person_locs, mask_locs)
         active_boxes = boxes[active_inds]
 
@@ -76,6 +76,7 @@ def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, clas
     Visualize physical locations.
     """
     RES = 800
+    GND_SIZE = 140
 
     def exterp(value, from_min, from_max, to_min, to_max):
         """Linear interp that supports extrap."""
@@ -84,8 +85,8 @@ def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, clas
     def interp_coords(coords):
         """From XY location to vis image pixel pos."""
         return np.array((
-            exterp(coords[:, 0], -50, 50, 0, RES),
-            exterp(coords[:, 1], 0, 100, RES, 0),
+            exterp(coords[:, 0], -GND_SIZE // 2, GND_SIZE // 2, 0, RES),
+            exterp(coords[:, 1], 0, GND_SIZE, RES, 0),
         ), dtype=int).swapaxes(0, 1)
 
     img = np.full((RES, RES, 3), 255, dtype=np.uint8)

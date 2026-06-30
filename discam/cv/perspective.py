@@ -2,8 +2,11 @@
 Perspective estimation module.
 """
 
+import cv2
 import numpy as np
+from PIL import Image
 from sklearn.linear_model import RANSACRegressor, LinearRegression
+from transformers import pipeline
 
 from ..utils.constants import *
 
@@ -28,11 +31,7 @@ class ComputePersp:
         self.hori_fov = np.radians(CAM_FOV)
         self.vert_fov = self.hori_fov / DET_RES[0] * DET_RES[1]
 
-        # Queue of detected boxes per frame.
-        self.data = []
-        # Initial model.
-        self.vanishing = None
-        self.dist_min = None
+        self.depth_nn = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
         self.ransac = RANSACRegressor(
             LinearRegression(),
@@ -41,21 +40,22 @@ class ComputePersp:
             residual_threshold=10,
         )
 
-    def update(self, boxes, iter_i):
+    def update(self, frame, boxes, iter_i):
         """
+        frame: cv2 format.
         boxes: boxes format.
         iter_i: CV pipeline iteration number.
         return: (person_locs, mask_locs)
             person_locs: ndarray float (N, 2) xy, physical locations of each box.
             mask_locs: ndarray float (M, 2) xy, field mask vertex locations.
         """
-        # Add data to queue.
-        self.data.append(boxes)
-        if len(self.data) > PERSP_QSIZE:
-            self.data.pop(0)
-
-        ema_fac = PERSP_EMA1 if iter_i < PERSP_EMA1_DUR else PERSP_EMA2
-        self.compute_vanishing(ema_fac)
+        run_nn = False
+        if PERSP_INTERVAL == -1 and iter_i == 0:
+            run_nn = True
+        elif PERSP_INTERVAL > 0 and iter_i % PERSP_INTERVAL == 0:
+            run_nn = True
+        if run_nn:
+            self.compute_vanishing(frame)
 
         # Pixel pos of boxes bottom edge.
         px_pos = np.stack((
@@ -65,47 +65,45 @@ class ComputePersp:
         person_locs = self.compute_locations(px_pos)
 
         mask_locs = self.compute_locations(self.mask_points)
-
         return person_locs, mask_locs
 
-    def compute_vanishing(self, ema_fac):
+    def compute_vanishing(self, frame):
         """
-        Uses self.data
         Computes:
-        - vanishing: Y pixel pos of vanishing line (horizon).
-        - dist_min: Distance from camera to ground location
+        - self.vanishing: Y pixel pos of vanishing line (horizon).
+        - self.dist_min: Distance from camera to ground location
             corresponding to the bottom of the frame.
 
-        ema_fac: EMA factor for parameters update.
+        Run depth NN, linear regression, and trig/geometry formulas.
         """
-        # Fit linear model of box height vs Y pixel pos.
-        heights = []
+        # Run "depth anything" NN.
+        frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        depth_map = self.depth_nn(frame)["predicted_depth"]
+
+        # Fit linear model of depth vs Y pixel pos.
+        depth_values = []
         y2s = []
-        for box_list in self.data:
-            for box in box_list:
-                heights.append(box[3] - box[1])
-                y2s.append(box[3])
-        heights = np.array(heights)
+        for y in range(int(depth_map.shape[0] * (1 - DEPTH_YLIMIT)),
+                       depth_map.shape[0],
+                       DEPTH_SAMPLING):
+            depth_samps = depth_map[y, ::DEPTH_SAMPLING]
+            depth_values.extend(depth_samps)
+            y2s.extend(y for _ in range(len(depth_samps)))
+        depth_values = np.array(depth_values)
         y2s = np.array(y2s)[:, None]
 
+        # Linear regression.
         # height = m * y2_pos + b
-        self.ransac.fit(y2s, heights)
+        self.ransac.fit(y2s, depth_values)
         m = self.ransac.estimator_.coef_[0]
         b = self.ransac.estimator_.intercept_
-        #vis_vanishing(y2s, heights, m, b, self.ransac.inlier_mask_)
+        #vis_vanishing(y2s, depth_values, m, b, self.ransac.inlier_mask_)
 
         # Find vanishing, by setting height = 0
-        vanishing = -b / m
+        self.vanishing = -b / m
         # Find min dist with trig.
-        theta_bottom = np.pi / 2 - (1 - vanishing / DET_RES[1]) * self.vert_fov
-        dist_min = CAM_HEIGHT / np.cos(theta_bottom)
-
-        if self.vanishing is None:
-            self.vanishing = vanishing
-            self.dist_min = dist_min
-        else:
-            self.vanishing = ema_fac * vanishing + (1 - ema_fac) * self.vanishing
-            self.dist_min = ema_fac * dist_min + (1 - ema_fac) * self.dist_min
+        theta_bottom = np.pi / 2 - (1 - self.vanishing / DET_RES[1]) * self.vert_fov
+        self.dist_min = CAM_HEIGHT / np.cos(theta_bottom)
 
     def compute_locations(self, px_pos):
         """

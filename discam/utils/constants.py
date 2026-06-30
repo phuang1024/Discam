@@ -20,14 +20,16 @@ DET_FPS = 1
 
 
 ### Perspective module params.
-PERSP_QSIZE = 20
-"""Number of past frames to consider."""
-PERSP_EMA1 = 0.5
-"""EMA fac for first `PERSP_EMA1_DUR` iterations."""
-PERSP_EMA1_DUR = 30
-"""The EMA fac is `PERSP_EMA1` for this many iters at the beginning."""
-PERSP_EMA2 = 0.01
-"""EMA fac for remainder of video."""
+PERSP_INTERVAL = -1
+"""Recompute every N iters. Set to -1 to compute once at beginning."""
+DEPTH_SAMPLING = 12
+"""Sample depth map at pixel intervals of this size.
+Should not be small, as number of samples increases quadratically."""
+DEPTH_YLIMIT = 0.4
+"""Sample a fraction of the image's Y extent, starting from the bottom.
+TODO this is a hack to extract the linear region before the vanishing point."""
+
+# Trig and geometry parameters.
 CAM_HEIGHT = 4
 """Cam height in meters."""
 CAM_FOV = 74
