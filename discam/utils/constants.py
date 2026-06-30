@@ -48,6 +48,9 @@ MAYBE_POS_THRES = 1
 ACTIVE_STD_THRES = 3
 """Std Z score threshold for stddev filtering."""
 
+SEP_EPS = 5
+"""Add this value to cov eigenvalues."""
+
 
 ### Output params for Post Processing.
 BOX_PADDING = 50
@@ -90,7 +93,7 @@ TRIM_MARGIN = 5
 
 
 ### Tensorboard logging params.
-LOG_IMG_INTERVAL = 5
+LOG_IMG_INTERVAL = 20
 """Log image every N CV pipeline iterations."""
 LOG_IMG_RES = 0.5
 """Log image resolution factor."""

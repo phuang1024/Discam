@@ -53,8 +53,9 @@ class Classifier:
 
         mean1 = np.mean(points1, axis=0)
         mean2 = np.mean(points2, axis=0)
-        cov1 = np.cov(points1.swapaxes(0, 1))
-        cov2 = np.cov(points2.swapaxes(0, 1))
+        eye = np.eye(2)
+        cov1 = np.cov(points1.swapaxes(0, 1)) + eye * SEP_EPS
+        cov2 = np.cov(points2.swapaxes(0, 1)) + eye * SEP_EPS
 
         resid = mean2 - mean1
         zeros = np.zeros_like(resid)
