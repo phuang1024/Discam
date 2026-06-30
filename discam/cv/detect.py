@@ -19,14 +19,14 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 class Detector:
     """
-    Detection with YOLO and SAHI. Tracking with ByteTrack.
+    Detection with YOLO and SAHI.
     """
 
     def __init__(self):
         self.YOLO = AutoDetectionModel.from_pretrained(
             model_type="ultralytics",
             model_path=os.path.join(ROOT, "yolo26n.pt"),
-            confidence_threshold=0.2,
+            confidence_threshold=DET_THRES,
             device=DEVICE,
         )
 
@@ -51,7 +51,7 @@ class Detector:
         # Convert to (x, y, x, y)
         boxes = []
         for r in results.object_prediction_list:
-            if r.category.id == 0 and r.score.value > 0.2:
+            if r.category.id == 0 and r.score.value > DET_THRES:
                 boxes.append(r.bbox.to_xyxy())
         boxes = np.array(boxes, dtype=int)
         return boxes

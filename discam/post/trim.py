@@ -70,9 +70,9 @@ def find_trim_sections(pipe_out):
         else:
             i += 1
 
+    sections = np.array(sections, dtype=np.float32) / DET_FPS
     if len(sections) == 0:
         return sections
-    sections = np.array(sections, dtype=np.float32) / DET_FPS
     sections[:, 0] += TRIM_MARGIN
     sections[:, 1] -= TRIM_MARGIN
     return sections

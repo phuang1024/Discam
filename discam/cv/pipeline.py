@@ -97,7 +97,7 @@ def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, clas
     view_locs = interp_coords(view_locs)
     cv2.fillPoly(img, [view_locs], (200, 200, 200))
 
-    # Classification Gaussians.
+    # Classification centers.
     locs = interp_coords(classifier.knn.cluster_centers_)
     for loc in locs:
         cv2.circle(img, loc, 6, (255, 255, 0), 2)

@@ -17,6 +17,8 @@ DET_RES = (1920, 1080)
 Since SAHI is used, this is not the input res of YOLO."""
 DET_FPS = 1
 """FPS to run detector module at."""
+DET_THRES = 0.1
+"""YOLO detection threshold."""
 
 
 ### Perspective module params.
@@ -41,9 +43,9 @@ PERSP_MIN_SIZE = 0.01
 ### Classifier module params.
 POS_THRES = 4
 """Field mask thres for initial classification."""
-MAYBE_POS_THRES = 0
+MAYBE_POS_THRES = 1
 """Thres for consideration during filtering."""
-ACTIVE_STD_THRES = 2.5
+ACTIVE_STD_THRES = 3
 """Std Z score threshold for stddev filtering."""
 
 
