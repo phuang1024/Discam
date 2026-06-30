@@ -50,8 +50,6 @@ BOX_PADDING = 50
 """Padding btwn people and crop box, in RES coords."""
 BOX_MIN_SIZE = 50
 """Min h and w in RES coords."""
-#BOX_MEDIAN_FILTER = 3
-"""Median filter size."""
 BOX_EXPAND_EMA = 0.5
 """EMA factor when box is growing."""
 BOX_SHRINK_EMA = 0.01
@@ -67,6 +65,20 @@ OUT_FPS_DOWNSCALE = 1
 """out_fps = in_fps / scale"""
 
 
+### Post Processing video trim params.
+# Multiplied by FPS.
+#PLATEAU_LEN = 5
+#COUNT_THRES = 17
+#SPEED_THRES = 1
+# Min, max time after stop to resume (sec).
+MIN_STOP_TIME = 60
+MAX_STOP_TIME = 120
+# Min time after resume to stop.
+MIN_PLAY_TIME = 10
+# Margin (sec). Positive means include more footage.
+TRIM_MARGIN = 5
+
+
 ### Tensorboard logging params.
 LOG_IMG_INTERVAL = 5
 """Log image every N CV pipeline iterations."""
@@ -76,22 +88,3 @@ LOG_IMG_RES = 0.5
 
 ### Misc.
 VERSION = "0.1.0"
-
-
-
-
-
-"""
-# Trim params.
-# Multiplied by FPS.
-PLATEAU_LEN = 5
-COUNT_THRES = 17
-SPEED_THRES = 1
-# Min, max time after stop to resume (sec).
-MIN_STOP_TIME = 60
-MAX_STOP_TIME = 120
-# Min time after resume to stop.
-MIN_PLAY_TIME = 10
-# Margin (sec). Positive means include more footage.
-TRIM_MARGIN = 5
-"""

@@ -1,30 +1,20 @@
 """
-Detect sections in between points to trim.
-The start of such a section is detected by a sudden increase in player count.
-End is sudden increase in speed.
+Detect sections in between points to trim out.
+The start is a sudden increase in player count.
+The end is sudden decrease in separation metric (see Classifier).
 """
 
-import matplotlib.pyplot as plt
+import numpy as np
+from scipy.ndimage import median_filter
 
-from utils import *
-
-
-def smooth_data(counts, speeds):
-    """
-    Hardcoded.
-    EMA on counts.
-    HPF on speeds.
-    """
-    counts = EMA.run_array(counts, 0.2)
-    speeds_hpf = EMA.run_array(speeds, 0.2) - EMA.run_array(speeds, 0.01)
-    return counts, speeds_hpf
+from ..utils.constants import *
 
 
 def find_plateaus(data, thres, min_len):
     """
     Find sections above thres for at least min_len contiguous.
-    data: 1D array.
-    return: bool array of same length.
+    data: ndarray (N,) float.
+    return: ndarray (N,) bool.
         True if a plateau *starts* on that index.
     """
     ret = np.zeros_like(data, dtype=bool)
@@ -40,45 +30,52 @@ def find_plateaus(data, thres, min_len):
     return ret
 
 
-def find_trim_sections(detect_out):
+def find_trim_sections(pipe_out):
     """
-    Detect in between points.
-    Returns sections to trim from output video.
+    Find sections to trim from pipeline output.
+    pipe_out: List of CVPipeline outputs from each frame.
     return: ndarray (N, 2)
-        (start, end) timestamps in seconds.
+        (start, end) timestamps to trim, in seconds.
     """
     # Extract data.
-    counts = [len(x["player_boxes"]) for x in detect_out]
-    speeds = [x["speeds"].mean() for x in detect_out]
-    # Smoothing.
-    counts, speeds = smooth_data(counts, speeds)
+    counts = np.array([len(x["active_boxes"]) for x in pipe_out], dtype=float)
+    seps = np.array([x["sep_metric"] for x in pipe_out], dtype=float)
+    # To detect falling edge.
+    seps *= -1
 
-    counts_pos = find_plateaus(counts, COUNT_THRES, FPS * PLATEAU_LEN)
-    speeds_pos = find_plateaus(speeds, SPEED_THRES, FPS * PLATEAU_LEN)
+    # Filtering.
+    counts = median_filter(counts, size=5)
+    seps = median_filter(seps, size=5)
 
-    ret = []
+    # Find plateaus.
+    counts_pos = find_plateaus(counts, 20, DET_FPS * 10)
+    speeds_pos = find_plateaus(seps, -3, DET_FPS * 10)
+
+    sections = []
     i = 0
-    while i < len(detect_out):
+    while i < len(pipe_out):
         if counts_pos[i]:
             # Found end of point.
             start = i
-            i += int(MIN_STOP_TIME * FPS)
-            while i < len(detect_out):
+            i += int(MIN_STOP_TIME * DET_FPS)
+            while i < len(pipe_out):
                 if speeds_pos[i]:
                     # Found start of point.
                     break
-                if i - start >= MAX_STOP_TIME * FPS:
+                if i - start >= MAX_STOP_TIME * DET_FPS:
                     break
                 i += 1
-            ret.append((start, i))
-            i += int(MIN_PLAY_TIME * FPS)
+            sections.append((start, i))
+            i += int(MIN_PLAY_TIME * DET_FPS)
         else:
             i += 1
 
-    ret = np.array(ret, dtype=np.float32) / FPS
-    ret[:, 0] += TRIM_MARGIN
-    ret[:, 1] -= TRIM_MARGIN
-    return ret
+    if len(sections) == 0:
+        return sections
+    sections = np.array(sections, dtype=np.float32) / DET_FPS
+    sections[:, 0] += TRIM_MARGIN
+    sections[:, 1] -= TRIM_MARGIN
+    return sections
 
 
 def gen_timestamps(sections):
@@ -102,10 +99,3 @@ def gen_timestamps(sections):
             string = f"{m}:{s:02d}"
         ret += string + "\n"
     return ret
-
-
-def plot_data(counts, speeds):
-    time = [i / FPS for i in range(len(counts))]
-    plt.plot(time, counts)
-    plt.plot(time, speeds)
-    plt.show()

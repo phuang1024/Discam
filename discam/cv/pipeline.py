@@ -46,15 +46,12 @@ class CVPipeline:
             logger.add_scalar("persp.min_dist", self.perspective.dist_min, frame_i)
 
             logger.add_scalar("class.num_active", np.sum(active_inds), frame_i)
-            logger.add_scalar("class.global_std", self.classifier.global_std, frame_i)
-            logger.add_scalar("class.cls1_std", self.classifier.cls1_std, frame_i)
-            logger.add_scalar("class.cls2_std", self.classifier.cls2_std, frame_i)
             logger.add_scalar("class.sep_metric", self.classifier.sep_metric, frame_i)
-            logger.add_scalar("class.z_score", self.classifier.z_score, frame_i)
 
         self.iter_i += 1
         return {
             "active_boxes": active_boxes,
+            "sep_metric": self.classifier.sep_metric,
         }
 
 

@@ -13,7 +13,7 @@ import torch
 
 from .post.bounding_box import compute_final_boxes
 from .post.run_pipe import post_run_pipeline
-#from trim import find_trim_sections, gen_timestamps
+from .post.trim import find_trim_sections, gen_timestamps
 from .utils import logger
 from .utils.constants import *
 from .utils.video_rw import post_write_video
@@ -98,22 +98,22 @@ def main():
     # Run pipeline.
     pipe_outs, frame_is = run_pipe_wrapper(args, paths)
 
+    # Compute boxes.
     print("Compute bounding boxes.")
     boxes = compute_final_boxes(pipe_outs, frame_is, orig_len)
 
-    """
-    trim_sections = find_trim_sections(detect_out)
+    # Find trim sections.
+    trim_sections = find_trim_sections(pipe_outs)
     print(f"Found trim sections: ", end="")
     for x in trim_sections:
         print(x, end=" ")
     print()
 
     ts_string = gen_timestamps(trim_sections)
-    ts_file = args.video.parent / (args.video.stem + ".ts.txt")
-    print(f"    Writing timestamps to {ts_file}")
-    with open(ts_file, "w") as f:
+    print(f"    Writing timestamps to {paths["timestamps"]}")
+    with open(paths["timestamps"], "w") as f:
         f.write(ts_string)
-    """
 
+    # Write output.
     print("Write output video.")
-    post_write_video(paths["in"], paths["out"], args.fps_scale, boxes, None)
+    post_write_video(paths["in"], paths["out"], args.fps_scale, boxes, trim_sections)

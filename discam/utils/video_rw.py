@@ -53,7 +53,7 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
     Use given bounding boxes to crop.
     Use given trim sections to trim.
     """
-    #trim_sections = trim_sections.tolist()
+    trim_sections = trim_sections.tolist()
 
     in_video = cv2.VideoCapture(in_path)
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
@@ -75,14 +75,12 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
             continue
 
         # Check trim.
-        """
         if len(trim_sections) > 0:
             curr_time = (frame_i - 1) / orig_fps
             if curr_time > trim_sections[0][1]:
                 trim_sections.pop(0)
             if trim_sections[0][0] <= curr_time <= trim_sections[0][1]:
                 continue
-        """
 
         # Get bbox.
         x1, y1, x2, y2 = boxes[frame_i - 1]

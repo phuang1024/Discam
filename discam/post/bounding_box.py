@@ -4,7 +4,6 @@ Also post processing smoothing.
 
 Steps:
 - Extract box per frame based on person detections.
-- Temporal median filter.
 - Linear interp between boxes for remaining frames.
 - EMA with different facs for expand vs shrink.
 - Aspect correction.
@@ -37,21 +36,6 @@ def extract_box(detections, padding=BOX_PADDING):
         y1 = min(ys) - padding
         y2 = max(ys) + padding
         return x1, y1, x2, y2
-
-
-def median_filter(boxes, k):
-    """
-    boxes: (N, 4)
-    return: Same format.
-    """
-    ret = []
-    for i in range(len(boxes)):
-        start = max(0, i - k // 2)
-        end = min(len(boxes), i + k // 2 + 1)
-        median_box = np.median(boxes[start:end], axis=0)
-        ret.append(median_box)
-
-    return ret
 
 
 def lerp_boxes(in_boxes, in_frames, frame_count):
@@ -225,8 +209,6 @@ def compute_final_boxes(pipe_outs, frame_is, frame_count):
             box = boxes[-1] if boxes else (0, 0, OUT_RES[0], OUT_RES[1])
         boxes.append(box)
     boxes = np.array(boxes, dtype=int)
-
-    #boxes = median_filter(boxes, BOX_MEDIAN_FILTER)
 
     # In and out video FPS is same, so we can use frame_is as is.
     boxes = lerp_boxes(boxes, frame_is, frame_count)
