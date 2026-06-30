@@ -4,6 +4,7 @@ Active player classification module.
 
 import cv2
 import numpy as np
+import scipy.spatial.distance
 from sklearn.cluster import KMeans
 
 from ..utils.constants import *
@@ -18,6 +19,7 @@ class Classifier:
     def __init__(self):
         # KNN to detect the pull (Frisbee), when two teams are far apart.
         self.knn = KMeans(2)
+        self.sep_metric = 0
 
     def update(self, person_locs, mask_locs):
         """
@@ -41,16 +43,27 @@ class Classifier:
         """
         Update KNN and separation metric.
         """
-        def variance(data):
-            return np.sqrt(np.sum(np.var(data, axis=0)))
-
         self.knn.fit(active_locs)
 
-        global_std = variance(active_locs)
-        cls1_std = variance(active_locs[self.knn.labels_ == 0])
-        cls2_std = variance(active_locs[self.knn.labels_ == 1])
+        # Shape (N, 2)
+        points1 = active_locs[self.knn.labels_ == 0]
+        points2 = active_locs[self.knn.labels_ == 1]
+        if len(points1) <= 2 or len(points2) <= 2:
+            return
 
-        self.sep_metric = global_std / (cls1_std + cls2_std)
+        mean1 = np.mean(points1, axis=0)
+        mean2 = np.mean(points2, axis=0)
+        cov1 = np.cov(points1.swapaxes(0, 1))
+        cov2 = np.cov(points2.swapaxes(0, 1))
+
+        resid = mean2 - mean1
+        zeros = np.zeros_like(resid)
+        try:
+            zscore1 = scipy.spatial.distance.mahalanobis(resid, zeros, np.linalg.inv(cov1))
+            zscore2 = scipy.spatial.distance.mahalanobis(-resid, zeros, np.linalg.inv(cov2))
+        except np.linalg.LinAlgError:
+            return
+        self.sep_metric = (zscore1 + zscore2) / 2
 
     def filter_field_mask(self, person_locs, mask_locs):
         """
