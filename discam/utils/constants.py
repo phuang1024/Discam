@@ -79,8 +79,8 @@ TRIM_PLATEAU = 10
 """Signals need to exceed thres for this many (CV) iters."""
 TRIM_COUNT_HIGH = 18
 """Active person count high thres to detect point end."""
-TRIM_SEP_LOW = 1.5
-TRIM_SEP_HIGH = 2.5
+TRIM_SEP_HIGH = 15
+TRIM_SEP_LOW = 8
 """Sep metric must go above high and below low to detect point start."""
 
 TRIM_MIN_STOP = 60
@@ -88,7 +88,8 @@ TRIM_MAX_STOP = 120
 """Min, max time after stop to resume (sec)."""
 TRIM_MIN_PLAY = 10
 """Min time after resume to stop."""
-TRIM_MARGIN = 5
+TRIM_MARGIN_END = 0
+TRIM_MARGIN_START = 15
 """Margin (sec). Positive means include more footage."""
 
 

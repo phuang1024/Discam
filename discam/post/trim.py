@@ -18,7 +18,7 @@ def find_plateaus(data, thres, above):
     return: ndarray (N,) bool.
         True if a plateau *starts* on that index.
     """
-    positive = data >= thres if above else data <= thres
+    positive = (data >= thres) if above else (data <= thres)
     ret = np.zeros_like(data, dtype=bool)
     # Traverse backwards.
     count = 0
@@ -46,17 +46,28 @@ def find_trim_sections(pipe_out):
     # Filtering.
     counts = median_filter(counts, size=TRIM_MED_FILTER)
     seps = median_filter(seps, size=TRIM_MED_FILTER)
+    """
     import matplotlib.pyplot as plt
     plt.plot(counts, label="Counts")
     plt.plot(seps, label="Seps")
     plt.legend()
     plt.tight_layout()
     plt.show()
+    """
 
     # Find plateaus.
     counts_high = find_plateaus(counts, TRIM_COUNT_HIGH, True)
-    speeds_high = find_plateaus(seps, TRIM_SEP_HIGH, True)
-    speeds_low = find_plateaus(seps, TRIM_SEP_LOW, False)
+    seps_high = find_plateaus(seps, TRIM_SEP_HIGH, True)
+    seps_low = find_plateaus(seps, TRIM_SEP_LOW, False)
+    """
+    plt.clf()
+    plt.plot(counts_high, label="counts_high")
+    plt.plot(seps_high, label="seps_high")
+    plt.plot(seps_low, label="seps_low")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    """
 
     sections = []
     i = 0
@@ -68,10 +79,10 @@ def find_trim_sections(pipe_out):
             # Find next point start.
             i += int(TRIM_MIN_STOP * DET_FPS)
             found_high = False
-            for i in range(i, min(i + TRIM_MAX_STOP * DET_FPS, len(pipe_out))):
-                if speeds_high[i]:
+            for i in range(i, min(start + TRIM_MAX_STOP * DET_FPS, len(pipe_out))):
+                if seps_high[i]:
                     found_high = True
-                if speeds_low[i] and found_high:
+                if seps_low[i] and found_high:
                     break
 
             sections.append((start, i))
@@ -83,10 +94,8 @@ def find_trim_sections(pipe_out):
     sections = np.array(sections, dtype=np.float32) / DET_FPS
     if len(sections) == 0:
         return sections
-    """
-    sections[:, 0] += TRIM_MARGIN
-    sections[:, 1] -= TRIM_MARGIN
-    """
+    sections[:, 0] += TRIM_MARGIN_END
+    sections[:, 1] -= TRIM_MARGIN_START
     return sections
 
 
