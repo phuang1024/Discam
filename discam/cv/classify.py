@@ -5,6 +5,7 @@ Active player classification module.
 import cv2
 import numpy as np
 from sklearn.mixture import GaussianMixture
+from sklearn.cluster import KMeans
 
 from ..utils.constants import *
 
@@ -16,8 +17,7 @@ class Classifier:
     """
 
     def __init__(self):
-        self.gmm1 = GaussianMixture(1)
-        self.gmm2 = GaussianMixture(2)
+        self.knn = KMeans(2)
 
     def update(self, person_locs, mask_locs):
         """
@@ -26,17 +26,23 @@ class Classifier:
         return: ndarray bool, same length as `person_locs`.
             Whether each box is active.
         """
+        def variance(data):
+            return np.sqrt(np.sum(np.var(data, axis=0)))
+
         # Run initial field mask filter.
         person_locs = person_locs.astype(np.float32)
         mask_locs = mask_locs.astype(np.float32)
         active_inds, do_filter = self.filter_field_mask(person_locs, mask_locs)
 
-        # Train GMM.
+        # Train KNN.
         active_locs = person_locs[active_inds]
-        self.gmm1.fit(active_locs)
-        self.gmm2.fit(active_locs)
-        self.gmm1_bic = self.gmm1.bic(active_locs)
-        self.gmm2_bic = self.gmm2.bic(active_locs)
+        self.knn.fit(active_locs)
+        self.global_std = variance(active_locs)
+        self.cls1_std = variance(active_locs[self.knn.labels_ == 0])
+        self.cls2_std = variance(active_locs[self.knn.labels_ == 1])
+        avg_std = (self.cls1_std + self.cls2_std) / 2
+        self.sep_metric = self.global_std / avg_std
+        self.z_score = np.linalg.norm(self.knn.cluster_centers_[0] - self.knn.cluster_centers_[1]) / avg_std
 
         active_inds = stddev_filter(person_locs, active_inds, do_filter)
         return active_inds

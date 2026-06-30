@@ -46,8 +46,11 @@ class CVPipeline:
             logger.add_scalar("persp.min_dist", self.perspective.dist_min, frame_i)
 
             logger.add_scalar("class.num_active", np.sum(active_inds), frame_i)
-            logger.add_scalar("class.gmm1_bic", self.classifier.gmm1_bic, frame_i)
-            logger.add_scalar("class.gmm2_bic", self.classifier.gmm2_bic, frame_i)
+            logger.add_scalar("class.global_std", self.classifier.global_std, frame_i)
+            logger.add_scalar("class.cls1_std", self.classifier.cls1_std, frame_i)
+            logger.add_scalar("class.cls2_std", self.classifier.cls2_std, frame_i)
+            logger.add_scalar("class.sep_metric", self.classifier.sep_metric, frame_i)
+            logger.add_scalar("class.z_score", self.classifier.z_score, frame_i)
 
         self.iter_i += 1
         return {
@@ -71,7 +74,7 @@ def vis_frame(frame, boxes, active_inds):
     return frame
 
 
-def vis_locations(locs, mask_locs, active_inds, persp: ComputePersp, classifier: Classifier):
+def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, classifier: Classifier):
     """
     Visualize physical locations.
     """
@@ -86,40 +89,29 @@ def vis_locations(locs, mask_locs, active_inds, persp: ComputePersp, classifier:
         return np.array((
             exterp(coords[:, 0], -50, 50, 0, RES),
             exterp(coords[:, 1], 0, 100, RES, 0),
-        ), dtype=int)
+        ), dtype=int).swapaxes(0, 1)
 
     img = np.full((RES, RES, 3), 255, dtype=np.uint8)
 
     # Overall camera FOV cone.
     view_points = np.array(((0, 0), (DET_RES[0], 0), (DET_RES[0], DET_RES[1]), (0, DET_RES[1])), dtype=float)
     view_locs = persp.compute_locations(view_points)
-    view_locs = interp_coords(view_locs).swapaxes(0, 1)
+    view_locs = interp_coords(view_locs)
     cv2.fillPoly(img, [view_locs], (200, 200, 200))
 
     # Classification Gaussians.
-    """
-    for (mean, cov) in zip(classifier.gmm.means_, classifier.gmm.covariances_):
-        # For simplicity, just draw a quad.
-        eigvals, eigvects = np.linalg.eig(cov)
-        axes = eigvals * eigvects
-        points = np.array((
-            mean + axes[0],
-            mean + axes[1],
-            mean - axes[0],
-            mean - axes[1],
-        ), dtype=float)
-        points = interp_coords(points).swapaxes(0, 1)
-        cv2.fillPoly(img, [points], (200, 160, 160))
-    """
+    locs = interp_coords(classifier.knn.cluster_centers_)
+    for loc in locs:
+        cv2.circle(img, loc, 6, (255, 255, 0), 2)
 
     # Field mask.
-    mask_locs = interp_coords(mask_locs).swapaxes(0, 1)
+    mask_locs = interp_coords(mask_locs)
     cv2.polylines(img, [mask_locs], True, (255, 0, 0), 4)
 
     # Players.
-    xs, ys = interp_coords(locs)
-    for i, (x, y) in enumerate(zip(xs, ys)):
+    person_locs = interp_coords(person_locs)
+    for i, loc in enumerate(person_locs):
         color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
-        cv2.circle(img, (x, y), 5, color, -1)
+        cv2.circle(img, loc, 5, color, -1)
 
     return img
