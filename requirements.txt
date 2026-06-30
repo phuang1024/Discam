@@ -5,4 +5,5 @@ scikit-learn
 tensorboard
 torch
 tqdm
+transformers
 ultralytics

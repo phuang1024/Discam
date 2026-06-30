@@ -4,7 +4,6 @@ Active player classification module.
 
 import cv2
 import numpy as np
-from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans
 
 from ..utils.constants import *

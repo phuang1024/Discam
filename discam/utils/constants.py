@@ -70,17 +70,23 @@ OUT_FPS_DOWNSCALE = 1
 
 
 ### Post Processing video trim params.
-# Multiplied by FPS.
-#PLATEAU_LEN = 5
-#COUNT_THRES = 17
-#SPEED_THRES = 1
-# Min, max time after stop to resume (sec).
-MIN_STOP_TIME = 60
-MAX_STOP_TIME = 120
-# Min time after resume to stop.
-MIN_PLAY_TIME = 10
-# Margin (sec). Positive means include more footage.
+TRIM_MED_FILTER = 7
+"""Trim median filter size."""
+TRIM_PLATEAU = 10
+"""Signals need to exceed thres for this many (CV) iters."""
+TRIM_COUNT_HIGH = 18
+"""Active person count high thres to detect point end."""
+TRIM_SEP_LOW = 1.5
+TRIM_SEP_HIGH = 2.5
+"""Sep metric must go above high and below low to detect point start."""
+
+TRIM_MIN_STOP = 60
+TRIM_MAX_STOP = 120
+"""Min, max time after stop to resume (sec)."""
+TRIM_MIN_PLAY = 10
+"""Min time after resume to stop."""
 TRIM_MARGIN = 5
+"""Margin (sec). Positive means include more footage."""
 
 
 ### Tensorboard logging params.
