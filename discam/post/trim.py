@@ -46,28 +46,11 @@ def find_trim_sections(pipe_out):
     # Filtering.
     counts = median_filter(counts, size=TRIM_MED_FILTER)
     seps = median_filter(seps, size=TRIM_MED_FILTER)
-    """
-    import matplotlib.pyplot as plt
-    plt.plot(counts, label="Counts")
-    plt.plot(seps, label="Seps")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-    """
 
     # Find plateaus.
     counts_high = find_plateaus(counts, TRIM_COUNT_HIGH, True)
     seps_high = find_plateaus(seps, TRIM_SEP_HIGH, True)
     seps_low = find_plateaus(seps, TRIM_SEP_LOW, False)
-    """
-    plt.clf()
-    plt.plot(counts_high, label="counts_high")
-    plt.plot(seps_high, label="seps_high")
-    plt.plot(seps_low, label="seps_low")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-    """
 
     sections = []
     i = 0

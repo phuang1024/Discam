@@ -43,9 +43,11 @@ class Classifier:
         """
         Update KNN and separation metric.
         """
+        if len(active_locs) < 2:
+            return
         self.knn.fit(active_locs)
 
-        # Shape (N, 2)
+        # Shape (N, 2).
         points1 = active_locs[self.knn.labels_ == 0]
         points2 = active_locs[self.knn.labels_ == 1]
         if len(points1) <= 2 or len(points2) <= 2:

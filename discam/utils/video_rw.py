@@ -79,7 +79,7 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
             curr_time = (frame_i - 1) / orig_fps
             if curr_time > trim_sections[0][1]:
                 trim_sections.pop(0)
-            if trim_sections[0][0] <= curr_time <= trim_sections[0][1]:
+            elif trim_sections[0][0] <= curr_time <= trim_sections[0][1]:
                 continue
 
         # Get bbox.
