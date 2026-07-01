@@ -40,6 +40,8 @@ autodoc_mock_imports = (
     "ultralytics",
 )
 
+autodoc_member_order = "bysource"
+
 
 
 # -- Options for HTML output -------------------------------------------------

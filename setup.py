@@ -22,8 +22,9 @@ setup(
     packages=["discam", "discam.cv", "discam.post", "discam.utils"],
     entry_points={
         "console_scripts": [
+            "discmask = discam.field_mask_main:main",
+            "disclive = discam.live_main:main",
             "discpost = discam.post_main:main",
-            "discmask = discam.utils.field_mask:main",
         ]
     },
 )

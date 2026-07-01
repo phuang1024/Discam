@@ -1,8 +1,8 @@
 """Manually drawn polygonal static field mask.
 
-Mask format: ``ndarray float (N, 2)``, xy pixel positions of N points.
+Mask format: ``ndarray float (N, 2)``, xy in ``[0, 1]`` relative to width and height.
 
-Run this file to interactively create a mask.
+Entry point to interactively create a mask.
 """
 
 import argparse
@@ -11,8 +11,6 @@ import time
 import cv2
 import numpy as np
 
-from .constants import *
-
 # Globals used in interactive mode.
 _interactive_frame = None
 # In coordinates of [0, 1] relative to W, H
@@ -20,42 +18,23 @@ _interactive_mask = []
 _last_click = 0
 
 
-def create_mask(points, res):
-    """Draw binary mask image.
-
-    Args:
-        points: ``ndarray float (N, 2)``, values in ``[0, 1]`` relative to W, H of ``res``.
-        res: ``(W, H)`` resolution.
-
-    Returns:
-        ``ndarray uint8 (H, W)``, 0 outside, 255 inside mask.
+def click_handler(event, x, y, flags, param):
+    """Mouse click handler.
+    Appends clicked point normalized to [0, 1].
     """
-    points[:, 0] *= res[0]
-    points[:, 1] *= res[1]
-    points = points.astype(int)
+    global _interactive_frame, _interactive_mask, _last_click
+    if event == cv2.EVENT_LBUTTONDOWN and time.time() - _last_click > 0.5:
+        cv2.circle(_interactive_frame, (x, y), 3, (0, 0, 255), -1)
+        x = x / _interactive_frame.shape[1]
+        y = y / _interactive_frame.shape[0]
+        _interactive_mask.append((x, y))
 
-    mask = np.zeros(res[::-1], dtype=np.uint8)
-    cv2.fillPoly(mask, [points], 255)
-    return mask
+        _last_click = time.time()
+    print(_interactive_mask)
 
 
 def main():
-    """Interactively create mask.
-    """
     global _interactive_frame, _interactive_mask, _last_click
-    def click_handler(event, x, y, flags, param):
-        """Mouse click handler.
-        Appends clicked point normalized to [0, 1].
-        """
-        global _interactive_frame, _interactive_mask, _last_click
-        if event == cv2.EVENT_LBUTTONDOWN and time.time() - _last_click > 0.5:
-            cv2.circle(_interactive_frame, (x, y), 3, (0, 0, 255), -1)
-            x = x / _interactive_frame.shape[1]
-            y = y / _interactive_frame.shape[0]
-            _interactive_mask.append((x, y))
-
-            _last_click = time.time()
-        print(_interactive_mask)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("video")

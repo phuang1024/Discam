@@ -74,10 +74,14 @@ def run_pipe_wrapper(args, paths):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("video", type=Path)
-    parser.add_argument("--fps_scale", type=int, default=1, help="Output FPS downscale factor.")
-    parser.add_argument("--trim", action="store_true", help="Enable trimming.")
-    parser.add_argument("--no_cache", action="store_true", help="Don't read from cache.")
-    parser.add_argument("--log", action="store_true", help="Enable tensorboard logging.")
+    parser.add_argument("--fps_scale", type=int, default=1,
+        help="Output FPS downscale factor.")
+    parser.add_argument("--trim", action="store_true",
+        help="Enable trimming.")
+    parser.add_argument("--no_cache", action="store_true",
+        help="Don't read from cache.")
+    parser.add_argument("--log", action="store_true",
+        help="Enable tensorboard logging.")
     args = parser.parse_args()
 
     # Get paths.

@@ -72,12 +72,6 @@ src/utils/constants.py
 
 .. automodule:: discam.utils.constants
    :members:
-   :member-order: bysource
-
-src/cv/field_mask.py
---------------------
-
-.. autofunction:: discam.utils.field_mask.create_mask
 
 src/cv/logger.py
 ----------------
@@ -97,13 +91,20 @@ src/cv/video_rw.py
 
 .. autofunction:: discam.utils.video_rw.vis_output_video
 
+src/field_mask_main.py
+----------------------
+
+.. automodule:: discam.field_mask_main
+   :members:
+
+src/live_main.py
+----------------
+
+.. automodule:: discam.live_main
+   :members:
+
 src/post_main.py
 ----------------
 
-.. autofunction:: discam.post_main.check_file_exists
-
-.. autofunction:: discam.post_main.get_file_paths
-
-.. autofunction:: discam.post_main.run_pipe_wrapper
-
-.. autofunction:: discam.post_main.main
+.. automodule:: discam.post_main
+   :members:
