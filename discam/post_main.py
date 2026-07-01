@@ -9,6 +9,7 @@ from pathlib import Path
 
 import cv2
 import torch
+from termcolor import cprint
 
 from .post.bounding_box import compute_final_boxes
 from .post.run_pipe import post_run_pipeline
@@ -22,7 +23,7 @@ torch.set_grad_enabled(False)
 
 def check_file_exists(path):
     if not os.path.exists(path):
-        print(f"File not found: {path}")
+        cprint(f"File not found: {path}", "red", attrs=["bold"])
         sys.exit(1)
 
 
@@ -51,19 +52,19 @@ def run_pipe_wrapper(args, paths):
     - Load from cache.
     - Run pipeline and save to cache.
     """
-    print("Run CV pipeline:")
+    cprint("Run CV pipeline:", color="light_cyan", attrs=["bold"])
     cache_file = paths["cache"] / "pipeline_post.pkl"
 
     if args.no_cache or not cache_file.exists():
         # Run pipeline.
         data = post_run_pipeline(paths["in"], paths["field_mask"])
-        print(f"    Saving to cache {cache_file}.")
+        cprint(f"    Saving to cache {cache_file}.", attrs=["bold"])
         with open(cache_file, "wb") as f:
             pickle.dump(data, f)
 
     else:
         # Load.
-        print(f"    Loading from cache {cache_file}.")
+        cprint(f"    Loading from cache {cache_file}.", attrs=["bold"])
         with open(cache_file, "rb") as f:
             data = pickle.load(f)
 
@@ -73,20 +74,21 @@ def run_pipe_wrapper(args, paths):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("video", type=Path)
-    parser.add_argument("--no_cache", action="store_true", help="Don't read from cache.")
     parser.add_argument("--fps_scale", type=int, default=1, help="Output FPS downscale factor.")
+    parser.add_argument("--trim", action="store_true", help="Enable trimming.")
+    parser.add_argument("--no_cache", action="store_true", help="Don't read from cache.")
     parser.add_argument("--log", action="store_true", help="Enable tensorboard logging.")
     args = parser.parse_args()
 
     # Get paths.
     paths = get_file_paths(args.video)
-    print(f"Discpost: Discam version {VERSION}",
-          f"    Input video: {paths['in']}",
-          f"    Output video: {paths['out']}",
-          f"    Field mask: {paths['field_mask']}", sep="\n")
+    cprint(f"Discpost: Discam version {VERSION}", color="light_cyan", attrs=["bold"])
+    cprint(f"    Input video: {paths['in']}\n"
+           f"    Output video: {paths['out']}\n"
+           f"    Field mask: {paths['field_mask']}", attrs=["bold"])
 
     if args.log:
-        print("Init logger:", paths["cache"])
+        cprint(f"Init logger: {paths['cache']}", color="light_cyan", attrs=["bold"])
         logger.init_logger(paths["cache"])
 
     # Get video info.
@@ -94,29 +96,31 @@ def main():
     orig_len = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     orig_fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
-    print(f"Input video:",
-          f"    Frame count: {orig_len}",
-          f"    FPS: {orig_fps}", sep="\n")
+    cprint(f"Input video:", color="light_cyan", attrs=["bold"])
+    cprint(f"    Frame count: {orig_len}\n"
+           f"    FPS: {orig_fps}", attrs=["bold"])
 
     # Run pipeline.
     pipe_outs, frame_is = run_pipe_wrapper(args, paths)
 
     # Compute boxes.
-    print("Compute bounding boxes.")
+    cprint("Compute bounding boxes.", color="light_cyan", attrs=["bold"])
     boxes = compute_final_boxes(pipe_outs, frame_is, orig_len)
 
     # Find trim sections.
-    trim_sections = find_trim_sections(pipe_outs)
-    print(f"Found trim sections: ", end="")
-    for x in trim_sections:
-        print(x, end=" ")
-    print()
+    trim_sections = None
+    if args.trim:
+        trim_sections = find_trim_sections(pipe_outs)
+        cprint(f"Found {len(trim_sections)} trim sections: ", end="", color="light_cyan", attrs=["bold"])
+        for x in trim_sections:
+            print(x, end=" ")
+        print()
 
-    ts_string = gen_timestamps(trim_sections)
-    print(f"    Writing timestamps to {paths["timestamps"]}")
-    with open(paths["timestamps"], "w") as f:
-        f.write(ts_string)
+        ts_string = gen_timestamps(trim_sections)
+        cprint(f"    Writing timestamps to {paths["timestamps"]}", attrs=["bold"])
+        with open(paths["timestamps"], "w") as f:
+            f.write(ts_string)
 
     # Write output.
-    print("Write output video.")
+    cprint("Write output video.", color="light_cyan", attrs=["bold"])
     post_write_video(paths["in"], paths["out"], args.fps_scale, boxes, trim_sections)

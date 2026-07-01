@@ -78,6 +78,7 @@ class Classifier:
             ``(def_pos, maybe_pos)``. Both are ``ndarray bool (N,)``.
             Classifications by 2 thresholds. See constants and docs.
         """
+        mask_locs = mask_locs.astype(int)
         def_pos = np.zeros([len(person_locs)], dtype=bool)
         maybe_pos = np.zeros_like(def_pos)
         for i, loc in enumerate(person_locs):

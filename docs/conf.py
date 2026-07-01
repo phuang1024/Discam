@@ -27,6 +27,19 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+autodoc_mock_imports = (
+    "cv2",
+    "numpy",
+    "sahi",
+    "scipy",
+    "sklearn",
+    "termcolor",
+    "torch",
+    "transformers",
+    "tqdm",
+    "ultralytics",
+)
+
 
 
 # -- Options for HTML output -------------------------------------------------

@@ -3,6 +3,7 @@ opencv-python
 sahi
 scikit-learn
 tensorboard
+termcolor
 torch
 tqdm
 transformers

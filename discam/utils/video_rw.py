@@ -54,9 +54,11 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
         fps_scale: ``out_fps = in_fps / scale``.
         boxes: ``boxes format``, crop boxes for each frame.
         trim_sections: ``ndarray float (N, 2)``, sections (sec) to remove.
+            Can be ``None`` for no trimming.
     """
     # Will be popped incrementally.
-    trim_sections = trim_sections.tolist()
+    if trim_sections is not None:
+        trim_sections = trim_sections.tolist()
 
     in_video = cv2.VideoCapture(in_path)
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
@@ -78,7 +80,7 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
             continue
 
         # Check trim.
-        if len(trim_sections) > 0:
+        if trim_sections:
             curr_time = (frame_i - 1) / orig_fps
             if curr_time > trim_sections[0][1]:
                 trim_sections.pop(0)
