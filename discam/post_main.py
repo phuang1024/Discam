@@ -1,5 +1,4 @@
-"""
-Entry point for Post Processing mode.
+"""Entry point for Post Processing mode.
 """
 
 import argparse
@@ -28,11 +27,11 @@ def check_file_exists(path):
 
 
 def get_file_paths(video_path):
-    """
-    Get file paths based on input video path.
+    """Get relevant file paths based on input video path.
     """
     def with_suffix(suffix):
         return video_path.parent / (video_path.stem + suffix)
+
     paths = {
         "in": video_path,
         "out": with_suffix(".discout.mp4"),
@@ -47,19 +46,23 @@ def get_file_paths(video_path):
 
 
 def run_pipe_wrapper(args, paths):
-    """
-    Load from cache, or
-    run pipeline and save to cache.
+    """Run or load CV pipeline results. Either:
+
+    - Load from cache.
+    - Run pipeline and save to cache.
     """
     print("Run CV pipeline:")
     cache_file = paths["cache"] / "pipeline_post.pkl"
+
     if args.no_cache or not cache_file.exists():
+        # Run pipeline.
         data = post_run_pipeline(paths["in"], paths["field_mask"])
         print(f"    Saving to cache {cache_file}.")
         with open(cache_file, "wb") as f:
             pickle.dump(data, f)
 
     else:
+        # Load.
         print(f"    Loading from cache {cache_file}.")
         with open(cache_file, "rb") as f:
             data = pickle.load(f)

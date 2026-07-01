@@ -2,31 +2,37 @@
 Global constants and configuration.
 
 Image formats:
-cv2 format:
-    ndarray, [H, W, C], uint8 (0, 255), BGR
-torch format:
-    Tensor, [C, H, W], float32 (0.0, 1.0), RGB
 
-boxes format:
-    ndarray, [N, 4], int, xyxy
+- ``cv2 format``: ``ndarray uint8 (H, W, C)``, (0, 255), BGR.
+- ``torch format``: ``Tensor float32 (C, H, W)``, (0.0, 1.0), RGB.
+
+Bounding box format:
+
+- ``boxes format``: ``ndarray int (N, 4)``, xyxy.
+
+Note that Post Processing crop boxes are the same format,
+but ``N`` denotes the time dimension instead of a list of detections.
+
+- ``Location`` refers to physical location on the field.
+- ``Pixel position`` refers to position on image frame.
 """
 
 ### Detector module params.
-DET_RES = (1920, 1080)
-"""Image resolution for detector module.
-Since SAHI is used, this is not the input res of YOLO."""
-DET_FPS = 1
-"""FPS to run detector module at."""
+CV_RES = (1920, 1080)
+CV_FPS = 1
+"""Res and FPS for CV pipeline."""
+
 DET_THRES = 0.1
 """YOLO detection threshold."""
 
 
 ### Perspective module params.
 PERSP_INTERVAL = -1
-"""Recompute every N iters. Set to -1 to compute once at beginning."""
+"""Recompute camera params every N iters.
+Set to -1 to compute once at beginning."""
 DEPTH_SAMPLING = 12
 """Sample depth map at pixel intervals of this size.
-Should not be small, as number of samples increases quadratically."""
+Should not be too small, as number of samples increases quadratically."""
 DEPTH_YLIMIT = 0.4
 """Sample a fraction of the image's Y extent, starting from the bottom.
 TODO this is a hack to extract the linear region before the vanishing point."""
@@ -35,28 +41,30 @@ TODO this is a hack to extract the linear region before the vanishing point."""
 CAM_HEIGHT = 4
 """Cam height in meters."""
 CAM_FOV = 74
-"""Cam horizontal FOV at widest setting."""
+"""Cam horizontal FOV in input video."""
 PERSP_MIN_SIZE = 0.01
 """Min size factor clamp (when boxes are close to vanishing point)."""
 
 
 ### Classifier module params.
-POS_THRES = 4
-"""Field mask thres for initial classification."""
+DEF_POS_THRES = 4
+"""Field mask thres for "definitely" positive initial pass."""
 MAYBE_POS_THRES = 1
-"""Thres for consideration during filtering."""
+"""Thres for "maybe" positive second pass,
+for consideration during additional filtering."""
 ACTIVE_STD_THRES = 3
-"""Std Z score threshold for stddev filtering."""
+"""Z score threshold for "maybe" positive stddev filtering."""
 
 SEP_EPS = 5
-"""Add this value to cov eigenvalues."""
+"""For separation metric, add this value to cov eigenvalues.
+This increases consideration on absolute (not relative) distance between two centroids."""
 
 
 ### Output params for Post Processing.
 BOX_PADDING = 50
-"""Padding btwn people and crop box, in RES coords."""
+"""Padding btwn people and crop box, in CV_RES coords."""
 BOX_MIN_SIZE = 50
-"""Min h and w in RES coords."""
+"""Min h and w."""
 BOX_EXPAND_EMA = 0.5
 """EMA factor when box is growing."""
 BOX_SHRINK_EMA = 0.01
@@ -68,17 +76,15 @@ BOX_MOVING_AVG = 100
 
 OUT_RES = (1280, 720)
 """Output video resolution."""
-OUT_FPS_DOWNSCALE = 1
-"""out_fps = in_fps / scale"""
 
 
 ### Post Processing video trim params.
 TRIM_MED_FILTER = 7
-"""Trim median filter size."""
+"""Median filter size on relevant signals."""
 TRIM_PLATEAU = 10
-"""Signals need to exceed thres for this many (CV) iters."""
+"""Signals need to exceed thres for this many CV iters."""
 TRIM_COUNT_HIGH = 18
-"""Active person count high thres to detect point end."""
+"""High thres of "active person count" to detect point end."""
 TRIM_SEP_HIGH = 15
 TRIM_SEP_LOW = 8
 """Sep metric must go above high and below low to detect point start."""
@@ -90,7 +96,7 @@ TRIM_MIN_PLAY = 10
 """Min time after resume to stop."""
 TRIM_MARGIN_END = 0
 TRIM_MARGIN_START = 15
-"""Margin (sec). Positive means include more footage."""
+"""Trim margins (sec). Positive means include more footage."""
 
 
 ### Tensorboard logging params.

@@ -1,5 +1,4 @@
-"""
-Perspective estimation module.
+"""Perspective estimation module.
 """
 
 import cv2
@@ -12,26 +11,29 @@ from ..utils.constants import *
 
 
 class ComputePersp:
-    """
-    Camera perspective estimation.
-    Estimate vanishing point with linear model of box heights.
-    Project pixel positions to locations on the field with model and other constants.
+    """Camera perspective and geometry estimation.
 
-    "Location" refers to physical location on the field.
-    "Pixel position" refers to position on image frame.
+    Estimation: Compute vanishing point using "depth-anything" NN
+    and linear regression.
+
+    Projection: Compute physical ``locations`` of points on the ground plane
+    using trig.
     """
 
     def __init__(self, mask_path):
         # For visualization.
         self.mask_points = np.load(mask_path)
-        self.mask_points[:, 0] *= DET_RES[0]
-        self.mask_points[:, 1] *= DET_RES[1]
+        self.mask_points[:, 0] *= CV_RES[0]
+        self.mask_points[:, 1] *= CV_RES[1]
 
         # FOV in rad.
         self.hori_fov = np.radians(CAM_FOV)
-        self.vert_fov = self.hori_fov / DET_RES[0] * DET_RES[1]
+        self.vert_fov = self.hori_fov / CV_RES[0] * CV_RES[1]
 
-        self.depth_nn = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
+        self.depth_nn = pipeline(
+            task="depth-estimation",
+            model="depth-anything/Depth-Anything-V2-Small-hf",
+        )
 
         self.ransac = RANSACRegressor(
             LinearRegression(),
@@ -42,39 +44,43 @@ class ComputePersp:
 
     def update(self, frame, boxes, iter_i):
         """
-        frame: cv2 format.
-        boxes: boxes format.
-        iter_i: CV pipeline iteration number.
-        return: (person_locs, mask_locs)
-            person_locs: ndarray float (N, 2) xy, physical locations of each box.
-            mask_locs: ndarray float (M, 2) xy, field mask vertex locations.
+        Args:
+            frame: ``cv2 format``.
+            boxes: ``boxes format``.
+            iter_i: CV pipeline iteration number.
+
+        Returns:
+            ``(person_locs, mask_locs)``.
+            Both ``ndarray float (N, 2)`` xy ``locations`` (with different N depending on length).
+            ``person_locs`` corresponds to ``boxes``.
         """
         run_nn = False
         if PERSP_INTERVAL == -1 and iter_i == 0:
             run_nn = True
         elif PERSP_INTERVAL > 0 and iter_i % PERSP_INTERVAL == 0:
             run_nn = True
+        # Recompute vanishing point.
         if run_nn:
             self.compute_vanishing(frame)
 
-        # Pixel pos of boxes bottom edge.
+        # Person locations. Use pixel pos of boxes bottom edge.
         px_pos = np.stack((
             (boxes[:, 0] + boxes[:, 2]) / 2,
             boxes[:, 3],
         ), axis=1, dtype=float)
         person_locs = self.compute_locations(px_pos)
 
+        # Mask locations.
         mask_locs = self.compute_locations(self.mask_points)
         return person_locs, mask_locs
 
     def compute_vanishing(self, frame):
-        """
-        Computes:
-        - self.vanishing: Y pixel pos of vanishing line (horizon).
-        - self.dist_min: Distance from camera to ground location
-            corresponding to the bottom of the frame.
+        """Compute:
 
-        Run depth NN, linear regression, and trig/geometry formulas.
+        - ``self.vanishing``: Y pixel pos of vanishing line (horizon).
+        - ``self.dist_min``: Distance from camera to ground ``location`` at the bottom of the frame.
+
+        Runs depth NN, linear regression, and trig/geometry formulas.
         """
         # Run "depth anything" NN.
         frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -93,7 +99,7 @@ class ComputePersp:
         y2s = np.array(y2s)[:, None]
 
         # Linear regression.
-        # height = m * y2_pos + b
+        # depth_values = m * y2s + b
         self.ransac.fit(y2s, depth_values)
         m = self.ransac.estimator_.coef_[0]
         b = self.ransac.estimator_.intercept_
@@ -102,26 +108,29 @@ class ComputePersp:
         # Find vanishing, by setting height = 0
         self.vanishing = -b / m
         # Find min dist with trig.
-        theta_bottom = np.pi / 2 - (1 - self.vanishing / DET_RES[1]) * self.vert_fov
+        theta_bottom = np.pi / 2 - (1 - self.vanishing / CV_RES[1]) * self.vert_fov
         self.dist_min = CAM_HEIGHT / np.cos(theta_bottom)
 
     def compute_locations(self, px_pos):
-        """
-        Convert pixel pos to locations.
-        px_pos: ndarray float (N, 2) xy, pixel positions.
-        return: ndarray float (N, 2) xy, physical locations.
+        """Convert pixel pos to locations.
+
+        Args:
+            px_pos: ``ndarray float (N, 2)``, xy ``pixel positions``.
+
+        Returns:
+            ``ndarray float (N, 2)``, xy ``locations``.
         """
         # Distance from cam, using linearity of size up to vanishing point.
-        size_facs = np.interp(px_pos[:, 1], (self.vanishing, DET_RES[1]), (0, 1))
+        size_facs = np.interp(px_pos[:, 1], (self.vanishing, CV_RES[1]), (0, 1))
         size_facs = np.clip(size_facs, PERSP_MIN_SIZE, 1)
         dists = self.dist_min / size_facs
 
-        # Y loc, using Pythag.
+        # Y location, using Pythag.
         y_locs = np.sqrt(np.pow(dists, 2) - CAM_HEIGHT ** 2)
 
-        # X loc, using trig.
+        # X location, using trig.
         # Horizontal pixel position normalized [-0.5, 0.5]
-        hori_pos = px_pos[:, 0] / DET_RES[0] - 0.5
+        hori_pos = px_pos[:, 0] / CV_RES[0] - 0.5
         x_locs = hori_pos * 2 * dists * np.tan(self.hori_fov / 2)
 
         ret = np.stack((x_locs, y_locs), axis=1)
@@ -129,8 +138,7 @@ class ComputePersp:
 
 
 def vis_vanishing(xs, ys, m, b, inliers):
-    """
-    Visualize linear regression to compute vanishing point.
+    """Visualize linear regression used to compute vanishing point.
     """
     import matplotlib.pyplot as plt
     # Plot data

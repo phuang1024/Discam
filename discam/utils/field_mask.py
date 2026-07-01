@@ -1,6 +1,6 @@
-"""
-Manual polygonal static field mask.
-Mask is 4 points in 2D.
+"""Manually drawn polygonal static field mask.
+
+Mask format: ``ndarray float (N, 2)``, xy pixel positions of N points.
 
 Run this file to interactively create a mask.
 """
@@ -13,6 +13,7 @@ import numpy as np
 
 from .constants import *
 
+# Globals used in interactive mode.
 _interactive_frame = None
 # In coordinates of [0, 1] relative to W, H
 _interactive_mask = []
@@ -20,13 +21,14 @@ _last_click = 0
 
 
 def create_mask(points, res):
-    """
-    Draw mask binary image.
-    points: ndarray float (N, 2)
-        Values in [0, 1] relative to W, H.
-    res: (W, H) resolution.
-    return: ndarray uint8 [H, W]
-        0 outside, 255 inside.
+    """Draw binary mask image.
+
+    Args:
+        points: ``ndarray float (N, 2)``, values in ``[0, 1]`` relative to W, H of ``res``.
+        res: ``(W, H)`` resolution.
+
+    Returns:
+        ``ndarray uint8 (H, W)``, 0 outside, 255 inside mask.
     """
     points[:, 0] *= res[0]
     points[:, 1] *= res[1]
@@ -37,28 +39,15 @@ def create_mask(points, res):
     return mask
 
 
-def create_persp_scale(points, res, max_val):
-    """
-    Create per-pixel scaling factor to account for far people being small.
-    Y axis lerp: From (min(points y coord) to yres - 1), to (max_val to 1).
-    return: ndarray float [H, W], from 1 to max_val.
-    """
-    img = np.zeros(res[::-1], dtype=float)
-    min_y = points[:, 1].min()
-    for y in range(res[1]):
-        if y < min_y:
-            img[y] = max_val
-        else:
-            img[y] = np.interp(y, [min_y, res[1] - 1], [max_val, 1])
-
-    return img
-
-
 def main():
+    """Interactively create mask.
+    """
     global _interactive_frame, _interactive_mask, _last_click
     def click_handler(event, x, y, flags, param):
+        """Mouse click handler.
+        Appends clicked point normalized to [0, 1].
+        """
         global _interactive_frame, _interactive_mask, _last_click
-        """Mouse click handler."""
         if event == cv2.EVENT_LBUTTONDOWN and time.time() - _last_click > 0.5:
             cv2.circle(_interactive_frame, (x, y), 3, (0, 0, 255), -1)
             x = x / _interactive_frame.shape[1]
@@ -71,9 +60,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("video")
     parser.add_argument("output")
-    parser.add_argument("--frame", type=int, default=30)
+    parser.add_argument("--frame", type=int, default=30, help="Frame number to use from video.")
     args = parser.parse_args()
 
+    # Read frame.
     cap = cv2.VideoCapture(args.video)
     cap.set(cv2.CAP_PROP_POS_FRAMES, args.frame)
     ret, _interactive_frame = cap.read()
@@ -85,6 +75,7 @@ def main():
     cv2.namedWindow("Frame")
     cv2.setMouseCallback("Frame", click_handler)
 
+    # Record click points.
     _last_click = time.time()
     while True:
         cv2.imshow("Frame", _interactive_frame)
@@ -92,8 +83,6 @@ def main():
         if key == ord("q"):
             break
 
-    # Un-scale.
-    mask = np.array(_interactive_mask)
-
     print("Writing to", args.output)
+    mask = np.array(_interactive_mask)
     np.save(args.output, mask)

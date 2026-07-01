@@ -1,5 +1,4 @@
-"""
-Active player classification module.
+"""Classification module.
 """
 
 import cv2
@@ -11,37 +10,39 @@ from ..utils.constants import *
 
 
 class Classifier:
-    """
-    Classify whether each player is active.
-    Uses manual field mask, computed physical locations, and data analysis.
+    """Classify whether each player is active.
+    Uses field mask, computed physical ``location``, and data analysis.
+    Separation metric for Trim is also computed here.
     """
 
     def __init__(self):
         # KNN to detect the pull (Frisbee), when two teams are far apart.
         self.knn = KMeans(2)
+        # Metric used in Trim. Computed every iteration.
         self.sep_metric = 0
 
     def update(self, person_locs, mask_locs):
         """
-        person_locs: ndarray float (N, 2) xy
-        mask_locs: ndarray float (M, 2) xy
-        return: ndarray bool, same length as `person_locs`.
-            Whether each box is active.
+        Args:
+            person_locs: ``ndarray float (N, 2)``, xy locations.
+            mask_locs: ``ndarray float (M, 2)``, xy locations.
+
+        Returns:
+            ``ndarray bool (N,)``, whether each box is active.
         """
         # Run initial field mask filter.
-        person_locs = person_locs.astype(np.float32)
-        mask_locs = mask_locs.astype(np.float32)
         active_inds, do_filter = self.filter_field_mask(person_locs, mask_locs)
 
+        # Update KNN.
         active_locs = person_locs[active_inds]
         self.update_knn(active_locs)
 
+        # Run Z score filter.
         active_inds = stddev_filter(person_locs, active_inds, do_filter)
         return active_inds
 
     def update_knn(self, active_locs):
-        """
-        Update KNN and separation metric.
+        """Update KNN and separation metric.
         """
         if len(active_locs) < 2:
             return
@@ -53,12 +54,14 @@ class Classifier:
         if len(points1) <= 2 or len(points2) <= 2:
             return
 
+        # Find mean and covs of each group.
         mean1 = np.mean(points1, axis=0)
         mean2 = np.mean(points2, axis=0)
         eye = np.eye(2)
         cov1 = np.cov(points1.swapaxes(0, 1)) + eye * SEP_EPS
         cov2 = np.cov(points2.swapaxes(0, 1)) + eye * SEP_EPS
 
+        # Find Z score of residual.
         resid = mean2 - mean1
         zeros = np.zeros_like(resid)
         try:
@@ -69,41 +72,38 @@ class Classifier:
         self.sep_metric = (zscore1 + zscore2) / 2
 
     def filter_field_mask(self, person_locs, mask_locs):
+        """Filter by proximity to field mask.
+
+        Returns:
+            ``(def_pos, maybe_pos)``. Both are ``ndarray bool (N,)``.
+            Classifications by 2 thresholds. See constants and docs.
         """
-        Filter by proximity to field mask.
-        person_locs: Physical locations of all detected people.
-        mask_locs: Physical locations of mask points.
-        return: (active_inds, do_filter)
-            Categorizations by 2 thresholds. See constants and docs.
-        """
-        active_inds = np.zeros([len(person_locs)], dtype=bool)
-        do_filter = np.zeros_like(active_inds)
+        def_pos = np.zeros([len(person_locs)], dtype=bool)
+        maybe_pos = np.zeros_like(def_pos)
         for i, loc in enumerate(person_locs):
             dist = cv2.pointPolygonTest(mask_locs, loc, True)
-            if dist > POS_THRES:
-                # Definitely active.
-                active_inds[i] = True
+            if dist > DEF_POS_THRES:
+                def_pos[i] = True
             elif dist > MAYBE_POS_THRES:
-                # Maybe active.
-                do_filter[i] = True
-
-        return active_inds, do_filter
+                maybe_pos[i] = True
+        return def_pos, maybe_pos
 
 
-def stddev_filter(person_locs, active_inds, do_filter):
+def stddev_filter(person_locs, def_pos, maybe_pos):
+    """Filtering with mean and stddev of definitely active players.
+    "Maybe" active players within some Z score of "definitely" are also marked active.
     """
-    Filtering with mean and stddev of given active players.
-    """
-    xs = person_locs[active_inds, 0]
-    ys = person_locs[active_inds, 1]
+    # Get "definitely" distribution.
+    xs = person_locs[def_pos, 0]
+    ys = person_locs[def_pos, 1]
     x_mean = np.mean(xs)
     y_mean = np.mean(ys)
     x_std = np.std(xs)
     y_std = np.std(ys)
 
-    ret = active_inds.copy()
+    ret = def_pos.copy()
     for i, (x, y) in enumerate(person_locs):
-        if do_filter[i]:
+        if maybe_pos[i]:
             zx = (x - x_mean) / x_std
             zy = (y - y_mean) / y_std
             z_score = np.hypot(zx, zy)

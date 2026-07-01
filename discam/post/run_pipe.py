@@ -1,5 +1,4 @@
-"""
-Pipeline running for Post Processing.
+"""Post Processing complete pipeline.
 """
 
 import cv2
@@ -10,19 +9,22 @@ from ..utils.constants import *
 
 
 def post_run_pipeline(video_path, mask_path):
-    """
-    Run pipeline on video file.
-    Respects FPS and RES constants.
-    return: (pipe_out, frame_is)
-        pipe_out: List of pipeline outputs.
-        frame_is: List of frame indices in original video coord.
+    """Run CV pipeline on video file.
+    Respects ``CV_FPS`` and ``CV_RES`` constants.
+
+    Returns:
+        ``(pipe_out, frame_is)``.
+
+        - ``pipe_out``: List of CV pipeline outputs.
+        - ``frame_is``: List of frame indices corresponding to each output.
     """
     video = cv2.VideoCapture(video_path)
     orig_w = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     orig_h = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     orig_fps = int(video.get(cv2.CAP_PROP_FPS))
     orig_len = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps_scale = int(orig_fps / DET_FPS)
+    # Scaling between input video and CV pipeline.
+    fps_scale = int(orig_fps / CV_FPS)
 
     pipeline = CVPipeline(mask_path)
     pipe_out = []
@@ -36,8 +38,8 @@ def post_run_pipeline(video_path, mask_path):
         if not ret:
             break
 
-        if orig_w != DET_RES[0] or orig_h != DET_RES[1]:
-            frame = cv2.resize(frame, DET_RES)
+        if orig_w != CV_RES[0] or orig_h != CV_RES[1]:
+            frame = cv2.resize(frame, CV_RES)
 
         pipe_out.append(pipeline.update(frame, frame_i))
         frame_is.append(frame_i)

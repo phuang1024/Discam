@@ -1,5 +1,4 @@
-"""
-Global tensorboard logging utils.
+"""Global tensorboard logging utils.
 """
 
 import cv2
@@ -8,6 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .constants import *
 
+# Global tensorboard instance.
 _logger = None
 enabled = False
 
@@ -24,7 +24,8 @@ def add_scalar(tag, value, frame_i):
 
 def add_image(tag, image, frame_i):
     """
-    image: cv2 format.
+    Args:
+        image: ``cv2 format``.
     """
     if _logger is not None:
         image = cv2.resize(image, None, fx=LOG_IMG_RES, fy=LOG_IMG_RES)

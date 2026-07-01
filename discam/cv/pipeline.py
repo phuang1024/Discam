@@ -1,5 +1,4 @@
-"""
-Computer vision sub-pipeline.
+"""Computer vision sub-pipeline.
 """
 
 import cv2
@@ -13,22 +12,32 @@ from ..utils.constants import *
 
 
 class CVPipeline:
+    """CV sub-pipeline.
+    Chains the Detector, Perspective, and Classifier together.
+    Also handles CV related logging.
+
+    Some modules require an "iteration number", which is kept here.
+    """
+
     def __init__(self, mask_path):
         self.detector = Detector()
         self.perspective = ComputePersp(mask_path)
         self.classifier = Classifier()
 
-        # For logging.
+        # CV iteration number.
         self.iter_i = 0
 
     def update(self, frame, frame_i):
         """
-        frame: cv2 format.
-        frame_i: Index of frame.
+        Args:
+            frame: ``cv2 format``.
+            frame_i: Index of frame in input video.
         """
+        # Run modules.
         boxes = self.detector.update(frame)
         person_locs, mask_locs = self.perspective.update(frame, boxes, self.iter_i)
         active_inds = self.classifier.update(person_locs, mask_locs)
+        # Extract return value.
         active_boxes = boxes[active_inds]
 
         # Vis and logging.
@@ -56,26 +65,31 @@ class CVPipeline:
 
 
 def vis_frame(frame, boxes, active_inds):
-    """
-    Visualize image frame detections.
-    frame: cv2 format.
-    boxes: boxes format.
-    active_inds: Bool array of whether each box is active.
+    """Visualize detected and classified boxes.
+
+    Args:
+        frame: ``cv2 format``.
+        boxes: ``boxes format``.
+        active_inds: ``ndarray bool (N,)``, whether each box is active.
     """
     frame = frame.copy()
-    # Draw boxes.
     for i, box in enumerate(boxes):
         color = (0, 255, 0) if active_inds[i] else (0, 0, 255)
         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), color, 2)
-
     return frame
 
 
 def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, classifier: Classifier):
+    """Visualize physical locations.
+
+    Args:
+        person_locs: ``ndarray float (N, 2)``, ``locations`` of all detected people.
+        mask_locs: ``ndarray float (N, 2)``, ``locations`` of field mask points.
+        active_inds: ``ndarray bool (N,)``, whether each person box is active.
     """
-    Visualize physical locations.
-    """
+    # Image res.
     RES = 800
+    # Vis frame side length in "meters".
     GND_SIZE = 140
 
     def exterp(value, from_min, from_max, to_min, to_max):
@@ -92,7 +106,7 @@ def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, clas
     img = np.full((RES, RES, 3), 255, dtype=np.uint8)
 
     # Overall camera FOV cone.
-    view_points = np.array(((0, 0), (DET_RES[0], 0), (DET_RES[0], DET_RES[1]), (0, DET_RES[1])), dtype=float)
+    view_points = np.array(((0, 0), (CV_RES[0], 0), (CV_RES[0], CV_RES[1]), (0, CV_RES[1])), dtype=float)
     view_locs = persp.compute_locations(view_points)
     view_locs = interp_coords(view_locs)
     cv2.fillPoly(img, [view_locs], (200, 200, 200))

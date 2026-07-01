@@ -1,13 +1,4 @@
-"""
-Compute overall bounding box given detections.
-Also post processing smoothing.
-
-Steps:
-- Extract box per frame based on person detections.
-- Linear interp between boxes for remaining frames.
-- EMA with different facs for expand vs shrink.
-- Aspect correction.
-- Large window moving average.
+"""Compute and filter crop boxes from CV outputs.
 """
 
 import cv2
@@ -17,9 +8,11 @@ from ..utils.constants import *
 
 
 def extract_box(detections, padding=BOX_PADDING):
-    """
-    Extract overall bounding box given person detections.
-    detections: (N, 4) xyxy
+    """Extract overall bounding box given person detections.
+
+    Args:
+        detections: ``boxes format``.
+        padding: Min space between frame and outermost person.
     """
     # Find min and max coords.
     xs = []
@@ -38,46 +31,46 @@ def extract_box(detections, padding=BOX_PADDING):
         return x1, y1, x2, y2
 
 
-def lerp_boxes(in_boxes, in_frames, frame_count):
+def lerp_boxes(in_boxes, frame_is, frame_count):
+    """Linear interpolation between boxes.
+    CV pipeline is run at a lower FPS than input video.
+
+    Args:
+        in_boxes: ``boxes format``, crop boxes from ``extract_box``.
+        frame_is: ``list int (N,)``, frame numbers of each box.
+        frame_count: Total number of frames in input video.
+
+    Returns:
+        ``boxes format``. Length ``frame_count`` (longer than input).
     """
-    Linear interpolation between boxes at frame intervals.
-    in_boxes: boxes format.
-    in_frames: List of frame numbers in output coordinates corresponding to each box.
-    frame_count: Total number of frames in output video.
-    return: boxes format. Length `frame_count`.
-    """
-    # Current frame is between B[i] and B[i+1].
+    # Means current frame is between B[i] and B[i+1].
     in_index = 0
 
     ret = []
     for frame in range(frame_count):
         # Before first box.
-        if frame <= in_frames[0]:
+        if frame <= frame_is[0]:
             ret.append(in_boxes[0])
             continue
         # After last box.
-        if frame >= in_frames[-1] or in_index >= len(in_boxes) - 1:
+        if frame >= frame_is[-1] or in_index >= len(in_boxes) - 1:
             ret.append(in_boxes[-1])
             continue
 
         # Calculate lerp.
-        fac = (frame - in_frames[in_index]) / (in_frames[in_index+1] - in_frames[in_index])
+        fac = (frame - frame_is[in_index]) / (frame_is[in_index+1] - frame_is[in_index])
         box = (1 - fac) * in_boxes[in_index] + fac * in_boxes[in_index+1]
         ret.append(box)
 
-        # Advance index.
-        if frame > in_frames[in_index + 1]:
+        # Advance in_boxes pointer.
+        if frame > frame_is[in_index + 1]:
             in_index += 1
 
     return ret
 
 
 class SmoothEMA:
-    """
-    Smooth a scalar value over time.
-    The value is one of the xyxy box coords.
-    When the box is expanding, more responsive.
-    When shrinking, less responsive and minimum margin.
+    """EMA variant. See ``ema_smooth_boxes``.
     """
 
     def __init__(self):
@@ -99,56 +92,45 @@ class SmoothEMA:
 
 
 def ema_smooth_boxes(in_boxes):
-    """
-    Apply EMA variant filter.
-    in_boxes: boxes format.
-    return: Same format.
+    """Apply the EMA variant filter.
+    More responsive when increasing, to not lose footage.
+    Less responsive and minimum margin when decreasing, to be less jittery.
+
+    Args:
+        in_boxes: ``boxes format``.
+
+    Returns:
+        Same shape.
     """
     x1_ema = SmoothEMA()
     y1_ema = SmoothEMA()
     x2_ema = SmoothEMA()
     y2_ema = SmoothEMA()
 
-    ret = []
-    for x1, y1, x2, y2 in in_boxes:
+    ret = np.zeros_like(in_boxes)
+    for i, (x1, y1, x2, y2) in enumerate(in_boxes):
+        # Reverse x1 and y1 "increase" and "decrease".
         x1 = -x1_ema.update(-x1)
         y1 = -y1_ema.update(-y1)
         x2 = x2_ema.update(x2)
         y2 = y2_ema.update(y2)
-        ret.append((x1, y1, x2, y2))
-
-    ret = np.array(ret, dtype=float)
+        ret[i] = (x1, y1, x2, y2)
     return ret
 
 
-def moving_average(boxes, k=BOX_MOVING_AVG):
-    """
-    Apply moving average filter.
-    boxes: boxes format.
-    return: Same format.
-    """
-    ret = []
-    moment = np.zeros(4, dtype=float)
-    num_elements = 0
-    for frame in range(len(boxes) + k):
-        if frame < len(boxes):
-            moment += boxes[frame]
-            num_elements += 1
-        if frame >= k:
-            moment -= boxes[frame - k]
-            num_elements -= 1
-        if frame >= k - 1 and len(ret) < len(boxes):
-            ret.append(moment / num_elements)
+def resize_box(box, target_aspect):
+    """Resize to satisfy:
 
-    return ret
+    - Target aspect ratio.
+    - Minimum dimensions.
+    - In bounds of original image.
 
+    Args:
+        box: A single ``xyxy`` box.
+        target_aspect: Target ``W/H`` aspect ratio.
 
-def resize_box(box, out_aspect):
-    """
-    Resize to satisfy aspect, min size, and in bounds.
-    box: xyxy
-    out_aspect: Target W/H aspect ratio.
-    return: xyxy, ndarray float
+    Returns:
+        Same format as ``box``.
     """
     cx = (box[0] + box[2]) / 2
     cy = (box[1] + box[3]) / 2
@@ -161,47 +143,81 @@ def resize_box(box, out_aspect):
 
     # Aspect: Expand one of width or height.
     aspect = width / height
-    if aspect > out_aspect:
-        height = width / out_aspect
+    if aspect > target_aspect:
+        height = width / target_aspect
     else:
-        width = height * out_aspect
+        width = height * target_aspect
     x1 = int(cx - width / 2)
     y1 = int(cy - height / 2)
     x2 = int(cx + width / 2)
     y2 = int(cy + height / 2)
 
     # Check in bounds.
-    if x2 - x1 > DET_RES[0] or y2 - y1 > DET_RES[1]:
-        return [0, 0, DET_RES[0], DET_RES[1]]
+    if x2 - x1 > CV_RES[0] or y2 - y1 > CV_RES[1]:
+        return [0, 0, CV_RES[0], CV_RES[1]]
     if x1 < 0:
         x2 -= x1
         x1 = 0
     if y1 < 0:
         y2 -= y1
         y1 = 0
-    if x2 >= DET_RES[0]:
-        x1 -= (x2 - DET_RES[0] + 1)
-        x2 = DET_RES[0] - 1
-    if y2 >= DET_RES[1]:
-        y1 -= (y2 - DET_RES[1] + 1)
-        y2 = DET_RES[1] - 1
+    if x2 >= CV_RES[0]:
+        x1 -= (x2 - CV_RES[0] + 1)
+        x2 = CV_RES[0] - 1
+    if y2 >= CV_RES[1]:
+        y1 -= (y2 - CV_RES[1] + 1)
+        y2 = CV_RES[1] - 1
 
-    return [x1, y1, x2, y2]
+    return (x1, y1, x2, y2)
+
+
+def moving_average(boxes, k=BOX_MOVING_AVG):
+    """Apply moving average filter on each coord independently.
+
+    Args:
+        boxes: ``boxes format``.
+        k: Window size.
+
+    Returns:
+        Same format.
+    """
+    ret = []
+    # Window sum.
+    moment = np.zeros(4, dtype=float)
+    num_elements = 0
+    for i in range(len(boxes) + k):
+        if i < len(boxes):
+            moment += boxes[i]
+            num_elements += 1
+        if i >= k:
+            moment -= boxes[i - k]
+            num_elements -= 1
+        if i >= k - 1 and len(ret) < len(boxes):
+            ret.append(moment / num_elements)
+
+    ret = np.array(ret, dtype=float)
+    return ret
 
 
 def compute_final_boxes(pipe_outs, frame_is, frame_count):
-    """
-    Main function to call.
-    Converts pipeline outputs (list of active player detections)
-    to a sequence of crop boxes for each frame, with filtering.
+    """Main function to convert CV outputs into crop boxes for Post Processing.
 
-    pipe_outs: List of pipeline outputs.
-    frame_is: List of frame indices the pipe outputs correspond to,
-        in input video coords.
-    frame_count: Total number of frames in output video.
-    return: boxes format. Length `frame_count`.
-        Corresponds to each frame in out video.
+    - Extract box per frame with active person detections.
+    - Linear interp between boxes for intermediate frames.
+    - EMA with different facs for expand vs shrink.
+    - Aspect, size, and bounds correction.
+    - Large window moving average.
+
+    Args:
+        pipe_outs: List of CV pipeline outputs.
+        frame_is: List of frame indices the pipe outputs correspond to, in input video coords.
+        frame_count: Total number of frames in input video.
+
+    Returns:
+        ``boxes format``, length `frame_count`.
+        Box for each frame in input video.
     """
+    # Extract boxes.
     boxes = []
     for data in pipe_outs:
         box = extract_box(data["active_boxes"])
@@ -210,29 +226,29 @@ def compute_final_boxes(pipe_outs, frame_is, frame_count):
         boxes.append(box)
     boxes = np.array(boxes, dtype=int)
 
-    # In and out video FPS is same, so we can use frame_is as is.
     boxes = lerp_boxes(boxes, frame_is, frame_count)
 
     boxes = ema_smooth_boxes(boxes)
 
-    out_aspect = OUT_RES[0] / OUT_RES[1]
+    aspect = OUT_RES[0] / OUT_RES[1]
     for i in range(len(boxes)):
-        boxes[i] = resize_box(boxes[i], out_aspect)
+        boxes[i] = resize_box(boxes[i], aspect)
 
     boxes = moving_average(boxes)
     return boxes
 
 
 def vis_static_box(frame, box):
-    """
-    frame: cv2 format.
-    box: xyxy.
+    """Visualize crop box on frame.
+
+    Args:
+        frame: ``cv2 format``.
+        box: xyxy.
     """
     frame = frame.copy()
-
     # Draw box.
     box = [int(x) for x in box]
     cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
 
-    cv2.imshow("StaticBBox", frame)
+    cv2.imshow("Bounding box", frame)
     cv2.waitKey(1)

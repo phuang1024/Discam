@@ -1,5 +1,4 @@
-"""
-Person detection and tracking module.
+"""Detection module.
 """
 
 import os
@@ -18,8 +17,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 class Detector:
-    """
-    Detection with YOLO and SAHI.
+    """Person detection with YOLO and SAHI.
     """
 
     def __init__(self):
@@ -32,10 +30,11 @@ class Detector:
 
     def update(self, frame):
         """
-        frame: cv2 format.
-        return: ndarray int [N, 5], (x, y, x, y, track_id)
-            Boxes of all detected people.
-            If person is not tracked, track_id = -1
+        Args:
+            frame: ``cv2 format``.
+
+        Returns:
+            ``boxes format``.
         """
         # Run SAHI.
         results = get_sliced_prediction(
@@ -48,7 +47,7 @@ class Detector:
             verbose=0,
         )
 
-        # Convert to (x, y, x, y)
+        # Convert to xyxy.
         boxes = []
         for r in results.object_prediction_list:
             if r.category.id == 0 and r.score.value > DET_THRES:
