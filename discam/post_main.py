@@ -12,7 +12,7 @@ import torch
 from termcolor import cprint
 
 from .post.bounding_box import compute_final_boxes
-from .post.run_pipe import post_run_pipeline
+from .post.post_pipe import post_run_pipeline
 from .post.trim import find_trim_sections, gen_timestamps
 from .utils import logger
 from .utils.constants import *

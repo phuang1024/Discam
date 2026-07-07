@@ -41,7 +41,7 @@ TODO this is a hack to extract the linear region before the vanishing point."""
 CAM_HEIGHT = 4
 """Cam height in meters."""
 CAM_FOV = 74
-"""Cam horizontal FOV in input video."""
+"""Cam horizontal FOV in degrees of input video."""
 PERSP_MIN_SIZE = 0.01
 """Min size factor clamp (when boxes are close to vanishing point)."""
 
