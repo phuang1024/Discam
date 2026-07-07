@@ -78,6 +78,8 @@ def main():
         help="Output FPS downscale factor.")
     parser.add_argument("--trim", action="store_true",
         help="Enable trimming.")
+    parser.add_argument("--vcodec", default="libx265",
+        help="Video codec (passed to FFmpeg).")
     parser.add_argument("--no_cache", action="store_true",
         help="Don't read from cache.")
     parser.add_argument("--log", action="store_true",
@@ -127,4 +129,4 @@ def main():
 
     # Write output.
     cprint("Write output video.", color="light_cyan", attrs=["bold"])
-    post_write_video(paths["in"], paths["out"], args.fps_scale, boxes, trim_sections)
+    post_write_video(paths["in"], paths["out"], args.fps_scale, boxes, trim_sections, args.vcodec)

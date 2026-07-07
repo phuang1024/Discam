@@ -14,7 +14,7 @@ class FFmpegWriter:
     """Video writer using ffmpeg subprocess.
     """
 
-    def __init__(self, path, fps, res):
+    def __init__(self, path, fps, res, vcodec):
         ffmpeg = shutil.which("ffmpeg")
         assert ffmpeg is not None, "ffmpeg not found in PATH"
 
@@ -26,7 +26,7 @@ class FFmpegWriter:
             "-s", f"{res[0]}x{res[1]}",
             "-r", str(fps),
             "-i", "-",
-            "-c:v", "libx265",
+            "-c:v", vcodec,
             "-crf", "32",
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
@@ -46,7 +46,7 @@ class FFmpegWriter:
         self.proc.wait()
 
 
-def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
+def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections, vcodec):
     """Write output video in Post Processing mode, given crop boxes.
     Also trims video.
 
@@ -64,7 +64,7 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections):
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
     orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
     orig_h = in_video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    out_video = FFmpegWriter(out_path, orig_fps / fps_scale, OUT_RES)
+    out_video = FFmpegWriter(out_path, orig_fps / fps_scale, OUT_RES, vcodec)
 
     frame_i = 0
     pbar = tqdm(total=len(boxes), desc="Writing output")
