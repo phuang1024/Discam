@@ -5,29 +5,21 @@ import time
 
 import cv2
 
+from ..cv.pipeline import CVPipeline
 from .ptz import PTZCamera, PTZSim
 
 
-def live_run_pipeline(video_path, sim):
+def live_run_pipeline(video_path, mask_path, sim):
     """TODO
     """
-    if sim:
-        camera = PTZSim(video_path)
-    else:
-        camera = PTZCamera(video_path)
+    camera = PTZSim(video_path) if sim else PTZCamera(video_path)
+    cv_pipe = CVPipeline(mask_path)
 
-    # TODO testing PTZ positions.
-    def show_next(delay):
-        cv2.imshow("test", camera.read())
-        cv2.waitKey(int(delay * 1000))
+    frame_i = 0
+    while True:
+        frame = camera.read()
+        if frame is None:
+            break
 
-    show_next(1)
-    for _ in range(5):
-        camera.set_pos(zoom=camera.zoom + 0.1)
-        show_next(0.3)
-    for _ in range(5):
-        camera.set_pos(pan=camera.pan + 2)
-        show_next(0.3)
-    for _ in range(5):
-        camera.set_pos(tilt=camera.tilt + 2)
-        show_next(0.3)
+        cv_pipe.update(frame, frame_i)
+        frame_i += 1

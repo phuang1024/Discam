@@ -31,7 +31,7 @@ class CVPipeline:
         """
         Args:
             frame: ``cv2 format``.
-            frame_i: Index of frame in input video.
+            frame_i: Index of frame in input video, for logging only.
         """
         # Run modules.
         boxes = self.detector.update(frame)

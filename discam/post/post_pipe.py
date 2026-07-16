@@ -26,7 +26,7 @@ def post_run_pipeline(video_path, mask_path):
     # Scaling between input video and CV pipeline.
     fps_scale = int(orig_fps / CV_FPS)
 
-    pipeline = CVPipeline(mask_path)
+    cv_pipe = CVPipeline(mask_path)
     pipe_out = []
     frame_is = []
     frame_i = 0
@@ -41,7 +41,7 @@ def post_run_pipeline(video_path, mask_path):
         if orig_w != CV_RES[0] or orig_h != CV_RES[1]:
             frame = cv2.resize(frame, CV_RES)
 
-        pipe_out.append(pipeline.update(frame, frame_i))
+        pipe_out.append(cv_pipe.update(frame, frame_i))
         frame_is.append(frame_i)
         pbar.update(1)
 
