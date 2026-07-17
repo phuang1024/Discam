@@ -25,6 +25,9 @@ class PTZ:
         """
         raise NotImplementedError
 
+    def set_pos_delta(self, pan=None, tilt=None, zoom=None) -> None:
+        raise NotImplementedError
+
     def close(self):
         raise NotImplementedError
 
@@ -39,6 +42,7 @@ class PTZSim(PTZ):
 
     Pan and tilt is degrees off of default video view.
     Zoom is factor > 1.
+    TODO turn zoom into an additive control
     """
 
     def __init__(self, path):
@@ -57,6 +61,7 @@ class PTZSim(PTZ):
         self.px_per_deg = self.orig_w / CAM_FOV
 
     def read(self):
+        print("PTZ:", self.pan, self.tilt, self.zoom)
         ret, frame = self.video.read()
         if not ret:
             return None
@@ -68,12 +73,20 @@ class PTZSim(PTZ):
         offset_y = self.px_per_deg * self.tilt
         x1 = int(self.orig_w // 2 + offset_x - new_w // 2)
         y1 = int(self.orig_h // 2 + offset_y - new_h // 2)
-        print("Crop xywh:", x1, y1, new_w, new_h)
 
         # TODO might go out of bounds.
-        frame_crop = frame[y1 : y1+new_h, x1 : x1+new_w]
+        frame_crop = self.crop(frame, x1, y1, x1+new_w, y1+new_h)
         #frame_crop = cv2.resize(frame_crop, CV_RES)
         return frame_crop
+
+    def crop(self, frame, x1, y1, x2, y2):
+        """Clip crop coords to be within frame size.
+        """
+        x1 = min(max(x1, 0), frame.shape[1])
+        x2 = min(max(x2, 0), frame.shape[1])
+        y1 = min(max(y1, 0), frame.shape[0])
+        y2 = min(max(y2, 0), frame.shape[0])
+        return frame[y1:y2, x1:x2]
 
     def set_pos(self, pan=None, tilt=None, zoom=None):
         if pan is not None:
@@ -82,6 +95,14 @@ class PTZSim(PTZ):
             self.tilt = tilt
         if zoom is not None:
             self.zoom = zoom
+
+    def set_pos_delta(self, pan=None, tilt=None, zoom=None):
+        if pan is not None:
+            self.pan += pan
+        if tilt is not None:
+            self.tilt += tilt
+        if zoom is not None:
+            self.zoom += zoom
 
     def close(self):
         self.video.release()
