@@ -27,16 +27,23 @@ class CVPipeline:
         # CV iteration number.
         self.iter_i = 0
 
-    def update(self, frame, frame_i):
+    def update(self, frame, frame_i, ptz=None):
         """
         Args:
             frame: ``cv2 format``.
             frame_i: Index of frame in input video, for logging only.
+            ptz: Current PTZ view for live mode.
         """
         # Run modules.
-        boxes = self.detector.update(frame)
-        person_locs, mask_locs = self.perspective.update(frame, boxes, self.iter_i)
+        boxes, adj_boxes = self.detector.update(frame, ptz)
+
+        # Boxes adjusted for PTZ.
+        if adj_boxes is None:
+            adj_boxes = boxes
+        person_locs, mask_locs = self.perspective.update(frame, adj_boxes, self.iter_i)
+
         active_inds = self.classifier.update(person_locs, mask_locs)
+
         # Extract return value.
         active_boxes = boxes[active_inds]
 

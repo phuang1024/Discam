@@ -13,7 +13,7 @@ from .track import Tracker
 def live_run_pipeline(video_path, mask_path, sim):
     """TODO
     """
-    camera = PTZSim(video_path) if sim else PTZCamera(video_path)
+    camera = PTZSim(video_path, 15) if sim else PTZCamera(video_path)
     cv_pipe = CVPipeline(mask_path)
     tracker = Tracker()
 
@@ -23,7 +23,8 @@ def live_run_pipeline(video_path, mask_path, sim):
         if frame is None:
             break
 
-        pipe_out = cv_pipe.update(frame, frame_i)
+        ptz = (camera.pan, camera.tilt, camera.zoom)
+        pipe_out = cv_pipe.update(frame, frame_i, ptz)
         frame_i += 1
 
         delta_ptz = tracker.update(pipe_out["active_boxes"])

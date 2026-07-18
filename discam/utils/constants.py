@@ -15,6 +15,14 @@ but ``N`` denotes the time dimension instead of a list of detections.
 
 - ``Location`` refers to physical location on the field.
 - ``Pixel position`` refers to position on image frame.
+
+Pan tilt zoom format:
+
+- ``ptz format``: Three scalars ``p``, ``t``, ``z``.
+  - ``p``: Real number, pan in degrees. ``0`` is the default centered pan.
+  - ``t``: Real number, tilt in degrees.
+  - ``z``: Real number ``z >= 1``, zoom factor.
+    I.e. FOV is ``z`` times smaller in length than default zoom.
 """
 
 ### Detector module params.

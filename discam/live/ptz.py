@@ -10,12 +10,15 @@ from ..utils.constants import *
 class PTZ:
     """PTZ interface base class.
     """
+    pan: float
+    tilt: float
+    zoom: float
 
     def read(self) -> np.ndarray | None:
         """Read next frame.
 
         Returns:
-            ``cv2 format`` frame in any resolution.
+            ``cv2 format`` frame in CV_RES.
         """
         raise NotImplementedError
 
@@ -39,17 +42,15 @@ class PTZCamera(PTZ):
 
 class PTZSim(PTZ):
     """Simulate PTZ on video with dynamic cropping.
-
-    Pan and tilt is degrees off of default video view.
-    Zoom is factor > 1.
-    TODO turn zoom into an additive control
     """
 
-    def __init__(self, path):
+    def __init__(self, path, interval=1):
         """
         Args:
             path: Path to video file.
+            interval: Read every Nth frame.
         """
+        self.interval = interval
         self.video = cv2.VideoCapture(path)
         self.orig_w = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.orig_h = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -61,8 +62,8 @@ class PTZSim(PTZ):
         self.px_per_deg = self.orig_w / CAM_FOV
 
     def read(self):
-        print("PTZ:", self.pan, self.tilt, self.zoom)
-        ret, frame = self.video.read()
+        for _ in range(self.interval):
+            ret, frame = self.video.read()
         if not ret:
             return None
 
@@ -76,7 +77,7 @@ class PTZSim(PTZ):
 
         # TODO might go out of bounds.
         frame_crop = self.crop(frame, x1, y1, x1+new_w, y1+new_h)
-        #frame_crop = cv2.resize(frame_crop, CV_RES)
+        frame_crop = cv2.resize(frame_crop, CV_RES)
         return frame_crop
 
     def crop(self, frame, x1, y1, x2, y2):
