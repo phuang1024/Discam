@@ -31,14 +31,14 @@ class Classifier:
             ``ndarray bool (N,)``, whether each box is active.
         """
         # Run initial field mask filter.
-        active_inds, do_filter = self.filter_field_mask(person_locs, mask_locs)
+        def_pos, maybe_pos = self.filter_field_mask(person_locs, mask_locs)
 
         # Update KNN.
-        active_locs = person_locs[active_inds]
+        active_locs = person_locs[def_pos]
         self.update_knn(active_locs)
 
         # Run Z score filter.
-        active_inds = stddev_filter(person_locs, active_inds, do_filter)
+        active_inds = stddev_filter(person_locs, def_pos, maybe_pos)
         return active_inds
 
     def update_knn(self, active_locs):

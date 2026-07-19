@@ -107,6 +107,15 @@ TRIM_MARGIN_START = 15
 """Trim margins (sec). Positive means include more footage."""
 
 
+### Live mode tracking params.
+TRACK_MARGIN = 200
+"""Maintain outermost person this many pixels from frame edge (in CV_RES coords)."""
+TRACK_COUNT = 10
+"""Begin zooming out if number of detected players below this."""
+TRACK_PT_SPEED = 1
+TRACK_ZOOM_SPEED = 1
+
+
 ### Tensorboard logging params.
 LOG_IMG_INTERVAL = 20
 """Log image every N CV pipeline iterations."""
