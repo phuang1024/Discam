@@ -51,41 +51,36 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections, vcodec)
     Also trims video.
 
     Args:
-        fps_scale: ``out_fps = in_fps / scale``.
+        fps_scale: ``out_fps = in_fps / scale``, int.
         boxes: ``boxes format``, crop boxes for each frame.
         trim_sections: ``ndarray float (N, 2)``, sections (sec) to remove.
+            Should be sorted.
             Can be ``None`` for no trimming.
     """
-    # Will be popped incrementally.
-    if trim_sections is not None:
-        trim_sections = trim_sections.tolist()
-
     in_video = cv2.VideoCapture(in_path)
     orig_fps = in_video.get(cv2.CAP_PROP_FPS)
     orig_w = in_video.get(cv2.CAP_PROP_FRAME_WIDTH)
     orig_h = in_video.get(cv2.CAP_PROP_FRAME_HEIGHT)
     out_video = FFmpegWriter(out_path, orig_fps / fps_scale, OUT_RES, vcodec)
 
+    if trim_sections is not None:
+        # Convert sec to frames. Will be popped incrementally.
+        trim_sections = (trim_sections * orig_fps).astype(int).tolist()
+
+    # Some values are skipped.
     frame_i = 0
     pbar = tqdm(total=len(boxes), desc="Writing output")
     while True:
-        # Increment frame_i at beginning.
-        frame_i += 1
-        pbar.update(1)
         ret, frame = in_video.read()
         if not ret:
             break
-        # Check output FPS downscaling.
-        if frame_i % fps_scale != 0:
-            continue
 
         # Check trim.
-        if trim_sections:
-            curr_time = (frame_i - 1) / orig_fps
-            if curr_time > trim_sections[0][1]:
-                trim_sections.pop(0)
-            elif trim_sections[0][0] <= curr_time <= trim_sections[0][1]:
-                continue
+        if trim_sections and frame_i > trim_sections[0][0]:
+            in_video.set(cv2.CAP_PROP_POS_FRAMES, trim_sections[0][1])
+            frame_i = trim_sections[0][1]
+            trim_sections.pop(0)
+            continue
 
         # Get bbox.
         x1, y1, x2, y2 = boxes[frame_i - 1]
@@ -98,6 +93,10 @@ def post_write_video(in_path, out_path, fps_scale, boxes, trim_sections, vcodec)
         frame_crop = cv2.resize(frame_crop, OUT_RES)
         out_video.write(frame_crop)
         #vis_output_video(frame, frame_crop, (x1, y1, x2, y2))
+
+        frame_i += fps_scale
+        pbar.n = frame_i
+        pbar.refresh()
 
     pbar.close()
     in_video.release()

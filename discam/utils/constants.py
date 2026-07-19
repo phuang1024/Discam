@@ -102,8 +102,8 @@ TRIM_MAX_STOP = 120
 """Min, max time after stop to resume (sec)."""
 TRIM_MIN_PLAY = 10
 """Min time after resume to stop."""
-TRIM_MARGIN_END = 0
-TRIM_MARGIN_START = 15
+TRIM_MARGIN_END = 3
+TRIM_MARGIN_START = 3
 """Trim margins (sec). Positive means include more footage."""
 
 

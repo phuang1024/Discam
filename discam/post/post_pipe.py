@@ -30,7 +30,7 @@ def post_run_pipeline(video_path, mask_path):
     pipe_out = []
     frame_is = []
     frame_i = 0
-    pbar = tqdm(total=orig_len // fps_scale, desc="Detector")
+    pbar = tqdm(total=orig_len // fps_scale, desc="CV pipeline")
     while True:
         for _ in range(fps_scale):
             ret, frame = video.read()
