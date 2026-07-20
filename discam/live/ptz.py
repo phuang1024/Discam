@@ -81,13 +81,26 @@ class PTZSim(PTZ):
         return frame_crop
 
     def crop(self, frame, x1, y1, x2, y2):
-        """Clip crop coords to be within frame size.
+        """Pad with zeros if out of bounds.
         """
+        ret = np.zeros((y2 - y1, x2 - x1, 3), dtype=np.uint8)
+
+        # Take clipped crop.
         x1 = min(max(x1, 0), frame.shape[1])
         x2 = min(max(x2, 0), frame.shape[1])
         y1 = min(max(y1, 0), frame.shape[0])
         y2 = min(max(y2, 0), frame.shape[0])
-        return frame[y1:y2, x1:x2]
+        crop = frame[y1:y2, x1:x2]
+
+        # Paste at correct corner.
+        paste_x = min(0, x1)
+        paste_y = min(0, y1)
+        ret[
+            paste_y : paste_y + crop.shape[0],
+            paste_x : paste_x + crop.shape[1],
+            :
+        ] = crop
+        return ret
 
     def set_pos(self, pan=None, tilt=None, zoom=None):
         if pan is not None:

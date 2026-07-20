@@ -13,6 +13,7 @@ from .track import Tracker
 def live_run_pipeline(video_path, mask_path, sim):
     """TODO
     """
+    # TODO interval
     camera = PTZSim(video_path, 15) if sim else PTZCamera(video_path)
     cv_pipe = CVPipeline(mask_path)
     tracker = Tracker()

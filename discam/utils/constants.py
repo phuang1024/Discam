@@ -112,8 +112,8 @@ TRACK_MARGIN = 200
 """Maintain outermost person this many pixels from frame edge (in CV_RES coords)."""
 TRACK_COUNT = 10
 """Begin zooming out if number of detected players below this."""
-TRACK_PT_SPEED = 1
-TRACK_ZOOM_SPEED = 1
+TRACK_PT_SPEED = 2e-3
+TRACK_ZOOM_SPEED = 1e-4
 
 
 ### Tensorboard logging params.
