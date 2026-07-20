@@ -3,7 +3,7 @@ __pycache__
 *.pt
 
 /data
-/scripts
+/ignore
 
 /build
 /dist
