@@ -64,6 +64,10 @@ MAYBE_POS_THRES = 1
 for consideration during additional filtering."""
 ACTIVE_STD_THRES = 3
 """Z score threshold for "maybe" positive stddev filtering."""
+FILTER_DEF_THRES = 15
+"""Sep metric less than this to enable stddev filtering within definitely positive.
+This ensures no erroneous filtering when teams are far apart.
+"""
 
 SEP_EPS = 5
 """For separation metric, add this value to cov eigenvalues.
