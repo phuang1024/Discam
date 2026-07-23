@@ -26,7 +26,7 @@ def post_run_pipeline(video_path, mask_path):
     # Scaling between input video and CV pipeline.
     fps_scale = int(orig_fps / CV_FPS)
 
-    cv_pipe = CVPipeline(mask_path)
+    cv_pipe = CVPipeline(mask_path, TILE_SIZE_POST)
     pipe_out = []
     frame_is = []
     frame_i = 0

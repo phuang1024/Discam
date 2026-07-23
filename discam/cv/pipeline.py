@@ -19,8 +19,8 @@ class CVPipeline:
     Some modules require an "iteration number", which is kept here.
     """
 
-    def __init__(self, mask_path):
-        self.detector = Detector()
+    def __init__(self, mask_path, tile_size):
+        self.detector = Detector(tile_size)
         self.perspective = ComputePersp(mask_path)
         self.classifier = Classifier()
 

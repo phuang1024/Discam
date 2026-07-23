@@ -35,9 +35,14 @@ CV_FPS = 1
 DET_THRES = 0.1
 """YOLO detection threshold."""
 
+TILE_SIZE_POST = 500
+"""SAHI tile size in post processing."""
+TILE_SIZE_LIVE = 800
+"""SAHI tile size in live. Can be larger since view is zoomed in."""
+
 
 ### Perspective module params.
-PERSP_INTERVAL = -1
+PERSP_INTERVAL = 120
 """Recompute camera params every N iters.
 Set to -1 to compute once at beginning."""
 DEPTH_SAMPLING = 12
@@ -114,12 +119,12 @@ TRIM_MARGIN_START = 3
 
 
 ### Live mode tracking params.
-TRACK_MARGIN = 300
+TRACK_MARGIN = 200
 """Maintain outermost person this many pixels from frame edge (in CV_RES coords)."""
 TRACK_COUNT = 10
 """Begin zooming out if number of detected players below this."""
-TRACK_PT_SPEED = 1e-2
-TRACK_ZOOM_SPEED = 1e-4
+TRACK_PT_SPEED = 0.3
+TRACK_ZOOM_SPEED = 0.3
 
 
 ### Tensorboard logging params.

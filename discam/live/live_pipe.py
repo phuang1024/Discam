@@ -8,6 +8,7 @@ import cv2
 from ..cv.pipeline import CVPipeline
 from .ptz import PTZCamera, PTZSim
 from .track import Tracker
+from ..utils.constants import *
 
 
 def live_run_pipeline(video_path, mask_path, sim):
@@ -15,7 +16,7 @@ def live_run_pipeline(video_path, mask_path, sim):
     """
     # TODO interval
     camera = PTZSim(video_path, 30) if sim else PTZCamera(video_path)
-    cv_pipe = CVPipeline(mask_path)
+    cv_pipe = CVPipeline(mask_path, TILE_SIZE_LIVE)
     tracker = Tracker()
 
     frame_i = 0

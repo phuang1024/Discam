@@ -20,7 +20,8 @@ class Detector:
     """Person detection with YOLO and SAHI.
     """
 
-    def __init__(self):
+    def __init__(self, tile_size):
+        self.tile_size = tile_size
         self.YOLO = AutoDetectionModel.from_pretrained(
             model_type="ultralytics",
             model_path=os.path.join(ROOT, "yolo26n.pt"),
@@ -44,8 +45,8 @@ class Detector:
         results = get_sliced_prediction(
             frame,
             self.YOLO,
-            slice_height=500,
-            slice_width=500,
+            slice_height=self.tile_size,
+            slice_width=self.tile_size,
             overlap_height_ratio=0.3,
             overlap_width_ratio=0.3,
             verbose=0,
