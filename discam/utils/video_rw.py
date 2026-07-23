@@ -27,7 +27,7 @@ class FFmpegWriter:
             "-r", str(fps),
             "-i", "-",
             "-c:v", vcodec,
-            "-crf", "32",
+            "-crf", "30",
             "-preset", "slow",
             "-pix_fmt", "yuv420p",
             path,

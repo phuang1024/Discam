@@ -9,10 +9,23 @@ from ..utils.constants import *
 
 class PTZ:
     """PTZ interface base class.
+
+    See constants for PTZ format.
     """
     pan: float
     tilt: float
     zoom: float
+
+    def __init__(self):
+        self.pan = 0
+        self.tilt = 0
+        self.zoom = 0
+
+    @property
+    def zoom_fac(self):
+        """Zoom as FOV factor.
+        I.e. ``fov = zoom_fac * standard_fov``"""
+        return np.exp(self.zoom)
 
     def read(self) -> np.ndarray | None:
         """Read next frame.
@@ -50,14 +63,11 @@ class PTZSim(PTZ):
             path: Path to video file.
             interval: Read every Nth frame.
         """
+        super().__init__()
         self.interval = interval
         self.video = cv2.VideoCapture(path)
         self.orig_w = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.orig_h = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        self.pan = 0
-        self.tilt = 0
-        self.zoom = 1
 
         self.px_per_deg = self.orig_w / CAM_FOV
 
@@ -68,14 +78,13 @@ class PTZSim(PTZ):
             return None
 
         # Crop frame.
-        new_w = int(self.orig_w / self.zoom)
-        new_h = int(self.orig_h / self.zoom)
+        new_w = int(self.orig_w / self.zoom_fac)
+        new_h = int(self.orig_h / self.zoom_fac)
         offset_x = self.px_per_deg * self.pan
         offset_y = self.px_per_deg * self.tilt
         x1 = int(self.orig_w // 2 + offset_x - new_w // 2)
         y1 = int(self.orig_h // 2 + offset_y - new_h // 2)
 
-        # TODO might go out of bounds.
         frame_crop = self.crop(frame, x1, y1, x1+new_w, y1+new_h)
         frame_crop = cv2.resize(frame_crop, CV_RES)
         return frame_crop
@@ -84,6 +93,9 @@ class PTZSim(PTZ):
         """Pad with zeros if out of bounds.
         """
         ret = np.zeros((y2 - y1, x2 - x1, 3), dtype=np.uint8)
+        # Paste at correct corner.
+        paste_x = max(0, -x1)
+        paste_y = max(0, -y1)
 
         # Take clipped crop.
         x1 = min(max(x1, 0), frame.shape[1])
@@ -92,9 +104,6 @@ class PTZSim(PTZ):
         y2 = min(max(y2, 0), frame.shape[0])
         crop = frame[y1:y2, x1:x2]
 
-        # Paste at correct corner.
-        paste_x = min(0, x1)
-        paste_y = min(0, y1)
         ret[
             paste_y : paste_y + crop.shape[0],
             paste_x : paste_x + crop.shape[1],

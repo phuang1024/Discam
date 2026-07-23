@@ -1,12 +1,12 @@
 """
 Global constants and configuration.
 
-Image formats:
+**Image formats:**
 
 - ``cv2 format``: ``ndarray uint8 (H, W, C)``, (0, 255), BGR.
 - ``torch format``: ``Tensor float32 (C, H, W)``, (0.0, 1.0), RGB.
 
-Bounding box format:
+**Bounding box format:**
 
 - ``boxes format``: ``ndarray int (N, 4)``, xyxy.
 
@@ -16,13 +16,15 @@ but ``N`` denotes the time dimension instead of a list of detections.
 - ``Location`` refers to physical location on the field.
 - ``Pixel position`` refers to position on image frame.
 
-Pan tilt zoom format:
+**Pan tilt zoom format:**
 
-- ``ptz format``: Three scalars ``p``, ``t``, ``z``.
-  - ``p``: Real number, pan in degrees. ``0`` is the default centered pan.
-  - ``t``: Real number, tilt in degrees.
-  - ``z``: Real number ``z >= 1``, zoom factor.
-    I.e. FOV is ``z`` times smaller in length than default zoom.
+Three scalars ``p``, ``t``, ``z``.
+
+- ``p``, ``t``: Real number, pan/tilt in degrees.
+  ``0`` is the default centered pan.
+- ``z``: Real number ``z >= 0``, ln of zoom factor.
+  I.e. FOV is ``exp(z)`` times smaller in length than default zoom.
+  Default zoom is ``z = 0``. Zooming by factor is additive (because of log).
 """
 
 ### Detector module params.
@@ -108,11 +110,11 @@ TRIM_MARGIN_START = 3
 
 
 ### Live mode tracking params.
-TRACK_MARGIN = 200
+TRACK_MARGIN = 300
 """Maintain outermost person this many pixels from frame edge (in CV_RES coords)."""
 TRACK_COUNT = 10
 """Begin zooming out if number of detected players below this."""
-TRACK_PT_SPEED = 2e-3
+TRACK_PT_SPEED = 1e-2
 TRACK_ZOOM_SPEED = 1e-4
 
 
