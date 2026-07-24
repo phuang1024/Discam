@@ -17,7 +17,7 @@ def apply_ptz(points, ptz):
 
     Args:
         points: ``ndarray float (N, 2)``, 2D pixel positions.
-        ptz: ``ptz format`` target camera pos.
+        ptz: ``ptz format`` camera pos.
 
     Returns:
         Same format as ``points``.

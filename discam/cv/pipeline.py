@@ -35,14 +35,16 @@ class CVPipeline:
             frame_i: Index of frame in input video, for logging only.
             ptz: Current PTZ view for live mode.
         """
-        # Run modules.
+        # Run detector.
         boxes, adj_boxes = self.detector.update(frame, ptz)
 
         # Boxes adjusted for PTZ.
         if adj_boxes is None:
             adj_boxes = boxes
+        # Run perspective.
         person_locs, mask_locs = self.perspective.update(frame, adj_boxes, self.iter_i)
 
+        # Run classifier.
         active_inds = self.classifier.update(person_locs, mask_locs)
 
         # Extract return value.
@@ -64,6 +66,11 @@ class CVPipeline:
 
             logger.add_scalar("class.num_active", np.sum(active_inds), frame_i)
             logger.add_scalar("class.sep_metric", self.classifier.sep_metric, frame_i)
+
+            if ptz is not None:
+                logger.add_scalar("ptz.pan", ptz[0], frame_i)
+                logger.add_scalar("ptz.tilt", ptz[1], frame_i)
+                logger.add_scalar("ptz.zoom", ptz[2], frame_i)
 
         self.iter_i += 1
         return {
@@ -94,7 +101,7 @@ def vis_locations(person_locs, mask_locs, active_inds, ptz, persp: ComputePersp,
         person_locs: ``ndarray float (N, 2)``, ``locations`` of all detected people.
         mask_locs: ``ndarray float (N, 2)``, ``locations`` of field mask points.
         active_inds: ``ndarray bool (N,)``, whether each person box is active.
-        ptz: ``ptz format`` current camera position for live mode. Set to None in post mode.
+        ptz: ``ptz format`` current camera position for live mode.
     """
     # Image res.
     RES = 800

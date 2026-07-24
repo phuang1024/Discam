@@ -20,8 +20,7 @@ class Tracker:
             curr_ptz: ``ptz format``, current camera position.
 
         Return:
-            ``(pan, tilt, zoom)`` additive delta control
-                in units defined in ``ptz.py``.
+            ``(pan, tilt, ln(zoom))`` additive delta control.
         """
         if len(active_boxes) == 0:
             # TODO zoom out speed?

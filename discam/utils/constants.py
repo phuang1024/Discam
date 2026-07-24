@@ -22,9 +22,12 @@ Three scalars ``p``, ``t``, ``z``.
 
 - ``p``, ``t``: Real number, pan/tilt in degrees.
   ``0`` is the default centered pan.
-- ``z``: Real number ``z >= 0``, ln of zoom factor.
-  I.e. FOV is ``exp(z)`` times smaller in length than default zoom.
-  Default zoom is ``z = 0``. Zooming by factor is additive (because of log).
+- ``z``: Real number ``z >= 1``, zoom factor.
+  FOV is ``z`` times smaller than default (most zoomed out) FOV.
+
+Some contexts will use ``ln(z)`` as zoom.
+This will be explicitly stated.
+This allows zoom controls to be additive.
 """
 
 ### Detector module params.

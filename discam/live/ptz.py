@@ -11,10 +11,14 @@ class PTZ:
     """PTZ interface base class.
 
     See constants for PTZ format.
+
+    The ``zoom`` attribute is ``ln(z)``, where ``z`` is the zoom factor.
+    The ``zoom_fac`` attribute returns the zoom factor.
     """
     pan: float
     tilt: float
     zoom: float
+    """``ln(z)``"""
 
     def __init__(self):
         self.pan = 0
@@ -23,8 +27,7 @@ class PTZ:
 
     @property
     def zoom_fac(self):
-        """Zoom as FOV factor.
-        I.e. ``fov = zoom_fac * standard_fov``"""
+        """Zoom as FOV factor."""
         return np.exp(self.zoom)
 
     def read(self) -> np.ndarray | None:
