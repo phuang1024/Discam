@@ -43,7 +43,6 @@ class Classifier:
         # Run Z score filter.
         # If people are close together, can filter outliers from within "definitely" positive.
         do_def_filter = self.sep_metric < FILTER_DEF_THRES
-        do_def_filter &= not self.live_mode
         active_inds = stddev_filter(person_locs, def_pos, maybe_pos, do_def_filter)
         return active_inds
 

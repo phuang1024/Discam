@@ -22,7 +22,7 @@ class CVPipeline:
 
     def __init__(self, mask_path, live_mode=False):
         self.detector = Detector(live_mode)
-        self.perspective = ComputePersp(mask_path)
+        self.perspective = ComputePersp(mask_path, live_mode)
         self.classifier = Classifier(live_mode)
 
         # CV iteration number.

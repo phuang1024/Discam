@@ -42,9 +42,10 @@ TILE_SIZE_LIVE = 800
 
 
 ### Perspective module params.
-PERSP_INTERVAL = 120
+PERSP_INTERVAL = -1
 """Recompute camera params every N iters.
-Set to -1 to compute once at beginning."""
+Set to -1 to compute once at beginning.
+Live mode only computes once at the beginning regardless."""
 DEPTH_SAMPLING = 12
 """Sample depth map at pixel intervals of this size.
 Should not be too small, as number of samples increases quadratically."""

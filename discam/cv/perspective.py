@@ -20,7 +20,9 @@ class ComputePersp:
     using trig.
     """
 
-    def __init__(self, mask_path):
+    def __init__(self, mask_path, live_mode):
+        self.live_mode = live_mode
+        
         # For visualization.
         self.mask_points = np.load(mask_path)
         self.mask_points[:, 0] *= CV_RES[0]
@@ -54,10 +56,8 @@ class ComputePersp:
             Both ``ndarray float (N, 2)`` xy ``locations`` (with different N depending on length).
             ``person_locs`` corresponds to ``boxes``.
         """
-        run_nn = False
-        if PERSP_INTERVAL == -1 and iter_i == 0:
-            run_nn = True
-        elif PERSP_INTERVAL > 0 and iter_i % PERSP_INTERVAL == 0:
+        run_nn = iter_i == 0
+        if not self.live_mode and PERSP_INTERVAL > 0 and iter_i % PERSP_INTERVAL == 0:
             run_nn = True
         # Recompute vanishing point.
         if run_nn:
