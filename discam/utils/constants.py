@@ -123,19 +123,23 @@ TRIM_MARGIN_START = 3
 
 
 ### Live mode tracking params.
+TRACK_HISTORY = 3
+"""Use detections from past N CV iters."""
+
 TRACK_MARGIN = 200
 """Maintain outermost person this many pixels from frame edge (in CV_RES coords)."""
-TRACK_COUNT = 10
+TRACK_LOW_COUNT = 10
 """Begin zooming out if number of detected players below this."""
-TRACK_PT = 0.3
+
+PT_SPEED = 0.3
 """Pan tilt speed multiplier. Should be on the order of 1."""
-TRACK_ZOOM_IN = 0.3
-TRACK_ZOOM_OUT = 0.8
+ZOOM_IN_SPEED = 0.3
+ZOOM_OUT_SPEED = 0.8
 """Zoom speed multipliers."""
 
 
 ### Tensorboard logging params.
-LOG_IMG_INTERVAL = 1#20
+LOG_IMG_INTERVAL = 20
 """Log image every N CV pipeline iterations."""
 LOG_IMG_RES = 0.5
 """Log image resolution factor."""
