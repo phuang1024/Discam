@@ -20,8 +20,8 @@ class Detector:
     """Person detection with YOLO and SAHI.
     """
 
-    def __init__(self, tile_size):
-        self.tile_size = tile_size
+    def __init__(self, live_mode):
+        self.live_mode = live_mode
         self.YOLO = AutoDetectionModel.from_pretrained(
             model_type="ultralytics",
             model_path=os.path.join(ROOT, "yolo26n.pt"),
@@ -42,11 +42,12 @@ class Detector:
               Is ``None`` if ``ptz == None``.
         """
         # Run SAHI.
+        tile_size = TILE_SIZE_LIVE if self.live_mode else TILE_SIZE_POST
         results = get_sliced_prediction(
             frame,
             self.YOLO,
-            slice_height=self.tile_size,
-            slice_width=self.tile_size,
+            slice_height=tile_size,
+            slice_width=tile_size,
             overlap_height_ratio=0.3,
             overlap_width_ratio=0.3,
             verbose=0,

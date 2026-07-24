@@ -19,10 +19,10 @@ class CVPipeline:
     Some modules require an "iteration number", which is kept here.
     """
 
-    def __init__(self, mask_path, tile_size):
-        self.detector = Detector(tile_size)
+    def __init__(self, mask_path, live_mode=False):
+        self.detector = Detector(live_mode)
         self.perspective = ComputePersp(mask_path)
-        self.classifier = Classifier()
+        self.classifier = Classifier(live_mode)
 
         # CV iteration number.
         self.iter_i = 0
@@ -50,7 +50,7 @@ class CVPipeline:
         # Vis and logging.
         if logger.enabled:
             det_vis = vis_frame(frame, boxes, active_inds)
-            locs_vis = vis_locations(person_locs, mask_locs, active_inds, self.perspective, self.classifier)
+            locs_vis = vis_locations(person_locs, mask_locs, active_inds, ptz, self.perspective, self.classifier)
             if self.iter_i % LOG_IMG_INTERVAL == 0:
                 logger.add_image("vis.detections", det_vis, frame_i)
                 logger.add_image("vis.locations", locs_vis, frame_i)
@@ -86,13 +86,14 @@ def vis_frame(frame, boxes, active_inds):
     return frame
 
 
-def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, classifier: Classifier):
+def vis_locations(person_locs, mask_locs, active_inds, ptz, persp: ComputePersp, classifier: Classifier):
     """Visualize physical locations.
 
     Args:
         person_locs: ``ndarray float (N, 2)``, ``locations`` of all detected people.
         mask_locs: ``ndarray float (N, 2)``, ``locations`` of field mask points.
         active_inds: ``ndarray bool (N,)``, whether each person box is active.
+        ptz: ``ptz format`` current camera position for live mode. Set to None in post mode.
     """
     # Image res.
     RES = 800
@@ -114,6 +115,17 @@ def vis_locations(person_locs, mask_locs, active_inds, persp: ComputePersp, clas
 
     # Overall camera FOV cone.
     view_points = np.array(((0, 0), (CV_RES[0], 0), (CV_RES[0], CV_RES[1]), (0, CV_RES[1])), dtype=float)
+    if ptz is not None:
+        # Apply pan and tilt.
+        px_per_deg = CV_RES[0] / CAM_FOV
+        view_points[:, 0] += ptz[0] * px_per_deg
+        view_points[:, 1] += ptz[1] * px_per_deg
+
+        # Apply zoom.
+        center = np.mean(view_points, axis=0)
+        delta = view_points - center
+        view_points = center + delta / ptz[2]
+
     view_locs = persp.compute_locations(view_points)
     view_locs = interp_coords(view_locs)
     cv2.fillPoly(img, [view_locs], (200, 200, 200))

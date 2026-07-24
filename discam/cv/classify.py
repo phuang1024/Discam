@@ -12,11 +12,13 @@ from ..utils.constants import *
 class Classifier:
     """Classify whether each player is active.
     Uses field mask, computed physical ``location``, and data analysis.
-    
+
     Separation metric for Trim is also computed here.
     """
 
-    def __init__(self):
+    def __init__(self, live_mode):
+        self.live_mode = live_mode
+
         # KNN to detect the pull (Frisbee), when two teams are far apart.
         self.knn = KMeans(2)
         # Metric used in Trim. Computed every iteration.
@@ -40,8 +42,9 @@ class Classifier:
 
         # Run Z score filter.
         # If people are close together, can filter outliers from within "definitely" positive.
-        one_group = self.sep_metric < FILTER_DEF_THRES
-        active_inds = stddev_filter(person_locs, def_pos, maybe_pos, one_group)
+        do_def_filter = self.sep_metric < FILTER_DEF_THRES
+        do_def_filter &= not self.live_mode
+        active_inds = stddev_filter(person_locs, def_pos, maybe_pos, do_def_filter)
         return active_inds
 
     def mask_classify(self, person_locs, mask_locs):
