@@ -28,15 +28,14 @@ class Tracker:
             return 0, 0, -1e-2
 
         pan, tilt, zoom = self.calc_centering_ctrl(active_boxes)
-        # if len(active_boxes) < TRACK_COUNT:
-        #     zoom -= (TRACK_COUNT - len(active_boxes)) * 1e-2
+        if len(active_boxes) < TRACK_COUNT:
+            zoom -= (TRACK_COUNT - len(active_boxes)) * 1e-2
         print(pan, tilt, zoom)
 
-        return (
-            pan * TRACK_PT_SPEED,
-            tilt * TRACK_PT_SPEED,
-            zoom * TRACK_ZOOM_SPEED,
-        )
+        pan *= TRACK_PT
+        tilt *= TRACK_PT
+        zoom *= TRACK_ZOOM_IN if zoom > 0 else TRACK_ZOOM_OUT
+        return (pan, tilt, zoom)
 
     def calc_centering_ctrl(self, active_boxes):
         """Calculate delta PTZ necessary to center detections.
