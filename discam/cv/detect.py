@@ -9,6 +9,7 @@ import torch
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
+from ..live.cam_pose import apply_inverse_ptz
 from ..utils.constants import *
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -63,31 +64,7 @@ class Detector:
         # Calculate boxes adjusted for PTZ.
         adj_boxes = None
         if ptz is not None:
-            adj_boxes = self.apply_ptz(boxes, ptz)
+            adj_boxes = boxes.copy().astype(float)
+            adj_boxes[:, :2] = apply_inverse_ptz(adj_boxes[:, :2], ptz)
+            adj_boxes[:, 2:] = apply_inverse_ptz(adj_boxes[:, 2:], ptz)
         return boxes, adj_boxes
-
-    def apply_ptz(self, boxes, ptz):
-        """Given ``boxes`` in coords of current view,
-        return boxes in coords of original (p=t=0, z=1) view.
-        TODO current alg isn't perfect.
-
-        Args:
-            boxes: ``boxes format``.
-            ptz: ``ptz format``.
-        """
-        boxes = boxes.copy()
-        # Apply inverse zoom.
-        mid_x = CV_RES[0] / 2
-        for i in (0, 2):
-            boxes[:, i] = mid_x + (boxes[:, i] - mid_x) / ptz[2]
-        mid_y = CV_RES[1] / 2
-        for i in (1, 3):
-            boxes[:, i] = mid_y + (boxes[:, i] - mid_y) / ptz[2]
-
-        # Apply inverse pan tilt.
-        px_per_deg = CV_RES[0] / CAM_FOV
-        for i in (0, 2):
-            boxes[:, i] = boxes[:, i] + px_per_deg * ptz[0]
-        for i in (1, 3):
-            boxes[:, i] = boxes[:, i] + px_per_deg * ptz[1]
-        return boxes

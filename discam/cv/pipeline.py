@@ -6,6 +6,7 @@ import numpy as np
 
 from .classify import Classifier
 from .detect import Detector
+from ..live.cam_pose import apply_inverse_ptz
 from .perspective import ComputePersp
 from ..utils import logger
 from ..utils.constants import *
@@ -116,16 +117,7 @@ def vis_locations(person_locs, mask_locs, active_inds, ptz, persp: ComputePersp,
     # Overall camera FOV cone.
     view_points = np.array(((0, 0), (CV_RES[0], 0), (CV_RES[0], CV_RES[1]), (0, CV_RES[1])), dtype=float)
     if ptz is not None:
-        # Apply pan and tilt.
-        px_per_deg = CV_RES[0] / CAM_FOV
-        view_points[:, 0] += ptz[0] * px_per_deg
-        view_points[:, 1] += ptz[1] * px_per_deg
-
-        # Apply zoom.
-        center = np.mean(view_points, axis=0)
-        delta = view_points - center
-        view_points = center + delta / ptz[2]
-
+        view_points = apply_inverse_ptz(view_points, ptz)
     view_locs = persp.compute_locations(view_points)
     view_locs = interp_coords(view_locs)
     cv2.fillPoly(img, [view_locs], (200, 200, 200))
