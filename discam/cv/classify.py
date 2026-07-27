@@ -40,10 +40,12 @@ class Classifier:
         # Update KNN.
         self.update_knn(person_locs[def_pos])
 
-        # Run Z score filter.
-        # If people are close together, can filter outliers from within "definitely" positive.
-        do_def_filter = self.sep_metric < FILTER_DEF_THRES
-        active_inds = stddev_filter(person_locs, def_pos, maybe_pos, do_def_filter)
+        if np.sum(def_pos) >= 3:
+            # Run Z score filter.
+            # If people are close together, can filter outliers from within "definitely" as well.
+            # TODO bad wrong algorithm
+            do_def_filter = self.sep_metric < FILTER_DEF_THRES
+            active_inds = stddev_filter(person_locs, def_pos, maybe_pos, do_def_filter)
         return active_inds
 
     def mask_classify(self, person_locs, mask_locs):
@@ -113,6 +115,7 @@ def stddev_filter(person_locs, def_pos, maybe_pos, filter_def):
         final classification of whether someone should be tracked.
     """
     # Filter within definitely pos.
+    # TODO producing bad results currently
     if filter_def:
         mean, std = compute_dist(person_locs[def_pos])
         zs = compute_zs(person_locs, mean, std)
