@@ -60,8 +60,12 @@ def main():
         key = cv2.waitKey(100)
         if key == ord("q"):
             break
-    cv2.destroyAllWindows()
+        elif key == ord("u"):
+            # TODO it doesn't update the vis
+            if len(_interactive_mask) > 0:
+                _interactive_mask.pop(-1)
 
+    cv2.destroyAllWindows()
     print("Writing to", args.output)
     mask = np.array(_interactive_mask)
     np.save(args.output, mask)

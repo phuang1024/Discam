@@ -22,7 +22,7 @@ class ComputePersp:
 
     def __init__(self, mask_path, live_mode):
         self.live_mode = live_mode
-        
+
         # For visualization.
         self.mask_points = np.load(mask_path)
         self.mask_points[:, 0] *= CV_RES[0]

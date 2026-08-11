@@ -38,14 +38,14 @@ class Classifier:
         def_pos, maybe_pos = self.mask_classify(person_locs, mask_locs)
 
         # Update KNN.
-        self.update_knn(person_locs[def_pos])
+        if np.sum(def_pos) >= 4:
+            self.update_knn(person_locs[def_pos])
 
-        if np.sum(def_pos) >= 3:
+        if np.sum(def_pos) >= 8:
             # Run Z score filter.
-            # If people are close together, can filter outliers from within "definitely" as well.
-            # TODO bad wrong algorithm
-            do_def_filter = self.sep_metric < FILTER_DEF_THRES
-            active_inds = stddev_filter(person_locs, def_pos, maybe_pos, do_def_filter)
+            active_inds = stddev_filter(person_locs, def_pos, maybe_pos)
+        else:
+            active_inds = np.logical_or(def_pos, maybe_pos)
         return active_inds
 
     def mask_classify(self, person_locs, mask_locs):
@@ -70,10 +70,8 @@ class Classifier:
     def update_knn(self, active_locs):
         """Update KNN and separation metric.
         """
-        if len(active_locs) < 2:
-            return
+        # Split into 2 classes.
         self.knn.fit(active_locs)
-
         # Shape (N, 2).
         points1 = active_locs[self.knn.labels_ == 0]
         points2 = active_locs[self.knn.labels_ == 1]
@@ -96,33 +94,40 @@ class Classifier:
         except np.linalg.LinAlgError:
             return
         self.sep_metric = (zscore1 + zscore2) / 2
+        # TODO can consider relative group size too.
 
 
-def stddev_filter(person_locs, def_pos, maybe_pos, filter_def):
+def stddev_filter(person_locs, def_pos, maybe_pos):
     """Filter active players by std dev.
 
-    First, optionally filter within ``def_pos``:
-    People too far from mean are set to negative.
+    First, filter within ``def_pos``:
+        People too far from others are set to negative.
 
     Then, filter using ``maybe_pos``:
-    People close enough are set to positive.
-
-    Args:
-        filter_def: Whether to filter within definitely positive.
+        People close enough are set to positive.
 
     Returns:
         ``ndarray bool (N,)``, same length as ``person_locs``,
         final classification of whether someone should be tracked.
     """
-    # Filter within definitely pos.
-    # TODO producing bad results currently
-    if filter_def:
-        mean, std = compute_dist(person_locs[def_pos])
-        zs = compute_zs(person_locs, mean, std)
-        def_pos = np.logical_and(def_pos, zs < ACTIVE_STD_THRES)
+    if False and np.sum(def_pos) < 30:
+        # Filter within definitely pos.
+        remove = []
+        inds = np.where(def_pos)
+        for i in inds:
+            dists = np.full([len(person_locs)], 1e3, dtype=float)
+            for j in inds:
+                dists[j] = np.linalg.norm(person_locs[i] - person_locs[j])
+                
+            count = np.sum(dists <= 5)
+            if count <= 3:
+                remove.append(i)
+
+        for i in remove:
+            def_pos[i] = False
 
     # Filter maybe pos by z score. Add close ones to positive.
-    mean, std = compute_dist(person_locs[def_pos])
+    mean, std = compute_distrib(person_locs[def_pos])
     zs = compute_zs(person_locs, mean, std)
     ret = np.logical_or(
         def_pos,
@@ -131,7 +136,7 @@ def stddev_filter(person_locs, def_pos, maybe_pos, filter_def):
     return ret
 
 
-def compute_dist(locs):
+def compute_distrib(locs):
     """Compute mean and std of a set of 2D points.
 
     Args:
